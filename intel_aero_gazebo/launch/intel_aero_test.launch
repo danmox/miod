@@ -1,0 +1,22 @@
+<launch>
+
+  <arg name="gui" default="false" />
+
+  <!-- R200 rviz visualization -->
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find intel_aero_description)/urdf/intel_aero.xacro'" />
+
+  <!-- launch gazebo with pile of rubble -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name"  value="worlds/rubble.world" />
+    <arg name="gui"         value="$(arg gui)" />
+  </include>
+
+  <!-- spawn Intel Aero pointing at pile of rubble -->
+  <node name="spawn_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -package_to_model -param robot_description -model intel_aero -x 4.0 -Y 3.141592" />
+
+  <!-- publish joint states to tf -->
+  <node name="state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+
+  <!-- image and camera vizualization <node name="rviz" pkg="rviz" type="rviz" args="-d $(find intel_aero_sim)/rviz/r200_test.rviz" />
+ -->
+</launch>
