@@ -1,0 +1,17 @@
+<package format="2">
+  <name>intel_aero</name>
+  <version>1.0.0</version>
+  <description>
+    This package provides code for flying and simulating the intel aero quadrotor platform.
+  </description>
+  <maintainer email="mox@seas.upenn.edu">Daniel Mox</maintainer>
+  <license>BSD</license>
+  <author>Daniel Mox</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+    <metapackage />
+  </export>
+
+</package>
