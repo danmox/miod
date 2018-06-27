@@ -1,0 +1,47 @@
+<launch>
+
+  <arg name="agent" default="1" />
+
+  <!-- spawn pose -->
+  <arg name="x" default="0" />
+  <arg name="y" default="0" />
+  <arg name="z" default="0" />
+  <arg name="R" default="0" />
+  <arg name="P" default="0" />
+  <arg name="Y" default="0" />
+
+  <!-- SITL config -->
+  <arg name="mavlink_udp_port"      default="14560" />
+  <arg name="interactive"           default="true" />
+  <arg name="startup_config"        value="$(find intel_aero_gazebo)/SITL/aero_$(arg agent)" />
+  <arg unless="$(arg interactive)"  name="px4_cmd_arg" value=""/>
+  <arg if="$(arg interactive)"      name="px4_cmd_arg" value="-d"/>
+
+  <group ns="aero$(arg agent)" >
+
+    <!-- load intel aero urdf to param -->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find intel_aero_description)/urdf/intel_aero.xacro mavlink_udp_port:=$(arg mavlink_udp_port)" />
+
+    <!-- spawn Intel Aero pointing at pile of rubble -->
+    <node name="spawn_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model intel_aero$(arg agent) -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)" />
+
+    <!-- publish joint states to tf -->
+    <node name="aero_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="aero_joint_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
+    <!-- PX4 SITL -->
+    <node name="aero_sitl_$(arg agent)" pkg="px4" type="px4" output="screen" args="$(find px4) $(arg startup_config) $(arg px4_cmd_arg)" />
+
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/node.launch" >
+      <arg name="pluginlists_yaml" value="$(find mavros)/launch/px4_pluginlists.yaml" />
+      <arg name="config_yaml" value="$(find intel_aero_gazebo)/SITL/px4_config_$(arg agent).yaml" />
+      <arg name="fcu_url" value="udp://:14541@localhost:14551" />
+      <arg name="gcs_url" value="" />
+      <arg name="tgt_system" value="$(arg agent)" />
+      <arg name="tgt_component" value="1" />
+    </include>
+
+  </group>
+
+</launch>

@@ -1,21 +1,34 @@
 <launch>
 
-  <arg name="gui" default="false" />
+  <!-- gazebo args -->
+  <arg name="gui"           default="false" />
+  <arg name="world"         default="worlds/empty.world" />
+  <arg name="verbose"       default="false" />
+  <arg name="paused"        default="false" />
+  <arg name="gazebo_debug"  default="false" />
 
   <!-- launch gazebo with pile of rubble -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name"  value="worlds/rubble.world" />
     <arg name="gui"         value="$(arg gui)" />
-    <arg name="verbose"     value="true" />
+    <arg name="world_name"  value="$(arg world)" />
+    <arg name="verbose"     value="$(arg verbose)" />
+    <arg name="paused"      value="$(arg paused)" />
+    <arg name="debug"       value="$(arg gazebo_debug)" />
   </include>
 
   <!-- image and camera vizualization -->
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find intel_aero_gazebo)/rviz/intel_aero_test.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find intel_aero_gazebo)/rviz/swarm.rviz" />
 
-  <!-- robot 2 -->
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero_test.launch" >
-    <arg name="agent" value="2" />
+  <!-- robot 1 -->
+  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
+    <arg name="agent"             value="1" />
+    <arg name="x"                 value="0" />
+    <arg name="y"                 value="0" />
+    <arg name="z"                 value="0" />
+    <arg name="R"                 value="0" />
+    <arg name="P"                 value="0" />
+    <arg name="Y"                 value="0" />
+    <arg name="mavlink_udp_port"  value="14561" />
   </include>
-
 
 </launch>
