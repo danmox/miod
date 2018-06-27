@@ -2,18 +2,17 @@
 
 <robot name="intel_aero" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <!-- include iris_base provided with PX4 package -->
+  <!-- iris_base -->
   <xacro:include filename="$(find intel_aero_description)/urdf/iris_base.xacro" />
 
-  <!-- load rs200 macro from realsense_gazebo_plugin package -->
-  <xacro:include filename="$(find realsense_gazebo_plugin)/urdf/realsense-RS200.macro.xacro" />
+  <!-- realsense r200 macro -->
+  <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro" />
 
-  <!-- create instance of RS200 and attach it to the iris -->
-  <xacro:realsense-rs200 />
-
+  <!-- create instance of r200 and attach it to the iris -->
+  <xacro:realsense_r200 />
   <joint name="realsense_joint" type="fixed">
     <parent link="base_link" />
-    <child link="rs200_camera" />
+    <child link="camera_link" />
     <origin ryp="0 0 0" xyz="0.101 0 0" />
   </joint>
 
