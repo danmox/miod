@@ -17,6 +17,9 @@
   <!-- publish joint states to tf -->
   <node name="state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
+  <!-- publish non-fixed joint states -->
+  <node name="joint_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+
   <!-- image and camera vizualization -->
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find intel_aero_gazebo)/rviz/intel_aero_test.rviz" />
 
