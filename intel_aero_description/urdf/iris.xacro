@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 
 <robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
+
   <!-- Properties -->
-  <xacro:property name="namespace" value="" />
   <xacro:property name="rotor_velocity_slowdown_sim" value="10" />
   <xacro:property name="mesh_file" value="iris.stl" />
   <xacro:property name="mesh_scale" value="1 1 1"/>
@@ -48,7 +48,7 @@
 
   <!-- Instantiate multirotor_base_macro once -->
   <xacro:multirotor_base_macro
-    robot_namespace="${namespace}"
+    robot_namespace="$(arg namespace)"
     mass="${mass}"
     body_width="${body_width}"
     body_height="${body_height}"
@@ -61,7 +61,7 @@
 
   <!-- Instantiate rotors -->
   <xacro:vertical_rotor
-    robot_namespace="${namespace}"
+    robot_namespace="$(arg namespace)"
     suffix="front_right"
     direction="ccw"
     motor_constant="${motor_constant}"
@@ -83,7 +83,7 @@
   </xacro:vertical_rotor>
 
   <xacro:vertical_rotor
-    robot_namespace="${namespace}"
+    robot_namespace="$(arg namespace)"
     suffix="back_left"
     direction="ccw"
     motor_constant="${motor_constant}"
@@ -104,7 +104,7 @@
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
-  <xacro:vertical_rotor robot_namespace="${namespace}"
+  <xacro:vertical_rotor robot_namespace="$(arg namespace)"
     suffix="front_left"
     direction="cw"
     motor_constant="${motor_constant}"
@@ -125,7 +125,7 @@
     <xacro:insert_block name="rotor_inertia" />
   </xacro:vertical_rotor>
 
-  <xacro:vertical_rotor robot_namespace="${namespace}"
+  <xacro:vertical_rotor robot_namespace="$(arg namespace)"
     suffix="back_right"
     direction="cw"
     motor_constant="${motor_constant}"

@@ -2,6 +2,8 @@
 
 <robot name="intel_aero" xmlns:xacro="http://ros.org/wiki/xacro">
 
+  <xacro:arg name='namespace' default='' />
+
   <!-- iris_base -->
   <xacro:include filename="$(find intel_aero_description)/urdf/iris_base.xacro" />
 
@@ -9,11 +11,6 @@
   <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro" />
 
   <!-- create instance of r200 and attach it to the iris -->
-  <xacro:realsense_r200 />
-  <joint name="realsense_joint" type="fixed">
-    <parent link="base_link" />
-    <child link="camera_link" />
-    <origin ryp="0 0 0" xyz="0.101 0 0" />
-  </joint>
+  <xacro:realsense_r200 namespace="$(arg namespace)" parent_link="base_link" />
 
 </robot>

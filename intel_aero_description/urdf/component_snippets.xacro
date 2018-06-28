@@ -27,8 +27,8 @@
       <plugin filename="librotors_gazebo_bag_plugin.so" name="rosbag">
         <robotNamespace>${namespace}</robotNamespace>
         <bagFileName>${bag_file}</bagFileName>
-        <linkName>base_link</linkName>
-        <frameId>base_link</frameId>
+        <linkName>${namespace}/base_link</linkName>
+        <frameId>${namespace}/base_link</frameId>
         <commandAttitudeThrustSubTopic>command/attitude</commandAttitudeThrustSubTopic>
         <commandAttitudeThrustPubTopic>command/attitude</commandAttitudeThrustPubTopic>
         <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
@@ -41,7 +41,7 @@
     params="namespace parent_link camera_suffix frame_rate
       horizontal_fov image_width image_height image_format min_distance
       max_distance noise_mean noise_stddev enable_visual *cylinder *origin">
-    <link name="${namespace}/camera_${camera_suffix}_link">
+    <link name="$(arg namespace)/camera_${camera_suffix}_link">
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
@@ -135,7 +135,10 @@
   </xacro:macro>
 
   <!-- Macro to add the mavlink interface. -->
-  <xacro:macro name="mavlink_interface_macro" params="namespace imu_sub_topic gps_sub_topic mavlink_addr mavlink_udp_port serial_enabled serial_device baudrate qgc_addr qgc_udp_port hil_mode hil_state_level vehicle_is_tailsitter">
+  <xacro:macro name="mavlink_interface_macro" 
+    params="namespace imu_sub_topic gps_sub_topic mavlink_addr mavlink_udp_port 
+        serial_enabled serial_device baudrate qgc_addr qgc_udp_port hil_mode 
+        hil_state_level vehicle_is_tailsitter">
     <gazebo>
       <plugin name="mavlink_interface" filename="libgazebo_mavlink_interface.so">
         <robotNamespace>${namespace}</robotNamespace>
@@ -273,7 +276,7 @@
     <!-- IMU joint -->
     <joint name="${namespace}/imu${imu_suffix}_joint" type="revolute">
       <xacro:insert_block name="origin" />
-      <parent link="${parent_link}" />
+      <parent link="${namespace}/${parent_link}" />
       <child link="${namespace}/imu${imu_suffix}_link" />
       <limit upper="0" lower="0" effort="0" velocity="0" />
     </joint>
@@ -282,7 +285,7 @@
       <!-- A good description of the IMU parameters can be found in the kalibr documentation:
            https://github.com/ethz-asl/kalibr/wiki/IMU-Noise-Model-and-Intrinsics -->
         <robotNamespace>${namespace}</robotNamespace> <!-- (string, required): ros namespace in which the messages are published -->
-        <linkName>${namespace}/imu${imu_suffix}_link</linkName> <!-- (string, required): name of the body which holds the IMU sensor -->
+          <linkName>${namespace}/imu${imu_suffix}_link</linkName> <!-- (string, required): name of the body which holds the IMU sensor -->
         <imuTopic>${imu_topic}</imuTopic> <!-- (string): name of the sensor output topic and prefix of service names (defaults to imu) -->
         <gyroscopeNoiseDensity>${gyroscope_noise_density}</gyroscopeNoiseDensity> <!-- Gyroscope noise density (two-sided spectrum) [rad/s/sqrt(Hz)] -->
         <gyroscopeRandomWalk>${gyroscopoe_random_walk}</gyroscopeRandomWalk> <!-- Gyroscope bias random walk [rad/s/s/sqrt(Hz)] -->
@@ -296,7 +299,7 @@
     </gazebo>
   </xacro:macro>
 
-<!-- Macro to add a generic odometry sensor. -->
+  <!-- Macro to add a generic odometry sensor. -->
   <xacro:macro name="odometry_plugin_macro"
     params="
       namespace odometry_sensor_suffix parent_link pose_topic pose_with_covariance_topic
