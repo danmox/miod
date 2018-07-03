@@ -29,6 +29,7 @@
     <arg name="P"                 value="0" />
     <arg name="Y"                 value="0" />
     <arg name="mavlink_udp_port"  value="14561" />
+    <arg name="fcu_url"           value="udp://:14541@localhost:14551" />
   </include>
 
 </launch>
