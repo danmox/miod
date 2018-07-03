@@ -1,16 +1,25 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(intel_aero_gazebo)
 
-find_package(catkin REQUIRED)
+cmake_policy(SET CMP0046 NEW)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  geometry_msgs
+  mavros_msgs
+)
 
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES intel_aero_gazebo
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+  CATKIN_DEPENDS
+    roscpp
+    geometry_msgs
+    mavros_msgs
 )
 
 include_directories(
-# include
-# ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
+
+add_executable(offboard_test src/offboard_test.cpp)
+target_link_libraries(offboard_test ${catkin_LIBRARIES})
