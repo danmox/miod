@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   land_cmd.request.altitude = 0;
 
   ROS_INFO("Sending land command");
-  while (!(land_client.call(land_cmd) && land_cmd.response.success)) {
+  while (ros::ok() && !(land_client.call(land_cmd) && land_cmd.response.success)) {
     ros::spinOnce();
     rate.sleep();
   }
