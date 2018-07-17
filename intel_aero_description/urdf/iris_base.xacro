@@ -43,7 +43,7 @@
   </xacro:if>
   
   <!-- Instantiate gps plugin. -->
-  <xacro:gps_plugin_macro namespace="$(arg namespace)" gps_noise="true" />
+  <xacro:gps_plugin_macro namespace="$(arg namespace)" gps_noise="false" />
   
   <!-- Instantiate mavlink telemetry interface. -->
   <xacro:if value="$(arg enable_mavlink_interface)">
@@ -69,7 +69,7 @@
   <xacro:imu_plugin_macro
     namespace="$(arg namespace)"
     imu_suffix=""
-    parent_link="base_link"
+    parent_link="$(arg namespace)/base_link"
     imu_topic="/imu"
     mass_imu_sensor="0.015"
     gyroscope_noise_density="0.0003394"
@@ -90,7 +90,7 @@
     <xacro:imu_plugin_macro
       namespace="$(arg namespace)"
       imu_suffix="gt"
-      parent_link="base_link"
+      parent_link="$(arg namespace)/base_link"
       imu_topic="ground_truth/imu"
       mass_imu_sensor="0.00001"
       gyroscope_noise_density="0.0"
@@ -110,7 +110,7 @@
     <xacro:odometry_plugin_macro
       namespace="$(arg namespace)/ground_truth"
       odometry_sensor_suffix="gt"
-      parent_link="base_link"
+      parent_link="$(arg namespace)/base_link"
       pose_topic="pose"
       pose_with_covariance_topic="pose_with_covariance"
       position_topic="position"

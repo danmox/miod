@@ -276,7 +276,7 @@
     <!-- IMU joint -->
     <joint name="${namespace}/imu${imu_suffix}_joint" type="revolute">
       <xacro:insert_block name="origin" />
-      <parent link="${namespace}/${parent_link}" />
+      <parent link="${parent_link}" />
       <child link="${namespace}/imu${imu_suffix}_link" />
       <limit upper="0" lower="0" effort="0" velocity="0" />
     </joint>
@@ -311,17 +311,17 @@
       noise_uniform_angular_velocity enable_odometry_map odometry_map
       image_scale *inertia *origin">
     <!-- odometry link -->
-    <link name="${namespace}/odometry_sensor${odometry_sensor_suffix}_link">
+    <link name="${namespace}/odometry_sensor_${odometry_sensor_suffix}_link">
       <inertial>
         <xacro:insert_block name="inertia" />
         <mass value="${mass_odometry_sensor}" />  <!-- [kg] -->
       </inertial>
     </link>
     <!-- odometry joint -->
-    <joint name="${namespace}/odometry_sensor${odometry_sensor_suffix}_joint" type="revolute">
+    <joint name="${namespace}/odometry_sensor_${odometry_sensor_suffix}_joint" type="revolute">
       <parent link="${parent_link}" />
       <xacro:insert_block name="origin" />
-      <child link="${namespace}/odometry_sensor${odometry_sensor_suffix}_link" />
+      <child link="${namespace}/odometry_sensor_${odometry_sensor_suffix}_link" />
       <limit upper="0" lower="0" effort="0" velocity="0" />
     </joint>
     <gazebo>

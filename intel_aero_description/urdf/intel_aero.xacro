@@ -11,6 +11,6 @@
   <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro" />
 
   <!-- create instance of r200 and attach it to the iris -->
-  <xacro:realsense_r200 namespace="$(arg namespace)" parent_link="base_link" />
+  <xacro:realsense_r200 namespace="$(arg namespace)" parent_link="$(arg namespace)/base_link" />
 
 </robot>
