@@ -4,6 +4,7 @@
 #include <mavros_msgs/CommandTOL.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
+#include <mavros_msgs/HomePosition.h>
 
 mavros_msgs::State current_state;
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
@@ -11,12 +12,19 @@ void state_cb(const mavros_msgs::State::ConstPtr& msg)
   current_state = *msg;
 }
 
+mavros_msgs::HomePosition home;
+void home_cb(const mavros_msgs::HomePosition::ConstPtr& msg)
+{
+  home = *msg;
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "offboard_node");
   ros::NodeHandle nh;
 
-  ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 10, state_cb);
+  ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &state_cb);
+  ros::Subscriber home_sub = nh.subscribe<mavros_msgs::HomePosition>("mavros/home_position/home", 10, &home_cb);
   ros::Publisher local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
   ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
   ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
@@ -38,12 +46,13 @@ int main(int argc, char **argv)
   }
   ROS_INFO("FCU connection made");
 
+  // send a few setpoints before starting
+
   geometry_msgs::PoseStamped pose;
+  pose.header.frame_id = "aero1/map";
   pose.pose.position.x = 0;
   pose.pose.position.y = 0;
   pose.pose.position.z = 2;
-
-  // send a few setpoints before starting
 
   ROS_INFO("Publishing setpoints before liftoff");
   for (int i = 100; ros::ok() && i > 0; --i) {
@@ -76,7 +85,50 @@ int main(int argc, char **argv)
   }
   ROS_INFO("Quad armed");
 
+  // send position commands
+
+  pose.header.frame_id = "aero1/map";
+  pose.pose.position.x = 0;
+  pose.pose.position.y = 0;
+  pose.pose.position.z = 2;
+
   ros::Time start = ros::Time::now();
+  ROS_INFO("Publishing (0,0,2) waypoint command for 10s");
+  while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
+    local_pos_pub.publish(pose);
+    ros::spinOnce();
+    rate.sleep();
+  }
+
+  start = ros::Time::now();
+  pose.pose.position.x = 2;
+  ROS_INFO("Publishing (2,0,2) waypoint command for 10s");
+  while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
+    local_pos_pub.publish(pose);
+    ros::spinOnce();
+    rate.sleep();
+  }
+
+  start = ros::Time::now();
+  pose.pose.position.y = 2;
+  ROS_INFO("Publishing (2,2,2) waypoint command for 10s");
+  while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
+    local_pos_pub.publish(pose);
+    ros::spinOnce();
+    rate.sleep();
+  }
+
+  start = ros::Time::now();
+  pose.pose.position.x = 0;
+  ROS_INFO("Publishing (0,2,2) waypoint command for 10s");
+  while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
+    local_pos_pub.publish(pose);
+    ros::spinOnce();
+    rate.sleep();
+  }
+
+  start = ros::Time::now();
+  pose.pose.position.y = 0;
   ROS_INFO("Publishing (0,0,2) waypoint command for 10s");
   while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
     local_pos_pub.publish(pose);
@@ -88,26 +140,15 @@ int main(int argc, char **argv)
 
   mavros_msgs::CommandTOL land_cmd;
   land_cmd.request.yaw = 0;
-  land_cmd.request.latitude = 0;
-  land_cmd.request.longitude = 0;
-  land_cmd.request.altitude = 0;
+  land_cmd.request.latitude = home.geo.latitude;
+  land_cmd.request.longitude = home.geo.longitude;
+  land_cmd.request.altitude = home.geo.altitude;
 
   ROS_INFO("Sending land command");
   while (ros::ok() && !(land_client.call(land_cmd) && land_cmd.response.success)) {
     ros::spinOnce();
     rate.sleep();
   }
-
-  // unarm the quad
-
-  arm_cmd.request.value = false;
-
-  ROS_INFO("Attempting to disarm quad");
-  while (ros::ok() && !(arming_client.call(arm_cmd) && arm_cmd.response.success)) {
-    ros::spinOnce();
-    rate.sleep();
-  }
-  ROS_INFO("Quad disarmed");
 
   return 0;
 }
