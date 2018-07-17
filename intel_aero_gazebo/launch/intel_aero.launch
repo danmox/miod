@@ -1,6 +1,11 @@
 <launch>
 
   <arg name="agent" default="1" />
+  <arg name="robot_ns" value="aero$(arg agent)" />
+
+  <!-- URDF -->
+  <arg name="aero_urdf" value="$(find intel_aero_description)/urdf/intel_aero.xacro" />
+  <arg name="xacro_args" value="namespace:=$(arg robot_ns) mavlink_udp_port:=$(arg mavlink_udp_port)" />
 
   <!-- spawn pose -->
   <arg name="x" default="0" />
@@ -9,8 +14,10 @@
   <arg name="R" default="0" />
   <arg name="P" default="0" />
   <arg name="Y" default="0" />
+  <arg name="pos_args" value="-x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)" />
 
   <!-- SITL config -->
+  <arg name="ground_truth"          default="true" />
   <arg name="mavlink_udp_port"      default="14560" />
   <arg name="fcu_url"               default="udp://:14541@localhost:14551" />
   <arg name="interactive"           default="true" />
@@ -18,35 +25,50 @@
   <arg unless="$(arg interactive)"  name="px4_cmd_arg" value=""/>
   <arg if="$(arg interactive)"      name="px4_cmd_arg" value="-d"/>
 
-  <group ns="aero$(arg agent)" >
+  <group ns="$(arg robot_ns)" >
 
     <!-- load intel aero urdf to param -->
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find intel_aero_description)/urdf/intel_aero.xacro namespace:=aero$(arg agent) mavlink_udp_port:=$(arg mavlink_udp_port)" />
+    <param name="robot_description" command="$(find xacro)/xacro -i $(arg aero_urdf) $(arg xacro_args)" />
 
     <!-- spawn Intel Aero -->
-    <node name="spawn_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model intel_aero$(arg agent) -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg R) -P $(arg P) -Y $(arg Y)" />
+    <node name="spawn_model"
+      pkg="gazebo_ros"
+      type="spawn_model"
+      args="-urdf -param robot_description -model $(arg robot_ns) $(arg pos_args)" />
 
     <!-- publish joint states to tf -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="join_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+    <node name="robot_state_publisher"
+      pkg="robot_state_publisher"
+      type="robot_state_publisher" />
+    <node name="join_state_publisher"
+      pkg="joint_state_publisher"
+      type="joint_state_publisher" />
 
     <!-- PX4 SITL -->
-    <node name="aero_sitl_$(arg agent)" pkg="px4" type="px4" output="screen" args="$(find px4) $(arg startup_config) $(arg px4_cmd_arg)" />
+    <node name="$(arg robot_ns)_sitl"
+      pkg="px4"
+      type="px4"
+      output="screen"
+      args="$(find px4) $(arg startup_config) $(arg px4_cmd_arg)" />
 
     <!-- MAVROS -->
-    <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="screen" respawn="false">
+    <node pkg="mavros"
+      type="mavros_node"
+      name="mavros"
+      clear_params="true"
+      output="screen"
+      respawn="false">
       <param name="fcu_url" value="$(arg fcu_url)" />
       <param name="gcs_url" value="" />
       <param name="target_system_id" value="$(arg agent)" />
       <param name="target_component_id" value="1" />
-      <param name="fcu_protocol" value="v2.0" />
 
       <rosparam command="load" file="$(find mavros)/launch/px4_pluginlists.yaml" />
       <rosparam command="load" file="$(find intel_aero_gazebo)/SITL/px4_config_$(arg agent).yaml" />
 
       <!--
-      <param name="global_position/frame_id" value="aero$(arg agent)/map" />
-      <param name="global_position/child_frame_id" value="aero$(arg agent)/base_link" />
+      <param name="global_position/frame_id" value="$(arg robot_ns)/map" />
+      <param name="global_position/child_frame_id" value="$(arg robot_ns)/base_link" />
       -->
     </node>
 
