@@ -79,6 +79,25 @@
       <!--<param name="filter_ground" value="true" />-->
     </node>
 
+    <!-- costmap generation -->
+    <node pkg="costmap_2d"
+      name="costmap_2d"
+      type="costmap_2d_node">
+      <remap from="map" to="projected_map" />
+      <param name="costmap/global_frame" value="$(arg robot_ns)/map" />
+      <param name="costmap/robot_base_frame" value="$(arg robot_ns)/base_link" />
+      <param name="costmap/map_topic" value="projected_map" />
+      <rosparam ns="costmap">
+        transform_tolerance: 0.3
+        update_frequency: 2.0
+        publish_frequency: 1.0
+        inflation_radius: 0.5
+        robot_radius: 0.3
+        static_map: true
+        map_type: costmap
+      </rosparam>
+    </node>
+
   </group>
 
 </launch>
