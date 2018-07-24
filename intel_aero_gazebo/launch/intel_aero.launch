@@ -62,14 +62,21 @@
       <param name="gcs_url" value="" />
       <param name="target_system_id" value="$(arg agent)" />
       <param name="target_component_id" value="1" />
-
       <rosparam command="load" file="$(find mavros)/launch/px4_pluginlists.yaml" />
       <rosparam command="load" file="$(find intel_aero_gazebo)/SITL/px4_config_$(arg agent).yaml" />
+    </node>
 
-      <!--
-      <param name="global_position/frame_id" value="$(arg robot_ns)/map" />
-      <param name="global_position/child_frame_id" value="$(arg robot_ns)/base_link" />
-      -->
+    <!-- mapping using octomap -->
+    <node name="octomap_server"
+      pkg="octomap_server"
+      type="octomap_server_node"
+      output="screen"
+      required="true">
+      <remap from="cloud_in" to="camera/depth/points" />
+      <param name="frame_id" value="$(arg robot_ns)/map" />
+      <param name="base_frame_id" value="$(arg robot_ns)/base_link" />
+      <param name="resolution" value="0.2" />
+      <!--<param name="filter_ground" value="true" />-->
     </node>
 
   </group>
