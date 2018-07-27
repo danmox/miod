@@ -7,16 +7,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   geometry_msgs
   mavros_msgs
-  octomap_server
 )
 
 catkin_package(
-#  INCLUDE_DIRS include
   CATKIN_DEPENDS
     roscpp
     geometry_msgs
     mavros_msgs
-    octomap_server
 )
 
 include_directories(
