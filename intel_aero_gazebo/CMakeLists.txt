@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   geometry_msgs
   mavros_msgs
+  tf
 )
 
 catkin_package(
@@ -14,6 +15,7 @@ catkin_package(
     roscpp
     geometry_msgs
     mavros_msgs
+    tf
 )
 
 include_directories(

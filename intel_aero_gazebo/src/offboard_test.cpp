@@ -5,6 +5,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/HomePosition.h>
+#include <tf/transform_datatypes.h>
 
 mavros_msgs::State current_state;
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
@@ -91,6 +92,7 @@ int main(int argc, char **argv)
   pose.pose.position.x = 0;
   pose.pose.position.y = 0;
   pose.pose.position.z = 2;
+  pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
 
   ros::Time start = ros::Time::now();
   ROS_INFO("Publishing (0,0,2) waypoint command for 10s");
@@ -102,6 +104,7 @@ int main(int argc, char **argv)
 
   start = ros::Time::now();
   pose.pose.position.x = 2;
+  pose.pose.orientation = tf::createQuaternionMsgFromYaw(M_PI/2.0);
   ROS_INFO("Publishing (2,0,2) waypoint command for 10s");
   while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
     local_pos_pub.publish(pose);
@@ -111,6 +114,7 @@ int main(int argc, char **argv)
 
   start = ros::Time::now();
   pose.pose.position.y = 2;
+  pose.pose.orientation = tf::createQuaternionMsgFromYaw(M_PI);
   ROS_INFO("Publishing (2,2,2) waypoint command for 10s");
   while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
     local_pos_pub.publish(pose);
@@ -120,6 +124,7 @@ int main(int argc, char **argv)
 
   start = ros::Time::now();
   pose.pose.position.x = 0;
+  pose.pose.orientation = tf::createQuaternionMsgFromYaw(3.0*M_PI/2.0);
   ROS_INFO("Publishing (0,2,2) waypoint command for 10s");
   while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
     local_pos_pub.publish(pose);
@@ -129,6 +134,7 @@ int main(int argc, char **argv)
 
   start = ros::Time::now();
   pose.pose.position.y = 0;
+  pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
   ROS_INFO("Publishing (0,0,2) waypoint command for 10s");
   while (ros::ok() && !(ros::Time::now() - start > ros::Duration(10.0))) {
     local_pos_pub.publish(pose);

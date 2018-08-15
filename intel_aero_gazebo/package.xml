@@ -11,6 +11,7 @@
   <depend>roscpp</depend>
   <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
+  <depend>tf</depend>
   <exec_depend>octomap_server</exec_depend>
   <exec_depend>costmap_2d</exec_depend>
 
