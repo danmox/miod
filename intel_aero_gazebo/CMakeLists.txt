@@ -24,6 +24,3 @@ include_directories(
 
 add_executable(offboard_test src/offboard_test.cpp)
 target_link_libraries(offboard_test ${catkin_LIBRARIES})
-
-add_executable(navigation_test src/navigation_test.cpp)
-target_link_libraries(navigation_test ${catkin_LIBRARIES})

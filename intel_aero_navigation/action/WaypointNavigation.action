@@ -1,0 +1,5 @@
+geometry_msgs/Pose2D goal
+---
+float32 total_time
+---
+float32 percent_complete

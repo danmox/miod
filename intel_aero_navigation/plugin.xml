@@ -1,0 +1,7 @@
+<library path="lib/libwaypoint_navigation_nodelet">
+  <class name="intel_aero_navigation/WaypointNavigationNodelet" type="intel_aero_navigation::WaypointNavigationNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      A nodelet for doing 2D waypoint navigation
+    </description>
+  </class>
+</library>
