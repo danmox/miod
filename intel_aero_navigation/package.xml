@@ -17,6 +17,7 @@
   <depend>nav_msgs</depend>
   <depend>grid_mapping</depend>
   <depend>nodelet</depend>
+  <depend>tf</depend>
 
   <export>
     <nodelet plugin="${prefix}/plugin.xml" />

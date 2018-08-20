@@ -16,7 +16,7 @@ class WaypointNavigationNodelet : public nodelet::Nodelet
       nh = getNodeHandle();
       pnh = getPrivateNodeHandle();
 
-      nav_ptr.reset(new WaypointNavigation(nh, pnh));
+      nav_ptr.reset(new WaypointNavigation(getName(), nh, pnh));
     }
 };
 

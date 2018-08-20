@@ -9,7 +9,7 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(4);
   spinner.start();
 
-  intel_aero_navigation::WaypointNavigation(nh, pnh);
+  intel_aero_navigation::WaypointNavigation nav(ros::this_node::getName(), nh, pnh);
 
   ros::waitForShutdown();
 

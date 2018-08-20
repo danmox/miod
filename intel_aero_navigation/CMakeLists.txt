@@ -13,6 +13,7 @@ find_package(catkin REQUIRED
   nav_msgs
   grid_mapping
   nodelet
+  tf
 )
 
 add_action_files(
