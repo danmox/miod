@@ -168,33 +168,34 @@ void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 }
 
 
-int costFunction(int width, int start, int goal)
+double euclideanCost(int width, int start, int goal)
 {
   int x1 = start % width;
   int y1 = start / width;
   int x2 = goal % width;
   int y2 = goal / width;
 
-  return abs(x2 - x1) + abs(y2 - y1);
+  return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
 
 // assumes start and goal are inbounds of costmap
-std::vector<int> WaypointNavigation::AStar(geometry_msgs::Pose start_pose, geometry_msgs::Pose goal_pose) const
+std::vector<int> WaypointNavigation::AStar(geometry_msgs::Pose start_pose,
+                                           geometry_msgs::Pose goal_pose) const
 {
-  int start = costmap.positionToIndex(start_pose.position.x, start_pose.position.y);
-  int goal = costmap.positionToIndex(goal_pose.position.x, goal_pose.position.y);
+  int start = costmap.positionToIndex(start_pose.position.x,
+                                      start_pose.position.y);
+  int goal = costmap.positionToIndex(goal_pose.position.x,
+                                     goal_pose.position.y);
 
-  // set up priority queue
-  typedef std::pair<int, int> q_el;
+  typedef std::pair<double, int> q_el;
   std::priority_queue<q_el, std::vector<q_el>, std::greater<q_el>> frontier;
+  std::unordered_map<int, int> came_from;
+  std::unordered_map<int, double> cost_so_far;
 
-  // keep track of cost and previous cell
-  std::unordered_map<int, int> came_from, cost_so_far;
-
-  frontier.emplace(0, start);
+  frontier.emplace(0.0, start);
   came_from.emplace(start, start);
-  cost_so_far.emplace(start, 0);
+  cost_so_far.emplace(start, 0.0);
 
   // perform search
   while (!frontier.empty()) {
@@ -204,14 +205,17 @@ std::vector<int> WaypointNavigation::AStar(geometry_msgs::Pose start_pose, geome
     if (current == goal)
       break;
 
-    for (int next_cell : costmap.fourConnectedNeighborIndices(current)) {
-      int new_cost = cost_so_far[current] + costmap.data[next_cell];
+    for (int next : costmap.neighborIndices(current)) {
+      double movement_cost = euclideanCost(costmap.w, current, next);
+      double obstacle_cost = costmap.data[next];
+      double new_cost = cost_so_far[current] + movement_cost + obstacle_cost;
 
-      if (!cost_so_far.count(next_cell) || new_cost < cost_so_far[next_cell]) {
-        cost_so_far[next_cell] = new_cost;
-        int weight = new_cost + costFunction(costmap.w, next_cell, goal);
-        frontier.emplace(weight, next_cell);
-        came_from[next_cell] = current;
+      if (cost_so_far.count(next) == 0 || new_cost < cost_so_far[next]) {
+        cost_so_far[next] = new_cost;
+        came_from[next] = current;
+
+        double weight = new_cost + euclideanCost(costmap.w, next, goal);
+        frontier.emplace(weight, next);
       }
     }
   }
