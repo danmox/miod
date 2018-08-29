@@ -45,7 +45,7 @@ class WaypointNavigation
     nav_msgs::Odometry::ConstPtr odom;
 
     std::thread takeoff_thread;
-    bool takeoff_complete;
+    bool takeoff_command_issued;
 
     // path of waypoints
     std::vector<geometry_msgs::PoseStamped> path;

@@ -30,8 +30,7 @@ class MavrosUAV
 
     void takeoff(const geometry_msgs::PoseStamped);
     void sendLocalPositionCommand(const geometry_msgs::PoseStamped&);
-    void land(mavros_msgs::CommandTOL& cmd); // srv msgs can't be const
-    mavros_msgs::State getState() { return state; }
+    void land(mavros_msgs::CommandTOL& cmd);
 
     void stateCB(const mavros_msgs::State::ConstPtr&);
     void homeCB(const mavros_msgs::HomePosition::ConstPtr&);

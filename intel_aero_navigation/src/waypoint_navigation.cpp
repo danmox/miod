@@ -15,7 +15,7 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   nav_server(nh_, name, false),
   nh(nh_),
   pnh(pnh_),
-  takeoff_complete(false)
+  takeoff_command_issued(false)
 {
   nav_server.registerGoalCallback(std::bind(&WaypointNavigation::goalCB, this));
   nav_server.registerPreemptCallback(std::bind(&WaypointNavigation::preemptCB, this));
@@ -197,47 +197,34 @@ void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   robot_pose.header.stamp = odom->header.stamp;
   robot_pose.pose = odom->pose.pose;
 
-  // waypoint tracking
+  // no path or path complete; UAV will either do nothing (robot is unarmed)
+  // or it will hover in place at the last completed goal
+  if (!nav_server.isActive()) {
+    aero.sendLocalPositionCommand(goal);
+    return;
+  }
+
+  // if the UAV has not been started takeoff in place
+  if (!takeoff_command_issued) {
+    ROS_INFO("[WaypointNavigation] spawning takeoff thread");
+    takeoff_thread = std::thread(&MavrosUAV::takeoff, aero, *path_it);
+    takeoff_thread.detach();
+    takeoff_command_issued = true;
+  }
 
   geometry_msgs::PoseStamped current_waypoint;
 
-  // follow waypoints if goal is active
-  if (nav_server.isActive() && path_it != path.end()) {
-
-    // if UAV not started, takeoff
-    if (aero.getState().mode != "OFFBOARD" && !takeoff_complete) {
-      ROS_INFO("[WaypointNavigation] state is %s", aero.getState().mode.c_str());
-
-      // join takeoff thread if it has completed
-      if (takeoff_thread.joinable()) {
-        ROS_INFO("[WaypointNavigation] joining takeoff thread");
-        takeoff_thread.join(); // TODO this still blocks :(
-        takeoff_complete = true;
-      } else {
-        ROS_INFO("[WaypointNavigation] starting takeoff thread");
-        takeoff_thread = std::thread(&MavrosUAV::takeoff, aero, *path_it);
-      }
-
-    }
-
-    // check if waypoint has been reached
-    if (distance(robot_pose, *path_it) < waypoint_tol) {
-
-      // advance to next waypoint only if one exists
-      ++path_it;
-      ROS_INFO("[WaypointNavigation] advancing to next waypoint");
-      if (path_it == path.end()) {
-        nav_server.setSucceeded();
-        current_waypoint = goal;
-      }
+  // check if the current waypoint has been reached
+  if (distance(robot_pose, *path_it) < waypoint_tol) {
+    ++path_it;
+    if (path_it == path.end()) {
+      nav_server.setSucceeded();
+      current_waypoint = goal;
     } else {
-      current_waypoint = *path_it;
+      ROS_INFO("[WaypointNavigation] advancing to next waypoint");
     }
-
   } else {
-    // no path or path complete; UAV with either do nothing (robot is unarmed)
-    // or it will hover in place at the last completed goal
-    current_waypoint = goal;
+    current_waypoint = *path_it;
   }
 
   // does nothing if a takeoff command has not be successfully executed
