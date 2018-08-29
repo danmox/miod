@@ -14,6 +14,7 @@ find_package(catkin REQUIRED
   grid_mapping
   nodelet
   tf
+  mavros_msgs
 )
 
 add_action_files(
@@ -41,6 +42,7 @@ catkin_package(
     nav_msgs
     grid_mapping
     nodelet
+    mavros_msgs
 )
 
 include_directories(
@@ -48,7 +50,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(waypoint_navigation src/waypoint_navigation.cpp)
+set(LIB_FILES
+  src/waypoint_navigation.cpp
+  src/mavros_uav.cpp
+)
+
+add_library(waypoint_navigation ${LIB_FILES})
 add_dependencies(waypoint_navigation ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(waypoint_navigation ${catkin_LIBRARIES})
 
