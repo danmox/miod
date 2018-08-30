@@ -41,6 +41,7 @@ class WaypointNavigation
     typedef grid_mapping::Grid<int8_t> Costmap;
     Costmap costmap; // graph for planning (wrapping nav_msgs::OccupancyGrid)
     nav_msgs::OccupancyGrid::ConstPtr ros_costmap_ptr; // costmap from costmap_2d
+    bool processed_costmap;
     geometry_msgs::PoseStamped goal;
     nav_msgs::Odometry::ConstPtr odom;
 
@@ -58,6 +59,7 @@ class WaypointNavigation
     std::vector<int> AStar(const grid_mapping::Point, const grid_mapping::Point) const;
     bool obstacleFree(const std::vector<int>&) const;
     void publishPath(const geometry_msgs::PoseStamped&) const;
+    void planPath(const geometry_msgs::PoseStamped&);
 
   public:
     WaypointNavigation(std::string, ros::NodeHandle, ros::NodeHandle);

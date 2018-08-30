@@ -39,10 +39,57 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
 
 void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
-  std::lock_guard<std::mutex> lock(costmap_mutex);
-  ros_costmap_ptr = msg;
+  {
+    std::lock_guard<std::mutex> lock(costmap_mutex);
+    ros_costmap_ptr = msg;
+    processed_costmap = false;
+  }
 
-  // TODO perform obstacle detection
+  if (!nav_server.isActive())
+    return;
+
+  // fetch current pose of robot
+  geometry_msgs::PoseStamped robot_pose;
+  {
+    std::lock_guard<std::mutex> lock(odom_mutex);
+    robot_pose.header.frame_id = odom->header.frame_id;
+    robot_pose.header.stamp = odom->header.stamp;
+    robot_pose.pose = odom->pose.pose;
+  }
+
+  // lock remainder of thread for costmap use
+  std::lock_guard<std::mutex> lock(costmap_mutex);
+
+  // process saved costmap
+  costmap = Costmap(ros_costmap_ptr); // costmap.insertMap? see comment below
+  processed_costmap = true;
+
+  // TODO if goalCB expanded the costmap to plan to the goal then the above
+  // processing of ros_costmap_ptr will likely have undone this expansion. The
+  // consequence is that now the goal and parts of the path are out of bounds of
+  // the current costmap and the following obstacle detection steps could result
+  // in and error.
+
+  // check current path for collisions (locked due to costmap access)
+
+  std::vector<int> check_pts;
+  check_pts.push_back(costmap.positionToIndex(robot_pose));
+  for (auto pt : path)
+    check_pts.push_back(costmap.positionToIndex(pt));
+
+  bool obstacle_free = true;
+  for (auto it = check_pts.begin()+1; it != check_pts.end(); ++it) {
+    if (!obstacleFree(costmap.rayCast(*(it-1), *it))) {
+      obstacle_free = false;
+      break;
+    }
+  }
+
+  if (obstacle_free)
+    return;
+
+  ROS_INFO("[WaypointNavigation] collision detected! replanning path");
+  planPath(robot_pose);
 }
 
 
@@ -72,12 +119,6 @@ void WaypointNavigation::goalCB()
     return;
   }
 
-  // convert stored costmap to grid_mapping::Grid
-  {
-    std::lock_guard<std::mutex> lock(costmap_mutex);
-    costmap = Costmap(ros_costmap_ptr);
-  }
-
   // fetch current pose of robot
   geometry_msgs::PoseStamped robot_pose;
   {
@@ -87,6 +128,21 @@ void WaypointNavigation::goalCB()
     robot_pose.pose = odom->pose.pose;
   }
 
+  // lock remainder of thread for costmap use
+  std::lock_guard<std::mutex> lock(costmap_mutex);
+
+  if (!processed_costmap) {
+    costmap = Costmap(ros_costmap_ptr);
+    processed_costmap = true;
+  }
+
+  planPath(robot_pose);
+}
+
+// must process costmap before calling this function and have costmap_mutex held
+// in the calling thread
+void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
+{
   // robot pose (odom) not in costmap: e.g. this could happen if the robot moves
   // away from it's initial position but no obstacles have been encountered and
   // thus the costmap is still empty
@@ -106,6 +162,11 @@ void WaypointNavigation::goalCB()
     grid_mapping::Point new_origin = grid_mapping::min(goal, costmap.origin);
     grid_mapping::Point new_top_corner = grid_mapping::max(goal, costmap.topCorner());
     costmap.expandMap(new_origin, new_top_corner);
+
+    // TODO expanded cells are initialized as unknown? so in this new map the
+    // goal is now a cell with value 50; this will cause issues with planning. A
+    // better solution might be to have new cells initialized to 0 or free for
+    // costmap planning purposes.
   }
 
   // plan path with A*
