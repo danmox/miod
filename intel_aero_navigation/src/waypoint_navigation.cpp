@@ -26,10 +26,15 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
              "default value of \"map\"");
     path_frame_id = "map";
   }
-  if (!pnh.getParam("waypoint_tolerance", waypoint_tol)) {
+  if (!pnh.getParam("position_tol", waypoint_tol)) {
     waypoint_tol = 0.2;
-    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"waypoint_tol\" "
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"position_tol\" "
              "using default value of %.2fm", waypoint_tol);
+  }
+  if (!pnh.getParam("yaw_tol", yaw_tol)) {
+    yaw_tol = 0.2;
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"yaw_tol\" "
+             "using default value of %.2fm", yaw_tol);
   }
 
   costmap_sub = nh.subscribe("costmap", 10, &WaypointNavigation::costmapCB, this);
@@ -156,14 +161,10 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
     grid_mapping::Point new_origin = grid_mapping::min(goal, costmap.origin);
     grid_mapping::Point new_top_corner = grid_mapping::max(goal, costmap.topCorner());
     costmap.expandMap(new_origin, new_top_corner);
-
-    // TODO expanded cells are initialized as unknown? so in this new map the
-    // goal is now a cell with value 50; this will cause issues with planning. A
-    // better solution might be to have new cells initialized to 0 or free for
-    // costmap planning purposes.
   }
 
   // plan path with A*
+  // TODO what if goal is in occupied space?
   std::vector<int> path_indices = AStar(robot_pose, goal);
 
   // add current robot pose (with goal z) to path as first point
@@ -188,13 +189,15 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
     grid_mapping::Point next_point = costmap.indexToPosition(*next_index);
     double yaw = atan2(next_point.y - curr_point.y, next_point.x - curr_point.x);
 
-    geometry_msgs::PoseStamped waypoint;
-    waypoint.header.frame_id = path_frame_id;
-    waypoint.header.stamp = ros::Time::now();
+    // waypoint to align quad heading with trajectory (spin to face along traj)
+    geometry_msgs::PoseStamped waypoint = path.back();
+    waypoint.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+    path.push_back(waypoint);
+
+    // position waypoint
     waypoint.pose.position.x = next_point.x;
     waypoint.pose.position.y = next_point.y;
     waypoint.pose.position.z = goal.pose.position.z;
-    waypoint.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
     path.push_back(waypoint);
 
     curr_index = next_index+1;
@@ -239,6 +242,20 @@ double distance(const geometry_msgs::PoseStamped& p1,
 }
 
 
+double headingError(const geometry_msgs::PoseStamped& p1,
+                    const geometry_msgs::PoseStamped& p2)
+{
+  double yaw1 = tf::getYaw(p1.pose.orientation);
+  double yaw2 = tf::getYaw(p2.pose.orientation);
+  double error = yaw2 - yaw1;
+  if (error > 2.0*M_PI)
+    return error - 2.0*M_PI;
+  if (error < -2.0*M_PI)
+    return error + 2.0*M_PI;
+  return error;
+}
+
+
 void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 {
   {
@@ -268,13 +285,12 @@ void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   geometry_msgs::PoseStamped current_waypoint;
 
   // check if the current waypoint has been reached
-  if (distance(robot_pose, *path_it) < waypoint_tol) {
+  if (distance(robot_pose, *path_it) < waypoint_tol &&
+      headingError(robot_pose, *path_it) < yaw_tol) {
     ++path_it;
     if (path_it == path.end()) {
       nav_server.setSucceeded();
       current_waypoint = goal;
-    } else {
-      ROS_INFO("[WaypointNavigation] advancing to next waypoint");
     }
   } else {
     current_waypoint = *path_it;

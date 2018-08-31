@@ -106,7 +106,10 @@
           output="screen">
       <remap from="costmap" to="costmap_2d/costmap/costmap" />
       <remap from="odom" to="mavros/local_position/odom" />
+
       <param name="path_frame_id" value="$(arg robot_ns)/map" />
+      <param name="position_tol"  value="0.2" />
+      <param name="yaw_tol"       value="0.2" />
     </node>
 
   </group>

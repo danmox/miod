@@ -31,7 +31,7 @@ class WaypointNavigation
 
     // parameters
     std::string path_frame_id;
-    double waypoint_tol;
+    double waypoint_tol, yaw_tol;
 
     ros::NodeHandle nh, pnh;
     ros::Subscriber costmap_sub, odom_sub;
