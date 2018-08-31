@@ -10,7 +10,7 @@ namespace intel_aero_navigation {
 
 
 WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ros::NodeHandle pnh_):
-  costmap(grid_mapping::Point(0.0, 0.0), 0.1, 1, 1),
+  costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1),
   aero(nh_, pnh_),
   nav_server(nh_, name, false),
   nh(nh_),
@@ -61,14 +61,8 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
   // process saved costmap
-  costmap = Costmap(ros_costmap_ptr); // costmap.insertMap? see comment below
+  costmap.insertMap(ros_costmap_ptr);
   processed_costmap = true;
-
-  // TODO if goalCB expanded the costmap to plan to the goal then the above
-  // processing of ros_costmap_ptr will likely have undone this expansion. The
-  // consequence is that now the goal and parts of the path are out of bounds of
-  // the current costmap and the following obstacle detection steps could result
-  // in and error.
 
   // check current path for collisions (locked due to costmap access)
 
@@ -132,7 +126,7 @@ void WaypointNavigation::goalCB()
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
   if (!processed_costmap) {
-    costmap = Costmap(ros_costmap_ptr);
+    costmap.insertMap(ros_costmap_ptr);
     processed_costmap = true;
   }
 
@@ -147,7 +141,7 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
   // away from it's initial position but no obstacles have been encountered and
   // thus the costmap is still empty
   if (!costmap.inBounds(robot_pose)) {
-    ROS_INFO("[WaypointNavigation] odom out of bounds of costmap: setting "
+    ROS_WARN("[WaypointNavigation] odom out of bounds of costmap: setting "
              "straight line path to goal");
     path.clear();
     path.push_back(goal);
@@ -170,7 +164,6 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
   }
 
   // plan path with A*
-  ROS_INFO("[WaypointNavigation] planning path through costmap with A*");
   std::vector<int> path_indices = AStar(robot_pose, goal);
 
   // add current robot pose (with goal z) to path as first point
@@ -180,7 +173,6 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
   path.push_back(first_waypoint);
 
   // prune A* path down to minimal set of points
-  ROS_INFO("[WaypointNavigation] pruning path down to minimal set of points");
   auto curr_index = path_indices.begin();
   while (curr_index != path_indices.end()) {
     auto next_index = curr_index;
