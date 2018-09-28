@@ -34,6 +34,7 @@
     <node name="spawn_model"
           pkg="gazebo_ros"
           type="spawn_model"
+          output="screen"
           args="-urdf -param robot_description -model $(arg robot_ns) $(arg pos_args)" />
 
     <!-- publish joint states to tf -->
@@ -75,8 +76,8 @@
       <remap from="cloud_in" to="camera/depth/points" />
       <param name="frame_id" value="$(arg robot_ns)/map" />
       <param name="base_frame_id" value="$(arg robot_ns)/base_link" />
-      <param name="resolution" value="0.2" />
-      <!--<param name="filter_ground" value="true" />-->
+      <param name="resolution" value="0.5" />
+      <param name="pointcloud_min_z" value="1.0" />
     </node>
 
     <!-- costmap generation -->
@@ -91,8 +92,8 @@
         transform_tolerance: 0.3
         update_frequency: 2.0
         publish_frequency: 1.0
-        inflation_radius: 0.5
-        robot_radius: 0.3
+        inflation_radius: 1.0
+        robot_radius: 1.0
         static_map: true
         always_send_full_costmap: true
         map_type: costmap

@@ -3,12 +3,12 @@
   <!-- gazebo args -->
   <arg name="gazebo_gui"    default="false" />
   <arg name="rviz"          default="true" />
-  <arg name="world"         default="$(find mrsl_quadrotor_description)/worlds/iros2017_corridor.world" />
+  <arg name="world"         default="$(find intel_aero_gazebo)/worlds/terrain.world" />
   <arg name="verbose"       default="false" />
   <arg name="paused"        default="false" />
   <arg name="gazebo_debug"  default="false" />
 
-  <!-- launch gazebo with pile of rubble -->
+  <!-- launch gazebo -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="gui"         value="$(arg gazebo_gui)" />
     <arg name="world_name"  value="$(arg world)" />
