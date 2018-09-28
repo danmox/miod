@@ -44,6 +44,8 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
 
 void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
+  static bool processed_first_map = false; // set resolution from first map
+
   {
     std::lock_guard<std::mutex> lock(costmap_mutex);
     ros_costmap_ptr = msg;
@@ -66,6 +68,10 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
   // process saved costmap
+  if (!processed_first_map) {
+    costmap.resolution = ros_costmap_ptr->info.resolution;
+    processed_first_map = true;
+  }
   costmap.insertMap(ros_costmap_ptr);
   processed_costmap = true;
 
@@ -130,7 +136,7 @@ void WaypointNavigation::goalCB()
   // lock remainder of thread for costmap use
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
-  if (!processed_costmap) {
+  if (!processed_costmap && ros_costmap_ptr) {
     costmap.insertMap(ros_costmap_ptr);
     processed_costmap = true;
   }
