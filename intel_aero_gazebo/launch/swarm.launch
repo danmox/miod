@@ -8,6 +8,11 @@
   <arg name="paused"        default="false" />
   <arg name="gazebo_debug"  default="false" />
 
+  <!-- robot args -->
+  <arg name="robot_radius"       default="1.0"/>
+  <arg name="inflation_radius"   default="1.0"/>
+  <arg name="octomap_resolution" default="0.5"/>
+
   <!-- launch gazebo -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="gui"         value="$(arg gazebo_gui)" />
@@ -26,15 +31,41 @@
 
   <!-- robot 1 -->
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="agent"             value="1" />
+    <arg name="agent"              value="1" />
+    <arg name="x"                  value="2" />
+    <arg name="y"                  value="0" />
+    <arg name="z"                  value="0" />
+    <arg name="mavlink_udp_port"   value="14561" />
+    <arg name="fcu_url"            value="udp://:14541@localhost:14551" />
+    <arg name="robot_radius"       value="$(arg robot_radius)"/>
+    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
+    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
+  </include>
+
+  <!-- robot 2
+  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
+    <arg name="agent"             value="2" />
     <arg name="x"                 value="2" />
     <arg name="y"                 value="0" />
     <arg name="z"                 value="0" />
     <arg name="R"                 value="0" />
     <arg name="P"                 value="0" />
     <arg name="Y"                 value="0" />
-    <arg name="mavlink_udp_port"  value="14561" />
-    <arg name="fcu_url"           value="udp://:14541@localhost:14551" />
+    <arg name="mavlink_udp_port"  value="14661" />
+    <arg name="fcu_url"           value="udp://:14541@localhost:14651" />
   </include>
-
+ -->
+  <!-- robot 3
+  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
+    <arg name="agent"             value="3" />
+    <arg name="x"                 value="0" />
+    <arg name="y"                 value="2" />
+    <arg name="z"                 value="0" />
+    <arg name="R"                 value="0" />
+    <arg name="P"                 value="0" />
+    <arg name="Y"                 value="0" />
+    <arg name="mavlink_udp_port"  value="14761" />
+    <arg name="fcu_url"           value="udp://:14541@localhost:14751" />
+  </include>
+ -->
 </launch>
