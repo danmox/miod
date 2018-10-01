@@ -196,6 +196,7 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
     double yaw = atan2(next_point.y - curr_point.y, next_point.x - curr_point.x);
 
     // waypoint to align quad heading with trajectory (spin to face along traj)
+    // TODO: only create this intermmediate waypoint if the current heading is way different
     geometry_msgs::PoseStamped waypoint = path.back();
     waypoint.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
     path.push_back(waypoint);

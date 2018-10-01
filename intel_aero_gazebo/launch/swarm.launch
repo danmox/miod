@@ -27,12 +27,12 @@
     name="rviz"
     pkg="rviz"
     type="rviz"
-    args="-d $(find intel_aero_gazebo)/rviz/swarm.rviz" />
+    args="-d $(find intel_aero_gazebo)/rviz/swarm3.rviz"/>
 
   <!-- robot 1 -->
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="agent"              value="1" />
-    <arg name="x"                  value="2" />
+    <arg name="id"                 value="1" />
+    <arg name="x"                  value="0" />
     <arg name="y"                  value="0" />
     <arg name="z"                  value="0" />
     <arg name="mavlink_udp_port"   value="14561" />
@@ -42,30 +42,34 @@
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
   </include>
 
-  <!-- robot 2
+  <!-- robot 2 -->
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="agent"             value="2" />
-    <arg name="x"                 value="2" />
-    <arg name="y"                 value="0" />
-    <arg name="z"                 value="0" />
-    <arg name="R"                 value="0" />
-    <arg name="P"                 value="0" />
-    <arg name="Y"                 value="0" />
-    <arg name="mavlink_udp_port"  value="14661" />
-    <arg name="fcu_url"           value="udp://:14541@localhost:14651" />
+    <arg name="id"                 value="2" />
+    <arg name="x"                  value="0" />
+    <arg name="y"                  value="2" />
+    <arg name="z"                  value="0" />
+    <arg name="mavlink_udp_port"   value="14661" />
+    <arg name="fcu_url"            value="udp://:14641@localhost:14651" />
+    <arg name="robot_radius"       value="$(arg robot_radius)"/>
+    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
+    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
   </include>
- -->
-  <!-- robot 3
+  <node pkg="tf2_ros" type="static_transform_publisher" name="aero2_broadcaster"
+        args="0 2 0 0 0 0 aero1/map aero2/map"/>
+
+  <!-- robot 3 -->
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="agent"             value="3" />
-    <arg name="x"                 value="0" />
-    <arg name="y"                 value="2" />
-    <arg name="z"                 value="0" />
-    <arg name="R"                 value="0" />
-    <arg name="P"                 value="0" />
-    <arg name="Y"                 value="0" />
-    <arg name="mavlink_udp_port"  value="14761" />
-    <arg name="fcu_url"           value="udp://:14541@localhost:14751" />
+    <arg name="id"                 value="3" />
+    <arg name="x"                  value="0" />
+    <arg name="y"                  value="4" />
+    <arg name="z"                  value="0" />
+    <arg name="mavlink_udp_port"   value="14761" />
+    <arg name="fcu_url"            value="udp://:14741@localhost:14751" />
+    <arg name="robot_radius"       value="$(arg robot_radius)"/>
+    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
+    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
   </include>
- -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="aero3_broadcaster"
+        args="0 4 0 0 0 0 aero1/map aero3/map"/>
+
 </launch>
