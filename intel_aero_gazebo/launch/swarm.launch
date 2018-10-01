@@ -9,6 +9,10 @@
   <arg name="gazebo_debug"  default="false" />
 
   <!-- robot args -->
+  <arg name="static_map"         default="false"/>
+  <arg name="static_map_file"    if="$(arg static_map)"     default="$(find intel_aero_gazebo)/maps/terrain_no_ground.bt"/>
+  <arg name="static_map_topic"   if="$(arg static_map)"     value="/projected_map"/>
+  <arg name="static_map_topic"   unless="$(arg static_map)" value="projected_map"/>
   <arg name="robot_radius"       default="1.0"/>
   <arg name="inflation_radius"   default="1.0"/>
   <arg name="octomap_resolution" default="0.5"/>
@@ -21,6 +25,16 @@
     <arg name="paused"      value="$(arg paused)" />
     <arg name="debug"       value="$(arg gazebo_debug)" />
   </include>
+
+  <!-- if enabled, load saved octomap -->
+  <node if="$(arg static_map)"
+        pkg="octomap_server"
+        type="octomap_server_node"
+        name="static_map_node"
+        args="$(arg static_map_file)">
+    <remap from="projected_map" to="$(arg static_map_topic)"/>
+    <param name="frame_id" value="aero1/map"/>
+  </node>
 
   <!-- image and camera vizualization -->
   <node if="$(arg rviz)"
@@ -40,6 +54,8 @@
     <arg name="robot_radius"       value="$(arg robot_radius)"/>
     <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
+    <arg name="static_map"         value="$(arg static_map)"/>
+    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
   </include>
 
   <!-- robot 2 -->
@@ -53,6 +69,8 @@
     <arg name="robot_radius"       value="$(arg robot_radius)"/>
     <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
+    <arg name="static_map"         value="$(arg static_map)"/>
+    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
   </include>
   <node pkg="tf2_ros" type="static_transform_publisher" name="aero2_broadcaster"
         args="0 2 0 0 0 0 aero1/map aero2/map"/>
@@ -68,6 +86,8 @@
     <arg name="robot_radius"       value="$(arg robot_radius)"/>
     <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
+    <arg name="static_map"         value="$(arg static_map)"/>
+    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
   </include>
   <node pkg="tf2_ros" type="static_transform_publisher" name="aero3_broadcaster"
         args="0 4 0 0 0 0 aero1/map aero3/map"/>

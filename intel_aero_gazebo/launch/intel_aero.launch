@@ -1,10 +1,15 @@
 <launch>
 
-  <arg name="id" default="1" />
-  <arg name="robot_ns" value="aero$(arg id)" />
-  <arg name="robot_radius" default="1.0"/>
-  <arg name="inflation_radius" default="0.2"/>
+  <arg name="id"                 default="1" />
+  <arg name="robot_radius"       default="1.0"/>
+  <arg name="inflation_radius"   default="0.2"/>
   <arg name="octomap_resolution" default="0.2"/>
+  <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
+  <arg name="static_map_topic"   default="projected_map"/>
+
+  <arg name="costmap_rate" if="$(arg static_map)"     value="0.1"/>
+  <arg name="costmap_rate" unless="$(arg static_map)" value="2.0"/>
+  <arg name="robot_ns"     value="aero$(arg id)" />
 
   <!-- URDF -->
   <arg name="aero_urdf" value="$(find intel_aero_description)/urdf/intel_aero.xacro" />
@@ -76,7 +81,8 @@
     </node>
 
     <!-- mapping using octomap -->
-    <node name="octomap_server"
+    <node unless="$(arg static_map)"
+          name="octomap_server"
           pkg="octomap_server"
           type="octomap_server_node"
           required="true">
@@ -91,16 +97,15 @@
     <node pkg="costmap_2d"
           name="costmap_2d"
           type="costmap_2d_node">
-      <remap from="map" to="projected_map" />
-      <param name="costmap/global_frame"     value="$(arg robot_ns)/map" />
-      <param name="costmap/robot_base_frame" value="$(arg robot_ns)/base_link" />
-      <param name="costmap/map_topic"        value="projected_map" />
-      <param name="inflation_radius"         value="$(arg inflation_radius)"/>
-      <param name="robot_radius"             value="$(arg robot_radius)"/>
+      <param name="costmap/global_frame"      value="$(arg robot_ns)/map" />
+      <param name="costmap/robot_base_frame"  value="$(arg robot_ns)/base_link" />
+      <param name="costmap/map_topic"         value="$(arg static_map_topic)" />
+      <param name="costmap/inflation_radius"  value="$(arg inflation_radius)"/>
+      <param name="costmap/robot_radius"      value="$(arg robot_radius)"/>
+      <param name="costmap/publish_frequency" value="$(arg costmap_rate)"/>
       <rosparam ns="costmap">
         transform_tolerance: 0.3
         update_frequency: 2.0
-        publish_frequency: 2.0
         static_map: true
         always_send_full_costmap: true
         map_type: costmap
