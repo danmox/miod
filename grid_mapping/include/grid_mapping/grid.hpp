@@ -4,6 +4,7 @@
 
 #include "grid_mapping/grid.h"
 #include <ros/ros.h>
+#include <algorithm>
 
 
 namespace grid_mapping {
@@ -89,7 +90,13 @@ template <class T>
 void Grid<T>::insertMap(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
   Grid<T> in(msg);
+  insertMap(in);
+}
 
+
+template <class T>
+void Grid<T>::insertMap(const Grid<T>& in)
+{
   // ensure current map spans input map
   if (!inBounds(in.origin) || !inBounds(in.topCorner()))
     expandMap(in.origin, in.topCorner());
@@ -104,13 +111,15 @@ nav_msgs::OccupancyGrid Grid<T>::createROSMsg() const
 {
   nav_msgs::OccupancyGrid msg;
   msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = frame_id;
   msg.info.resolution = resolution;
   msg.info.width = w;
   msg.info.height = h;
   msg.info.origin.position.x = origin.x;
   msg.info.origin.position.y = origin.y;
   msg.data.resize(data.size());
-  msg.data.insert(msg.data.begin(), data.begin(), data.end());
+  std::transform(data.begin(), data.end(), msg.data.begin(),
+                 [](T a){return static_cast<int8_t>(a);});
 
   return msg;
 }

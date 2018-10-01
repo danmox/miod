@@ -28,6 +28,7 @@ class Grid : public GridBase
 
     void expandMap(const Point, const Point);
     void insertMap(const nav_msgs::OccupancyGrid::ConstPtr&);
+    void insertMap(const Grid<T>&);
 
     nav_msgs::OccupancyGrid createROSMsg() const;
 
