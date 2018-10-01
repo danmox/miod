@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /aero1 model1/Links1
       Splitter Ratio: 0.5
     Tree Height: 1084
   - Class: rviz/Selection
@@ -69,7 +68,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /viz
+      Marker Topic: /network_visualization
       Name: network
       Namespaces:
         {}
@@ -80,67 +79,13 @@ Visualization Manager:
       Collision Enabled: false
       Enabled: true
       Links:
-        All Links Enabled: false
+        All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        aero1/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/base_link_inertia:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero1/camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: false
-        aero1/camera_rgb_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/camera_rgb_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero1/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero1/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero1/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero1/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: aero1 model
-      Robot Description: aero1/robot_description
+      Robot Description: /aero1/robot_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
@@ -160,34 +105,6 @@ Visualization Manager:
       Topic: /aero1/mavros/setpoint_position/local
       Unreliable: false
       Value: true
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: map
-      Draw Behind: false
-      Enabled: false
-      Name: aero1 proj map
-      Topic: /aero1/projected_map
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
-    - Class: rviz/MarkerArray
-      Enabled: false
-      Marker Topic: /aero1/occupied_cells_vis_array
-      Name: aero1 octomap
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: false
-      Name: aero1 costmap
-      Topic: /aero1/costmap_2d/costmap/costmap
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -221,62 +138,8 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        aero2/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/base_link_inertia:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/camera_rgb_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_rgb_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: aero2 model
-      Robot Description: aero2/robot_description
+      Robot Description: /aero2/robot_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
@@ -296,34 +159,6 @@ Visualization Manager:
       Topic: /aero2/mavros/setpoint_position/local
       Unreliable: false
       Value: true
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: map
-      Draw Behind: false
-      Enabled: false
-      Name: aero2 proj map
-      Topic: /aero2/projected_map
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
-    - Class: rviz/MarkerArray
-      Enabled: false
-      Marker Topic: /aero2/occupied_cells_vis_array
-      Name: aero2 octomap
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: false
-      Name: aero2 costmap
-      Topic: /aero2/costmap_2d/costmap/costmap
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -357,62 +192,8 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        aero3/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/base_link_inertia:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/camera_rgb_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_rgb_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: aero3 model
-      Robot Description: aero3/robot_description
+      Robot Description: /aero3/robot_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
@@ -432,34 +213,6 @@ Visualization Manager:
       Topic: /aero3/mavros/setpoint_position/local
       Unreliable: false
       Value: true
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: map
-      Draw Behind: false
-      Enabled: false
-      Name: aero3 proj map
-      Topic: /aero3/projected_map
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
-    - Class: rviz/MarkerArray
-      Enabled: false
-      Marker Topic: /aero3/occupied_cells_vis_array
-      Name: aero3 octomap
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: false
-    - Alpha: 0.699999988
-      Class: rviz/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: false
-      Name: aero3 costmap
-      Topic: /aero3/costmap_2d/costmap/costmap
-      Unreliable: false
-      Use Timestamp: false
-      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -481,6 +234,114 @@ Visualization Manager:
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
       Topic: /aero3/path
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: aero4 model
+      Robot Description: /aero4/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Axes Length: 0.25
+      Axes Radius: 0.0500000007
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
+      Name: aero4 pos cmd
+      Shaft Length: 1
+      Shaft Radius: 0.0500000007
+      Shape: Axes
+      Topic: /aero4/mavros/setpoint_position/local
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Head Diameter: 0.300000012
+      Head Length: 0.200000003
+      Length: 0.300000012
+      Line Style: Lines
+      Line Width: 0.0299999993
+      Name: aero4 path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.0299999993
+      Shaft Diameter: 0.100000001
+      Shaft Length: 0.100000001
+      Topic: /aero4/path
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: aero5 model
+      Robot Description: /aero5/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Axes Length: 0.25
+      Axes Radius: 0.0500000007
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.300000012
+      Head Radius: 0.100000001
+      Name: aero5 pos cmd
+      Shaft Length: 1
+      Shaft Radius: 0.0500000007
+      Shape: Axes
+      Topic: /aero5/mavros/setpoint_position/local
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Head Diameter: 0.300000012
+      Head Length: 0.200000003
+      Length: 0.300000012
+      Line Style: Lines
+      Line Width: 0.0299999993
+      Name: aero4 path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.0299999993
+      Shaft Diameter: 0.100000001
+      Shaft Length: 0.100000001
+      Topic: /aero5/path
       Unreliable: false
       Value: true
   Enabled: true
@@ -508,25 +369,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 47.0107727
+      Distance: 102.152214
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 11.5564928
-        Y: -7.56588268
-        Z: -5.05242682
+        X: 58.5817986
+        Y: -10.1209898
+        Z: -17.1442013
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.759797215
-      Target Frame: aero1/map
+      Pitch: 0.724797308
+      Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 2.57164741
+      Yaw: 1.90664732
     Saved: ~
 Window Geometry:
   Displays:
