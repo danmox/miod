@@ -13,6 +13,7 @@
   <arg name="static_map_file"    if="$(arg static_map)"     default="$(find intel_aero_gazebo)/maps/terrain_no_ground.bt"/>
   <arg name="static_map_topic"   if="$(arg static_map)"     value="/projected_map"/>
   <arg name="static_map_topic"   unless="$(arg static_map)" value="projected_map"/>
+  <arg name="world_frame"        default="world"/>
   <arg name="robot_radius"       default="1.0"/>
   <arg name="inflation_radius"   default="1.0"/>
   <arg name="octomap_resolution" default="0.5"/>
@@ -33,7 +34,7 @@
         name="static_map_node"
         args="$(arg static_map_file)">
     <remap from="projected_map" to="$(arg static_map_topic)"/>
-    <param name="frame_id" value="aero1/map"/>
+    <param name="frame_id" value="$(arg world_frame)"/>
   </node>
 
   <!-- image and camera vizualization -->
@@ -56,6 +57,7 @@
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
     <arg name="static_map"         value="$(arg static_map)"/>
     <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
+    <arg name="world_frame"        value="$(arg world_frame)"/>
   </include>
 
   <!-- robot 2 -->
@@ -71,9 +73,8 @@
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
     <arg name="static_map"         value="$(arg static_map)"/>
     <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
+    <arg name="world_frame"        value="$(arg world_frame)"/>
   </include>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="aero2_broadcaster"
-        args="0 2 0 0 0 0 aero1/map aero2/map"/>
 
   <!-- robot 3 -->
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
@@ -88,8 +89,7 @@
     <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
     <arg name="static_map"         value="$(arg static_map)"/>
     <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
+    <arg name="world_frame"        value="$(arg world_frame)"/>
   </include>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="aero3_broadcaster"
-        args="0 4 0 0 0 0 aero1/map aero3/map"/>
 
 </launch>

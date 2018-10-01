@@ -1,6 +1,8 @@
 #include <intel_aero_navigation/waypoint_navigation.h>
 #include <nav_msgs/Path.h>
-#include <tf/transform_datatypes.h>
+#include <geometry_msgs/Pose.h>
+#include <tf2/utils.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <queue>
 #include <unordered_map>
 #include <iostream>
@@ -11,6 +13,7 @@ namespace intel_aero_navigation {
 
 WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ros::NodeHandle pnh_):
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1),
+  tf2_listener(tf2_buff),
   aero(nh_, pnh_),
   nav_server(nh_, name, false),
   nh(nh_),
@@ -21,11 +24,22 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   nav_server.registerPreemptCallback(std::bind(&WaypointNavigation::preemptCB, this));
   nav_server.start();
 
-  if (!pnh.getParam("path_frame_id", path_frame_id)) {
-    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"frame_id\" using"
-             "default value of \"map\"");
-    path_frame_id = "map";
+  if (!pnh.getParam("costmap_frame", costmap_frame)) {
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"costmap_frame\" "
+             "using default value of \"map\"");
+    world_frame = "map";
   }
+  if (!pnh.getParam("world_frame", world_frame)) {
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"world_frame\" "
+             "using default value of \"map\"");
+    world_frame = "world";
+  }
+  if (!pnh.getParam("local_frame", local_frame)) {
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"local_frame\" "
+             "using default value of \"map\"");
+    local_frame = "map";
+  }
+  costmap.frame_id = local_frame;
   if (!pnh.getParam("position_tol", waypoint_tol)) {
     waypoint_tol = 0.2;
     ROS_WARN("[WaypointNavigation] failed to fetch parameter \"position_tol\" "
@@ -40,6 +54,24 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   costmap_sub = nh.subscribe("costmap", 10, &WaypointNavigation::costmapCB, this);
   odom_sub = nh.subscribe("odom", 10, &WaypointNavigation::odomCB, this);
   path_pub = nh.advertise<nav_msgs::Path>("path", 10);
+
+  // cache transforms needed to convert between local, world and costmap frames
+  ROS_INFO("[WaypointNavigation] waiting for transforms to be available");
+  ros::Rate rate(1);
+  bool transforms_cached = false;
+  while (!transforms_cached) {
+    try {
+      ros::Time t0(0);
+      world_to_local = tf2_buff.lookupTransform(local_frame, world_frame, t0);
+      costmap_to_local = tf2_buff.lookupTransform(local_frame, costmap_frame, t0);
+      transforms_cached = true;
+      ROS_INFO("[WaypointNavigation] cached transforms");
+    } catch (tf2::TransformException &ex) {
+      ROS_WARN("[WaypointNavigation] %s", ex.what());
+    }
+    ros::spinOnce();
+    rate.sleep();
+  }
 }
 
 void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
@@ -50,6 +82,12 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
     std::lock_guard<std::mutex> lock(costmap_mutex);
     ros_costmap_ptr = msg;
     processed_costmap = false;
+  }
+
+  // set resolution from received map
+  if (!processed_first_map) {
+    costmap.resolution = ros_costmap_ptr->info.resolution;
+    processed_first_map = true;
   }
 
   if (!nav_server.isActive())
@@ -67,20 +105,21 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   // lock remainder of thread for costmap use
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
-  // process saved costmap
-  if (!processed_first_map) {
-    costmap.resolution = ros_costmap_ptr->info.resolution;
-    processed_first_map = true;
-  }
-  costmap.insertMap(ros_costmap_ptr);
+  // process costmap, shifting it into the local frame
+  geometry_msgs::Pose origin;
+  tf2::doTransform(ros_costmap_ptr->info.origin, origin, costmap_to_local);
+  Costmap in_map(ros_costmap_ptr);
+  in_map.origin = grid_mapping::Point(origin.position.x, origin.position.y);
+  costmap.insertMap(in_map);
   processed_costmap = true;
 
   // check current path for collisions (locked due to costmap access)
 
   std::vector<int> check_pts;
   check_pts.push_back(costmap.positionToIndex(robot_pose));
-  for (auto pt : path)
-    check_pts.push_back(costmap.positionToIndex(pt));
+  for (auto path_pose : path) {
+    check_pts.push_back(costmap.positionToIndex(path_pose));
+  }
 
   bool obstacle_free = true;
   for (auto it = check_pts.begin()+1; it != check_pts.end(); ++it) {
@@ -106,9 +145,10 @@ void WaypointNavigation::goalCB()
     nav_server.setAborted();
   }
 
-  goal.header.frame_id = path_frame_id;
+  goal.header.frame_id = local_frame;
   goal.header.stamp = ros::Time::now();
   goal.pose = (nav_server.acceptNewGoal())->goal;
+  tf2::doTransform(goal, goal, world_to_local);
   ROS_INFO("[WaypointNavigation] accepted new goal");
 
   if (nav_server.isPreemptRequested()) {
@@ -137,7 +177,11 @@ void WaypointNavigation::goalCB()
   std::lock_guard<std::mutex> lock(costmap_mutex);
 
   if (!processed_costmap && ros_costmap_ptr) {
-    costmap.insertMap(ros_costmap_ptr);
+    geometry_msgs::Pose origin;
+    tf2::doTransform(ros_costmap_ptr->info.origin, origin, costmap_to_local);
+    Costmap in_map(ros_costmap_ptr);
+    in_map.origin = grid_mapping::Point(origin.position.x, origin.position.y);
+    costmap.insertMap(in_map);
     processed_costmap = true;
   }
 
@@ -198,7 +242,9 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
     // waypoint to align quad heading with trajectory (spin to face along traj)
     // TODO: only create this intermmediate waypoint if the current heading is way different
     geometry_msgs::PoseStamped waypoint = path.back();
-    waypoint.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+    tf2::Quaternion yaw_quat;
+    yaw_quat.setRPY(0.0, 0.0, yaw);
+    waypoint.pose.orientation = tf2::toMsg(yaw_quat);
     path.push_back(waypoint);
 
     // position waypoint
@@ -252,8 +298,8 @@ double distance(const geometry_msgs::PoseStamped& p1,
 double headingError(const geometry_msgs::PoseStamped& p1,
                     const geometry_msgs::PoseStamped& p2)
 {
-  double yaw1 = tf::getYaw(p1.pose.orientation);
-  double yaw2 = tf::getYaw(p2.pose.orientation);
+  double yaw1 = tf2::getYaw(p1.pose.orientation);
+  double yaw2 = tf2::getYaw(p2.pose.orientation);
   double error = yaw2 - yaw1;
   if (error > 2.0*M_PI)
     return error - 2.0*M_PI;
@@ -374,7 +420,7 @@ std::vector<int> WaypointNavigation::AStar(grid_mapping::Point start_pt,
 void WaypointNavigation::publishPath(const geometry_msgs::PoseStamped& pose) const
 {
   nav_msgs::Path path_msg;
-  path_msg.header.frame_id = path_frame_id;
+  path_msg.header.frame_id = local_frame;
 
   path_msg.poses.push_back(pose);
   for (auto path_pose : path) {

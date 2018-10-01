@@ -53,11 +53,19 @@ Visualization Manager:
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: static_map
       Topic: /projected_map
       Unreliable: false
       Use Timestamp: false
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /occupied_cells_vis_array
+      Name: octomap
+      Namespaces:
+        map: true
+      Queue Size: 100
       Value: true
     - Alpha: 1
       Class: rviz/RobotModel
@@ -205,60 +213,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        aero2/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/base_link_inertia:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/camera_rgb_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/camera_rgb_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero2/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero2/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: aero2 model
       Robot Description: aero2/robot_description
       TF Prefix: ""
@@ -341,60 +295,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        aero3/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/base_link_inertia:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/camera_rgb_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/camera_rgb_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        aero3/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        aero3/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: aero3 model
       Robot Description: aero3/robot_description
       TF Prefix: ""
@@ -467,19 +367,11 @@ Visualization Manager:
       Topic: /aero3/path
       Unreliable: false
       Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /occupied_cells_vis_array
-      Name: MarkerArray
-      Namespaces:
-        map: true
-      Queue Size: 100
-      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: aero1/map
+    Fixed Frame: world
     Frame Rate: 30
   Name: root
   Tools:
@@ -500,7 +392,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 44.7228508
+      Distance: 57.439579
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -515,10 +407,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.644796252
+      Pitch: 0.759797215
       Target Frame: aero1/map
       Value: Orbit (rviz)
-      Yaw: 2.47664428
+      Yaw: 2.57164741
     Saved: ~
 Window Geometry:
   Displays:

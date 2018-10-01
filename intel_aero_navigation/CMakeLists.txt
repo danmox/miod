@@ -13,8 +13,10 @@ find_package(catkin REQUIRED
   nav_msgs
   grid_mapping
   nodelet
-  tf
   mavros_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 add_action_files(
@@ -43,6 +45,9 @@ catkin_package(
     grid_mapping
     nodelet
     mavros_msgs
+    tf2
+    tf2_ros
+    tf2_geometry_msgs
 )
 
 include_directories(

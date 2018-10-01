@@ -3,6 +3,7 @@
 <robot name="intel_aero" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <xacro:arg name='namespace' default='' />
+  <xacro:arg name='max_range' default='10.0'/>
 
   <!-- iris_base -->
   <xacro:include filename="$(find intel_aero_description)/urdf/iris_base.xacro" />
@@ -11,6 +12,8 @@
   <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro" />
 
   <!-- create instance of r200 and attach it to the iris -->
-  <xacro:realsense_r200 namespace="$(arg namespace)" parent_link="$(arg namespace)/base_link" />
+  <xacro:realsense_r200 namespace="$(arg namespace)"
+                        parent_link="$(arg namespace)/base_link"
+                        max_range="$(arg max_range)"/>
 
 </robot>

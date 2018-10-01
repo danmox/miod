@@ -7,11 +7,15 @@
 #include <nav_msgs/OccupancyGrid.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <intel_aero_navigation/WaypointNavigationAction.h>
 
 #include <actionlib/server/simple_action_server.h>
 #include <grid_mapping/grid.hpp>
 #include <intel_aero_navigation/mavros_uav.h>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <mutex>
 #include <vector>
@@ -30,12 +34,16 @@ class WaypointNavigation
     MavrosUAV aero; // wrapper class interface to UAV
 
     // parameters
-    std::string path_frame_id;
+    std::string local_frame, world_frame, costmap_frame;
     double waypoint_tol, yaw_tol;
 
     ros::NodeHandle nh, pnh;
     ros::Subscriber costmap_sub, odom_sub;
     ros::Publisher path_pub;
+
+    tf2_ros::Buffer tf2_buff;
+    tf2_ros::TransformListener tf2_listener;
+    geometry_msgs::TransformStamped world_to_local, costmap_to_local;
 
     std::mutex costmap_mutex, odom_mutex; // need thread safety for odom, costmap
     typedef grid_mapping::Grid<int8_t> Costmap;

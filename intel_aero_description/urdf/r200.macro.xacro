@@ -8,7 +8,7 @@
   <xacro:property name="r200_cam_depth_offset" value="0.01"/>
 
   <!-- camera macro -->
-  <xacro:macro name="realsense_r200" params="namespace parent_link">
+  <xacro:macro name="realsense_r200" params="namespace parent_link max_range">
 
     <!-- Camera joint -->
     <joint name="${namespace}/camera_joint" type="fixed">
@@ -80,8 +80,8 @@
           <depth_camera>
           </depth_camera>
           <clip>
-            <near>0.5</near>
-            <far>10.0</far>
+            <near>0.25</near>
+            <far>${max_range}</far>
           </clip>
         </camera>
         <plugin name="kinect_camera_controller" filename="libgazebo_ros_openni_kinect.so">
