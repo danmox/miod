@@ -1,0 +1,14 @@
+<launch>
+
+  <arg name="static_map_topic"/>
+  <arg name="world_frame"/>
+
+  <node pkg="network_status"
+        type="network_visualization_node"
+        name="network_visualization_node"
+        output="screen">
+    <remap from="/map_rf" to="$(arg static_map_topic)"/>
+    <param name="world_frame"      value="$(arg world_frame)"/>
+  </node>
+
+</launch>

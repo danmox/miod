@@ -44,15 +44,4 @@
     type="rviz"
     args="-d $(find intel_aero_gazebo)/rviz/swarm7.rviz"/>
 
-  <!-- network topology visualization
-  <node pkg="network_status"
-        type="network_visualization_node"
-        name="network_visualization_node"
-        output="screen">
-    <param name="number_of_agents" value="4"/>
-    <param name="task_agent_id"    value="4"/>
-    <param name="world_frame"      value="$(arg world_frame)"/>
-  </node>
-  -->
-
 </launch>
