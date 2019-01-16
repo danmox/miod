@@ -42,7 +42,7 @@
     name="rviz"
     pkg="rviz"
     type="rviz"
-    args="-d $(find intel_aero_gazebo)/rviz/swarm7.rviz"/>
+    args="-d $(find intel_aero_gazebo)/rviz/example.rviz"/>
 
   <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
     <arg name="id"                 value="1" />
