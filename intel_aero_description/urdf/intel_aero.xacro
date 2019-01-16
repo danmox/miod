@@ -16,4 +16,11 @@
                         parent_link="$(arg namespace)/base_link"
                         max_range="$(arg max_range)"/>
 
+  <!-- load plugin for sending velocity commands directly to the quadrotor -->
+  <gazebo>
+    <plugin name="intel_aero_gazebo" filename="libvelocity_control.so">
+      <link_name>$(arg namespace)/base_link</link_name>
+    </plugin>
+  </gazebo>
+
 </robot>
