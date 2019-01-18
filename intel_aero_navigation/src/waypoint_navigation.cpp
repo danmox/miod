@@ -115,12 +115,23 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
   // check current path for collisions (locked due to costmap access)
 
+  grid_mapping::Point first_point(robot_pose);
+  if (!costmap.inBounds(first_point)) { // ensure 1st checkpoint is inbounds
+    if (!path.empty()) {
+      first_point = costmap.bbxIntersection(path[0], first_point);
+    } else {
+      return;
+    }
+  }
+
+  // build list of checkpoints
   std::vector<int> check_pts;
-  check_pts.push_back(costmap.positionToIndex(robot_pose));
+  check_pts.push_back(costmap.positionToIndex(first_point));
   for (auto path_pose : path) {
     check_pts.push_back(costmap.positionToIndex(path_pose));
   }
 
+  // check cells along path for obstacles
   bool obstacle_free = true;
   for (auto it = check_pts.begin()+1; it != check_pts.end(); ++it) {
     if (!obstacleFree(costmap.rayCast(*(it-1), *it))) {
