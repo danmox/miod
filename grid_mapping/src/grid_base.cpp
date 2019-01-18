@@ -200,7 +200,7 @@ int_vec GridBase::fourConnectedNeighborIndices(const int cell) const
 }
 
 
-void GridBase::bbxIntersection(const Point p1, Point& p2) const
+Point GridBase::bbxIntersection(const Point p1, const Point p2) const
 {
   // make sure the start point is inside the bbx and end point is not
   if (!inBounds(p1)) {
@@ -211,7 +211,7 @@ void GridBase::bbxIntersection(const Point p1, Point& p2) const
     exit(EXIT_FAILURE);
   }
   if (inBounds(p2))
-    return;
+    return p2;
 
   // To ensure intersection point falls within map, the bounding box
   // used is the rectangle with corners at the origin of each corner cell
@@ -235,7 +235,7 @@ void GridBase::bbxIntersection(const Point p1, Point& p2) const
   double max_ty = t0y > t1y ? t0y : t1y;
   double t = max_tx < max_ty ? max_tx : max_ty;
 
-  p2 = Point(r0x + t*dx, r0y + t*dy);
+  return Point(r0x + t*dx, r0y + t*dy);
 }
 
 int_vec GridBase::rayCast(const Point p1, Point p2) const
@@ -248,7 +248,7 @@ int_vec GridBase::rayCast(const Point p1, Point p2) const
 
   int_vec indices;
   if (!inBounds(p2))
-    bbxIntersection(p1, p2);
+    p2 = bbxIntersection(p1, p2);
 
   const Point dp = p2 - p1;
   const double steps = round(dp.abs().max() / resolution);
