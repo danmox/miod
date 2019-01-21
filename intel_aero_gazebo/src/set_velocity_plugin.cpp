@@ -22,6 +22,7 @@ class SetModelVelocity : public gazebo::ModelPlugin
     std::thread queue_thread;
 
     std::string link_name;
+    volatile bool received_msg;
     gazebo::math::Vector3 linear_vel, angular_vel;
 
     gazebo::physics::ModelPtr model;
@@ -30,6 +31,8 @@ class SetModelVelocity : public gazebo::ModelPlugin
     void QueueThread();
 
   public:
+    SetModelVelocity() : received_msg(false) {};
+
     virtual void Load(gazebo::physics::ModelPtr _model,
                       sdf::ElementPtr _sdf);
     void Update(const gazebo::common::UpdateInfo &_info);
@@ -45,6 +48,7 @@ void SetModelVelocity::QueueThread()
 
 void SetModelVelocity::velCB(const geometry_msgs::Twist::ConstPtr& msg)
 {
+  received_msg = true;
   linear_vel.Set(msg->linear.x, msg->linear.y, msg->linear.z);
   angular_vel.Set(msg->angular.x, msg->angular.z, msg->angular.z);
 }
@@ -95,7 +99,12 @@ void SetModelVelocity::Load(gazebo::physics::ModelPtr _model,
 void SetModelVelocity::Update(const gazebo::common::UpdateInfo &_info)
 {
   auto link = model->GetLink(link_name);
-  if (link) {
+  // NOTE: model velocity only set after a command has been received; once a
+  // command has been received the model velocity will always be set regardless
+  // of if the publisher is active (i.e. you cannot stop the setting of the
+  // model velocity directly once a command has been received)
+  if (link && received_msg) {
+    ROS_DEBUG("[SetAngularVel] setting velocity for %s", link_name.c_str());
     link->SetLinearVel(linear_vel);
     link->SetAngularVel(angular_vel);
   } else {
