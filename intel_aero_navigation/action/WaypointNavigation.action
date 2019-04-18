@@ -1,4 +1,8 @@
-geometry_msgs/Pose goal
+uint8 LAND = 0
+uint8 HOVER = 1
+
+geometry_msgs/Pose[] waypoints
+uint8 end_behavior
 ---
 float32 total_time
 ---

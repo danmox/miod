@@ -74,7 +74,7 @@ int main(int argc, char** argv)
   ROS_INFO("[demo_node] starting quads");
   for (int i = 0; i < number_of_robots; ++i) {
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
-    goal_msg.goal = start_poses[i];
+    goal_msg.waypoints.push_back(start_poses[i]);
     nav_clients[i]->sendGoal(goal_msg);
   }
 

@@ -1,11 +1,13 @@
 #include <intel_aero_navigation/waypoint_navigation.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
 #include <tf2/utils.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <queue>
 #include <unordered_map>
 #include <iostream>
+#include <cmath>
 
 
 namespace intel_aero_navigation {
@@ -18,7 +20,8 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   nav_server(nh_, name, false),
   nh(nh_),
   pnh(pnh_),
-  takeoff_command_issued(false)
+  takeoff_command_issued(false),
+  end_behavior(WaypointNavigationGoal::HOVER)
 {
   nav_server.registerGoalCallback(std::bind(&WaypointNavigation::goalCB, this));
   nav_server.registerPreemptCallback(std::bind(&WaypointNavigation::preemptCB, this));
@@ -40,15 +43,15 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
     local_frame = "map";
   }
   costmap.frame_id = local_frame;
-  if (!pnh.getParam("position_tol", waypoint_tol)) {
-    waypoint_tol = 0.2;
+  if (!pnh.getParam("position_tol", position_tol)) {
+    position_tol = 0.2;
     ROS_WARN("[WaypointNavigation] failed to fetch parameter \"position_tol\" "
-             "using default value of %.2fm", waypoint_tol);
+             "using default value of %.2fm", position_tol);
   }
-  if (!pnh.getParam("yaw_tol", yaw_tol)) {
-    yaw_tol = 0.2;
-    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"yaw_tol\" "
-             "using default value of %.2fm", yaw_tol);
+  if (!pnh.getParam("heading_tol", heading_tol)) {
+    heading_tol = 0.2;
+    ROS_WARN("[WaypointNavigation] failed to fetch parameter \"heading_tol\" "
+             "using default value of %.2fm", heading_tol);
   }
 
   costmap_sub = nh.subscribe("costmap", 10, &WaypointNavigation::costmapCB, this);
@@ -115,25 +118,40 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
   // check current path for collisions (locked due to costmap access)
 
-  std::vector<int> check_pts;
-  check_pts.push_back(costmap.positionToIndex(robot_pose));
-  for (auto path_pose : path) {
-    check_pts.push_back(costmap.positionToIndex(path_pose));
+  grid_mapping::Point first_point(robot_pose);
+  if (!costmap.inBounds(first_point)) { // ensure 1st checkpoint is inbounds
+    if (!path.empty()) {
+      first_point = costmap.bbxIntersection(path[0], first_point);
+    } else {
+      return;
+    }
   }
 
+  // build list of checkpoints
+  std::vector<int> check_pts;
+  check_pts.push_back(costmap.positionToIndex(first_point));
+  for (auto it = path_it; it != path.end(); ++it)
+    check_pts.push_back(costmap.positionToIndex(*it));
+
+  // check cells along path for obstacles
   bool obstacle_free = true;
+  grid_mapping::Point pt1, pt2;
   for (auto it = check_pts.begin()+1; it != check_pts.end(); ++it) {
     if (!obstacleFree(costmap.rayCast(*(it-1), *it))) {
+      pt1 = costmap.indexToPosition(*(it-1));
+      pt2 = costmap.indexToPosition(*it);
       obstacle_free = false;
       break;
     }
   }
 
-  if (obstacle_free)
-    return;
+  if (!obstacle_free) {
+    //ROS_INFO("[WaypointNavigation] collision detected! replanning path");
+    ROS_INFO_STREAM("[WaypointNavigation] collision detected between " << pt1 << " and " << pt2);
+    //planPath(robot_pose);
+  }
 
-  ROS_INFO("[WaypointNavigation] collision detected! replanning path");
-  planPath(robot_pose);
+  return;
 }
 
 
@@ -145,19 +163,13 @@ void WaypointNavigation::goalCB()
     nav_server.setAborted();
   }
 
-  goal.header.frame_id = local_frame;
-  goal.header.stamp = ros::Time::now();
-  goal.pose = (nav_server.acceptNewGoal())->goal;
-  tf2::doTransform(goal, goal, world_to_local);
+  // accept new goal
+  auto action_goal = nav_server.acceptNewGoal();
+  end_behavior = action_goal->end_behavior;
   ROS_INFO("[WaypointNavigation] accepted new goal");
 
-  if (nav_server.isPreemptRequested()) {
-    ROS_INFO("[WaypointNavigation] goal preempted");
-    nav_server.setPreempted();
-    return;
-  }
-
-  // this is unlikely to happen
+  // without knowing the quad's current position it is impossible to proceed
+  // with planning
   if (!odom) {
     ROS_ERROR("[WaypointNavigation] no odom! aborting goal");
     nav_server.setAborted();
@@ -171,6 +183,39 @@ void WaypointNavigation::goalCB()
     robot_pose.header.frame_id = odom->header.frame_id;
     robot_pose.header.stamp = odom->header.stamp;
     robot_pose.pose = odom->pose.pose;
+  }
+
+  // if there are no waypoints execute the desired end behavior
+  if (action_goal->waypoints.empty()) {
+    if (end_behavior == WaypointNavigationGoal::LAND) {
+      path.clear();
+      nav_server.setSucceeded();
+      aero.land();
+    } else if (end_behavior == WaypointNavigationGoal::HOVER) {
+      path.clear();
+      robot_pose.pose.position.z = 2; // default hover height
+      path.push_back(robot_pose);
+      path_it = path.begin();
+    }
+    return;
+  }
+
+  // convert vector of pose msgs in the global frame to vector of timestamped
+  // poses in the local frame
+  geometry_msgs::PoseStamped waypoint;
+  waypoint.header.frame_id = local_frame;
+  waypoint.header.stamp = ros::Time::now();
+  waypoints.clear();
+  for (auto& pose : action_goal->waypoints) {
+    waypoint.pose = pose;
+    tf2::doTransform(waypoint, waypoint, world_to_local);
+    waypoints.push_back(waypoint);
+  }
+
+  if (nav_server.isPreemptRequested()) {
+    ROS_INFO("[WaypointNavigation] goal preempted");
+    nav_server.setPreempted();
+    return;
   }
 
   // lock remainder of thread for costmap use
@@ -188,6 +233,18 @@ void WaypointNavigation::goalCB()
   planPath(robot_pose);
 }
 
+// return the quaternion corresponding to a yaw aligned with the line segment
+// connecting points p1 and p2
+geometry_msgs::Quaternion pathSegmentQuaternion(const geometry_msgs::Point& p1,
+                                                const geometry_msgs::Point& p2)
+{
+  double yaw = atan2(p2.y - p1.y, p2.x - p1.x);
+  tf2::Quaternion yaw_quat;
+  yaw_quat.setRPY(0.0, 0.0, yaw);
+  return tf2::toMsg(yaw_quat);
+}
+
+
 // must process costmap before calling this function and have costmap_mutex held
 // in the calling thread
 void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
@@ -197,69 +254,95 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
   // thus the costmap is still empty
   if (!costmap.inBounds(robot_pose)) {
     ROS_WARN("[WaypointNavigation] odom out of bounds of costmap: setting "
-             "straight line path to goal");
-    path.clear();
-    path.push_back(goal);
+             "straight line path to all waypoints");
+    path = waypoints;
     path_it = path.begin();
     return;
   }
 
-  // goal pose not in bounds of costmap
-  if (!costmap.inBounds(goal)) {
-    ROS_INFO("[WaypointNavigation] goal out of bounds of costmap: expanding "
-             "costmap");
-    grid_mapping::Point new_origin = grid_mapping::min(goal, costmap.origin);
-    grid_mapping::Point new_top_corner = grid_mapping::max(goal, costmap.topCorner());
-    costmap.expandMap(new_origin, new_top_corner);
-  }
-
-  // plan path with A*
-  // TODO what if goal is in occupied space?
-  std::vector<int> path_indices = AStar(robot_pose, goal);
-
-  // add current robot pose (with goal z) to path as first point
-  geometry_msgs::PoseStamped first_waypoint = robot_pose;
-  first_waypoint.pose.position.z = goal.pose.position.z;
-  path.clear();
-  path.push_back(first_waypoint);
-
-  // prune A* path down to minimal set of points
-  auto curr_index = path_indices.begin();
-  while (curr_index != path_indices.end()) {
-    auto next_index = curr_index;
-
-    while (next_index+1 != path_indices.end()) {
-      if (!obstacleFree(costmap.rayCast(*curr_index, *next_index))) {
-        break;
-      }
-      ++next_index;
+  // ensure waypoints are in bounds of costmap
+  for (auto& pt : waypoints) {
+    if (!costmap.inBounds(pt)) {
+      ROS_INFO("[WaypointNavigation] waypoint out of bounds of costmap: "
+               "expanding costmap");
+      grid_mapping::Point new_origin = grid_mapping::min(pt, costmap.origin);
+      grid_mapping::Point new_top_corner = grid_mapping::max(pt, costmap.topCorner());
+      costmap.expandMap(new_origin, new_top_corner);
     }
-
-    grid_mapping::Point curr_point = costmap.indexToPosition(*curr_index);
-    grid_mapping::Point next_point = costmap.indexToPosition(*next_index);
-    double yaw = atan2(next_point.y - curr_point.y, next_point.x - curr_point.x);
-
-    // waypoint to align quad heading with trajectory (spin to face along traj)
-    // TODO: only create this intermmediate waypoint if the current heading is way different
-    geometry_msgs::PoseStamped waypoint = path.back();
-    tf2::Quaternion yaw_quat;
-    yaw_quat.setRPY(0.0, 0.0, yaw);
-    waypoint.pose.orientation = tf2::toMsg(yaw_quat);
-    path.push_back(waypoint);
-
-    // position waypoint
-    waypoint.pose.position.x = next_point.x;
-    waypoint.pose.position.y = next_point.y;
-    waypoint.pose.position.z = goal.pose.position.z;
-    path.push_back(waypoint);
-
-    curr_index = next_index+1;
   }
+
+  // the path the quad follows consists of two kinds of points: position
+  // waypoints, consisting of the set of goal points received in the action
+  // message and the points computed by A* to avoid obstacles while traveling
+  // between them, and orientation waypoints, additional waypoints added to
+  // sharp corners in the path to allow the robot to turn and face along the
+  // path segment before traversing it
+  std::vector<geometry_msgs::Point> position_waypoints;
+  geometry_msgs::Point starting_point;
+  starting_point.x = robot_pose.pose.position.x;
+  starting_point.y = robot_pose.pose.position.y;
+  starting_point.z = waypoints.front().pose.position.z;
+  position_waypoints.push_back(starting_point);
+
+  // use A* to plan obstacle free paths between each waypoint
+  for (geometry_msgs::PoseStamped& next_waypoint : waypoints) {
+
+    std::vector<int> path_inds;
+    path_inds = AStar(position_waypoints.back(), next_waypoint);
+
+    // prune A* path down to minimal set of points
+    auto curr_ind = path_inds.begin();
+    while (curr_ind+1 != path_inds.end()) {
+
+      // step along path until raycast between curr_ind and next_ind crosses
+      // an obstacle or the end of the path is reached
+      auto next_ind = curr_ind;
+      for (; next_ind+1 != path_inds.end(); ++next_ind)
+        if (!obstacleFree(costmap.rayCast(*curr_ind, *(next_ind+1))))
+          break;
+
+      // next_ind is the furthest point along the path that can safely be reached
+      grid_mapping::Point pt = costmap.indexToPosition(*next_ind);
+      geometry_msgs::Point waypoint;
+      waypoint.x = pt.x;
+      waypoint.y = pt.y;
+      waypoint.z = next_waypoint.pose.position.z;
+      position_waypoints.push_back(waypoint);
+      curr_ind = next_ind;
+    }
+  }
+
+  auto wp_it = position_waypoints.begin();
+
+  // first waypoint
+  geometry_msgs::PoseStamped waypoint;
+  waypoint.header.frame_id = local_frame;
+  waypoint.header.stamp = ros::Time::now();
+  waypoint.pose.position = *wp_it;
+  waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
+  path.clear();
+  path.push_back(waypoint);
+
+  // intermediate waypoints
+  for (++wp_it; wp_it+1 != position_waypoints.end(); ++wp_it) {
+    // position waypoint
+    waypoint.pose.position = *wp_it;
+    path.push_back(waypoint);
+    // yaw waypoint
+    waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
+    path.push_back(waypoint);
+  }
+
+  // end waypoint
+  waypoint.pose.position = *wp_it;
+  path.push_back(waypoint);
+
+  // initialize tracker to first point
   path_it = path.begin();
 
+  // send the path to rviz
   publishPath(robot_pose);
 }
-
 
 bool WaypointNavigation::obstacleFree(const std::vector<int>& cells) const
 {
@@ -281,7 +364,7 @@ void WaypointNavigation::preemptCB()
     nav_server.setPreempted();
   }
 
-  // TODO set goal to current state?
+  // TODO set waypoint to current state?
 }
 
 
@@ -309,48 +392,66 @@ double headingError(const geometry_msgs::PoseStamped& p1,
 }
 
 
+bool waypointReached(const geometry_msgs::PoseStamped& robot,
+                     const geometry_msgs::PoseStamped& goal,
+                     const double position_tol,
+                     const double heading_tol)
+{
+  bool distance_achieved = distance(robot, goal) < position_tol;
+  bool heading_achieved = std::abs(headingError(robot, goal)) < heading_tol;
+  return distance_achieved && heading_achieved;
+}
+
+
 void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 {
   {
     std::lock_guard<std::mutex> lock(odom_mutex);
     odom = msg;
   }
-  geometry_msgs::PoseStamped robot_pose;
-  robot_pose.header.frame_id = odom->header.frame_id;
-  robot_pose.header.stamp = odom->header.stamp;
-  robot_pose.pose = odom->pose.pose;
 
-  // no path or path complete; UAV will either do nothing (robot is unarmed)
-  // or it will hover in place at the last completed goal
+  // nothing to do yet
+  if (path.empty())
+    return;
+
+  geometry_msgs::PoseStamped robot_pose;
+  robot_pose.header.frame_id = msg->header.frame_id;
+  robot_pose.header.stamp = msg->header.stamp;
+  robot_pose.pose = msg->pose.pose;
+
+  // if the quad has visited all waypoints already and was requested to hover at
+  // the last one
   if (!nav_server.isActive()) {
-    aero.sendLocalPositionCommand(goal);
+    if (end_behavior == WaypointNavigationGoal::HOVER) {
+      aero.sendLocalPositionCommand(path.back());
+      ROS_DEBUG("[WaypointNavigation] sending local position command");
+    }
     return;
   }
 
-  // if the UAV has not been started takeoff in place
-  if (!takeoff_command_issued) {
-    ROS_INFO("[WaypointNavigation] spawning takeoff thread");
-    takeoff_thread = std::thread(&MavrosUAV::takeoff, aero, *path_it);
-    takeoff_thread.detach();
-    takeoff_command_issued = true;
-  }
+  // send takeoff command if UAV is not armed
+  if (!aero.takeoffCommandIssued())
+    aero.takeoff(*path_it);
 
   geometry_msgs::PoseStamped current_waypoint;
 
   // check if the current waypoint has been reached
-  if (distance(robot_pose, *path_it) < waypoint_tol &&
-      headingError(robot_pose, *path_it) < yaw_tol) {
+  if (waypointReached(robot_pose, *path_it, position_tol, heading_tol)) {
     ++path_it;
-    if (path_it == path.end()) {
-      nav_server.setSucceeded();
-      current_waypoint = goal;
+    if (path_it == path.end()) { // path completed, execute end behavior
+      nav_server.setSucceeded(); // nav_server.isActive now returns false until new goal is received
+      if (end_behavior == WaypointNavigationGoal::LAND) {
+        aero.land();
+        return;
+      }
+      current_waypoint = path.back();
     }
   } else {
     current_waypoint = *path_it;
   }
 
-  // does nothing if a takeoff command has not be successfully executed
   aero.sendLocalPositionCommand(current_waypoint);
+  ROS_DEBUG("[WaypointNavigation] sending local position command");
 }
 
 

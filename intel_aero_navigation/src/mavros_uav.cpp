@@ -29,7 +29,7 @@ void MavrosUAV::homeCB(const mavros_msgs::HomePosition::ConstPtr& msg)
 }
 
 
-void MavrosUAV::takeoff(const geometry_msgs::PoseStamped cmd)
+void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
 {
   ros::Rate rate(10.0); //setpoint publishing rate MUST be faster than 2Hz
 
@@ -80,15 +80,37 @@ void MavrosUAV::takeoff(const geometry_msgs::PoseStamped cmd)
 }
 
 
-void MavrosUAV::land(mavros_msgs::CommandTOL& cmd)
+void MavrosUAV::takeoff(const geometry_msgs::PoseStamped pose)
 {
-  ros::Rate rate(10.0);
+  land_command_issued = false;
+  takeoff_command_issued = true;
 
+  ROS_INFO("[MavrosUAV] spawning takeoff thread");
+  takeoff_thread = std::thread(&MavrosUAV::takeoffThread, this, pose);
+  takeoff_thread.detach();
+}
+
+
+void MavrosUAV::landingThread()
+{
   ROS_INFO("[MavrosUAV] sending land command");
+  ros::Rate rate(10.0);
+  mavros_msgs::CommandTOL cmd;
   while (ros::ok() && !(land_srv.call(cmd) && cmd.response.success)) {
     ros::spinOnce();
     rate.sleep();
   }
+}
+
+
+void MavrosUAV::land()
+{
+  land_command_issued = true;
+  takeoff_command_issued = false;
+
+  ROS_INFO("[MavrosUAV] landing thread started");
+  landing_thread = std::thread(&MavrosUAV::landingThread, this);
+  landing_thread.detach();
 }
 
 
@@ -98,4 +120,4 @@ void MavrosUAV::sendLocalPositionCommand(const geometry_msgs::PoseStamped& cmd)
 }
 
 
-}
+} // namespace intel_aero_navigation

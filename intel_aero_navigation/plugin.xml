@@ -5,3 +5,10 @@
     </description>
   </class>
 </library>
+<library path="lib/libwaypoint_navigation_vel_nodelet">
+  <class name="intel_aero_navigation/WaypointNavigationVelNodelet" type="intel_aero_navigation::WaypointNavigationVelNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      A nodelet for doing 2D waypoint navigation without px4
+    </description>
+  </class>
+</library>

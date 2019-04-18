@@ -33,7 +33,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES waypoint_navigation waypoint_navigation_nodelet
+  LIBRARIES waypoint_navigation waypoint_navigation_nodelet waypoint_navigation_vel_nodelet
   CATKIN_DEPENDS
     roscpp
     std_msgs
@@ -57,6 +57,7 @@ include_directories(
 
 set(LIB_FILES
   src/waypoint_navigation.cpp
+  src/waypoint_navigation_vel.cpp
   src/mavros_uav.cpp
 )
 
@@ -69,3 +70,15 @@ target_link_libraries(waypoint_navigation_nodelet waypoint_navigation ${catkin_L
 
 add_executable(waypoint_navigation_node src/waypoint_navigation_node.cpp)
 target_link_libraries(waypoint_navigation_node waypoint_navigation ${catkin_LIBRARIES})
+
+add_executable(action_test src/action_test.cpp)
+target_link_libraries(action_test waypoint_navigation ${catkin_LIBRARIES})
+
+add_library(waypoint_navigation_vel_nodelet src/waypoint_navigation_vel_nodelet.cpp)
+target_link_libraries(waypoint_navigation_vel_nodelet waypoint_navigation ${catkin_LIBRARIES})
+
+add_executable(waypoint_navigation_vel_node src/waypoint_navigation_vel_node.cpp)
+target_link_libraries(waypoint_navigation_vel_node waypoint_navigation ${catkin_LIBRARIES})
+
+add_executable(action_test_vel src/action_test_vel.cpp)
+target_link_libraries(action_test_vel waypoint_navigation ${catkin_LIBRARIES})

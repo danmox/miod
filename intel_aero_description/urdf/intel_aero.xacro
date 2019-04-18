@@ -2,25 +2,31 @@
 
 <robot name="intel_aero" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <xacro:arg name='namespace' default='' />
-  <xacro:arg name='max_range' default='10.0'/>
+  <xacro:arg name="namespace"        default=""/>
+  <xacro:arg name="max_range"        default="10.0"/>
+  <xacro:arg name="enable_realsense" default="false"/>
+  <xacro:arg name="spawn_only"       default="false"/>
 
   <!-- iris_base -->
-  <xacro:include filename="$(find intel_aero_description)/urdf/iris_base.xacro" />
-
-  <!-- realsense r200 macro -->
-  <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro" />
+  <xacro:include filename="$(find intel_aero_description)/urdf/iris_base.xacro"/>
 
   <!-- create instance of r200 and attach it to the iris -->
-  <xacro:realsense_r200 namespace="$(arg namespace)"
-                        parent_link="$(arg namespace)/base_link"
-                        max_range="$(arg max_range)"/>
+  <xacro:include filename="$(find intel_aero_description)/urdf/r200.macro.xacro"/>
+
+  <!-- load realsense plugin for streaming depth/rgb frames -->
+  <xacro:if value="$(arg enable_realsense)">
+    <xacro:realsense_r200 namespace="$(arg namespace)"
+                          parent_link="$(arg namespace)/base_link"
+                          max_range="$(arg max_range)"/>
+  </xacro:if>
 
   <!-- load plugin for sending velocity commands directly to the quadrotor -->
-  <gazebo>
-    <plugin name="intel_aero_gazebo" filename="libvelocity_control.so">
-      <link_name>$(arg namespace)/base_link</link_name>
-    </plugin>
-  </gazebo>
+  <xacro:if value="$(arg spawn_only)">
+    <gazebo>
+      <plugin name="intel_aero_gazebo" filename="libvelocity_control.so">
+        <link_name>$(arg namespace)/base_link</link_name>
+      </plugin>
+    </gazebo>
+  </xacro:if>
 
 </robot>

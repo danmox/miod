@@ -46,7 +46,7 @@ void SetModelVelocity::QueueThread()
 void SetModelVelocity::velCB(const geometry_msgs::Twist::ConstPtr& msg)
 {
   linear_vel.Set(msg->linear.x, msg->linear.y, msg->linear.z);
-  angular_vel.Set(msg->angular.x, msg->angular.z, msg->angular.z);
+  angular_vel.Set(msg->angular.x, msg->angular.y, msg->angular.z);
 }
 
 void SetModelVelocity::Load(gazebo::physics::ModelPtr _model,

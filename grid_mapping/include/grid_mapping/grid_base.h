@@ -51,7 +51,7 @@ class GridBase
     std::vector<int> fourConnectedNeighborIndices(const int) const;
 
     // raycasting methods
-    void bbxIntersection(const Point, Point&) const;
+    Point bbxIntersection(const Point, const Point) const;
     std::vector<int> rayCast(const Point, Point) const;
     std::vector<int> rayCast(const int, const int) const;
 };

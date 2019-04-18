@@ -1,0 +1,116 @@
+<launch>
+
+  <arg name="id"                 default="1"/>
+  <arg name="robot_ns"           value="aero$(arg id)"/>
+
+  <!-- topics / frames args -->
+  <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
+  <arg name="static_map_topic"   default="projected_map"/>
+  <arg name="world_frame"        default="world"/>
+  <arg name="map_frame"          default="$(arg robot_ns)/map"/>
+  <arg name="base_frame"         default="$(arg robot_ns)/base_link"/>
+
+  <!-- waypoint navigation vel args -->
+  <arg name="position_tol"       default="0.2"/> <!-- meters -->
+  <arg name="heading_tol"        default="0.2"/> <!-- ~28deg -->
+
+  <!-- mapping / costmap args -->
+  <arg name="robot_radius"       default="1.0"/>
+  <arg name="inflation_radius"   default="1.0"/>
+  <arg name="octomap_resolution" default="0.1"/>
+  <arg name="costmap_rate"       if="$(arg static_map)"     value="0.1"/>
+  <arg name="costmap_rate"       unless="$(arg static_map)" value="2.0"/>
+  <arg name="costmap_frame"      if="$(arg static_map)"     value="$(arg world_frame)"/>
+  <arg name="costmap_frame"      unless="$(arg static_map)" value="$(arg map_frame)"/>
+
+  <!-- spawn model args -->
+  <arg name="x"                default="0"/>
+  <arg name="y"                default="0"/>
+  <arg name="z"                default="0"/>
+  <arg name="R"                default="0"/>
+  <arg name="P"                default="0"/>
+  <arg name="Y"                default="0"/>
+  <arg name="enable_realsense" default="false"/>
+  <arg name="pos_args" value="-x $(arg x) -y $(arg y) -z $(arg z)
+                              -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
+
+  <!-- SITL args -->
+  <arg name="mavlink_udp_port"      default="14560"/>
+  <arg name="mavlink_tcp_port"      default="4560"/>
+  <arg name="fcu_url"               default="udp://:14541@localhost:14581"/>
+  <arg name="interactive"           default="true"/>
+  <arg name="target_system_id"      default="$(arg id)"/>
+
+  <group ns="$(arg robot_ns)">
+
+    <!-- load intel aero urdf to param -->
+    <param name="robot_description"
+           command="$(find xacro)/xacro -i
+                    $(find intel_aero_description)/urdf/intel_aero.xacro
+                    namespace:=$(arg robot_ns)
+                    spawn_only:=true
+                    enalbe_realsense:=$(arg enable_realsense)"/>
+
+    <!-- spawn Intel Aero -->
+    <node name="spawn_model"
+          pkg="gazebo_ros"
+          type="spawn_model"
+          output="screen"
+          args="-urdf -param robot_description -model $(arg robot_ns)
+                -x $(arg x) -y $(arg y) -z $(arg z)
+                -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
+
+    <!-- static transform to offset robot spawn position -->
+    <node pkg="tf2_ros"
+          type="static_transform_publisher"
+          name="offset_broadcaster"
+          args="$(arg x) $(arg y) $(arg z) $(arg Y) $(arg P) $(arg R)
+                $(arg world_frame) $(arg map_frame)"/>
+
+    <!-- model pose tf publisher (for spawn_only so model appears in rviz) -->
+    <node pkg="intel_aero_gazebo"
+          type="model_tf_publisher"
+          name="model_tf_publisher"
+          output="screen">
+      <param name="model_name" value="$(arg robot_ns)"/>
+      <param name="parent_frame" value="$(arg world_frame)"/>
+      <param name="child_frame" value="$(arg base_frame)"/>
+    </node>
+
+    <!-- publish joint states to tf -->
+    <node name="robot_state_publisher"
+          pkg="robot_state_publisher"
+          type="robot_state_publisher"/>
+    <node name="joint_state_publisher"
+          pkg="joint_state_publisher"
+          type="joint_state_publisher"/>
+
+    <node pkg="nodelet"
+          type="nodelet"
+          name="waypoint_navigation_vel_nodelet"
+          args="standalone intel_aero_navigation/WaypointNavigationVelNodelet"
+          output="screen">
+      <remap from="costmap" to="costmap_2d/costmap/costmap"/>
+      <param name="local_frame"   value="$(arg map_frame)"/>
+      <param name="costmap_frame" value="$(arg costmap_frame)"/>
+      <param name="world_frame"   value="$(arg world_frame)"/>
+      <param name="position_tol"  value="$(arg position_tol)"/>
+      <param name="heading_tol"   value="$(arg heading_tol)"/>
+    </node>
+
+    <!--
+    <node name="waypoint_navigation_vel_node"
+          pkg="intel_aero_navigation"
+          type="waypoint_navigation_vel_node" 
+          output="screen">
+      <remap from="costmap" to="costmap_2d/costmap/costmap"/>
+      <param name="local_frame"   value="$(arg world_frame)"/>
+      <param name="costmap_frame" value="$(arg costmap_frame)"/>
+      <param name="world_frame"   value="$(arg world_frame)"/>
+      <param name="position_tol"  value="0.2"/>
+      <param name="heading_tol"   value="0.2"/>
+    </node>
+    -->
+
+  </group>
+</launch>

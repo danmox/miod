@@ -1,7 +1,10 @@
 <launch>
 
+  <!-- px4 or no px4 -->
+  <arg name="spawn_only"    default="true"/>
+
   <!-- gazebo args -->
-  <arg name="gazebo_gui"    default="true" />
+  <arg name="gazebo_gui"    default="false" />
   <arg name="rviz"          default="true" />
   <arg name="world"         default="$(find intel_aero_gazebo)/worlds/terrain.world" />
   <arg name="verbose"       default="false" />
@@ -39,24 +42,59 @@
 
   <!-- rviz -->
   <node if="$(arg rviz)"
-    name="rviz"
-    pkg="rviz"
-    type="rviz"
-    args="-d $(find intel_aero_gazebo)/rviz/example.rviz"/>
+        name="rviz"
+        pkg="rviz"
+        type="rviz"
+        args="-d $(find intel_aero_gazebo)/rviz/example.rviz"/>
 
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="1" />
-    <arg name="x"                  value="30" />
-    <arg name="y"                  value="-10" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14561" />
-    <arg name="fcu_url"            value="udp://:14541@localhost:14551" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
+  <arg name="intel_aero_launch_file" if="$(arg spawn_only)"     value="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch"/>
+  <arg name="intel_aero_launch_file" unless="$(arg spawn_only)" value="$(find intel_aero_gazebo)/launch/intel_aero.launch"/>
 
+  <!-- aero 1 -->
+  <group>
+    <arg name="id" value="1"/>
+    <include file="$(arg intel_aero_launch_file)" >
+      <arg name="id"                 value="$(arg id)" />
+      <arg name="x"                  value="0" />
+      <arg name="y"                  value="0" />
+      <arg name="z"                  value="0" />
+      <arg name="mavlink_udp_port"   value="14561" />
+      <arg name="mavlink_tcp_port"   value="4561" />
+      <arg name="fcu_url"            value="udp://:14541@localhost:14581" />
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))" />
+      <arg name="position_tol"       value="0.2"/>
+      <arg name="heading_tol"        value="0.2"/>
+    </include>
+  </group>
+
+  <!-- aero 2
+  <group>
+    <arg name="id" value="2"/>
+    <include file="$(arg intel_aero_launch_file)" >
+      <arg name="id"                 value="$(arg id)" />
+      <arg name="x"                  value="1" />
+      <arg name="y"                  value="0" />
+      <arg name="z"                  value="0" />
+      <arg name="mavlink_udp_port"   value="14562" />
+      <arg name="mavlink_tcp_port"   value="4562" />
+      <arg name="fcu_url"            value="udp://:14542@localhost:14582" />
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))" />
+    </include>
+  </group>
+ -->
+  <!-- aero 3
+  <group>
+    <arg name="id" value="3"/>
+    <include file="$(arg intel_aero_launch_file)" >
+      <arg name="id"                 value="$(arg id)" />
+      <arg name="x"                  value="1" />
+      <arg name="y"                  value="1" />
+      <arg name="z"                  value="0" />
+      <arg name="mavlink_udp_port"   value="14563" />
+      <arg name="mavlink_tcp_port"   value="4563" />
+      <arg name="fcu_url"            value="udp://:14543@localhost:14583" />
+      <arg name="target_system_id"   value="4" />
+    </include>
+  </group>
+ -->
 </launch>

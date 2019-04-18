@@ -1,15 +1,18 @@
 <launch>
 
+  <!-- px4 or no px4 -->
+  <arg name="spawn_only"    default="true"/>
+
   <!-- gazebo args -->
-  <arg name="gazebo_gui"    default="false" />
-  <arg name="rviz"          default="true" />
-  <arg name="world"         default="$(find intel_aero_gazebo)/worlds/terrain.world" />
-  <arg name="verbose"       default="false" />
-  <arg name="paused"        default="false" />
-  <arg name="gazebo_debug"  default="false" />
+  <arg name="gazebo_gui"    default="false"/>
+  <arg name="rviz"          default="true"/>
+  <arg name="world"         default="$(find intel_aero_gazebo)/worlds/empty.world"/>
+  <arg name="verbose"       default="false"/>
+  <arg name="paused"        default="false"/>
+  <arg name="gazebo_debug"  default="false"/>
 
   <!-- robot args -->
-  <arg name="static_map"         default="false"/>
+  <arg name="static_map"         default="true"/>
   <arg name="static_map_file"    if="$(arg static_map)"     default="$(find intel_aero_gazebo)/maps/terrain_no_ground.bt"/>
   <arg name="static_map_topic"   if="$(arg static_map)"     value="/projected_map"/>
   <arg name="static_map_topic"   unless="$(arg static_map)" value="projected_map"/>
@@ -20,11 +23,11 @@
 
   <!-- launch gazebo -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="gui"         value="$(arg gazebo_gui)" />
-    <arg name="world_name"  value="$(arg world)" />
-    <arg name="verbose"     value="$(arg verbose)" />
-    <arg name="paused"      value="$(arg paused)" />
-    <arg name="debug"       value="$(arg gazebo_debug)" />
+    <arg name="gui"         value="$(arg gazebo_gui)"/>
+    <arg name="world_name"  value="$(arg world)"/>
+    <arg name="verbose"     value="$(arg verbose)"/>
+    <arg name="paused"      value="$(arg paused)"/>
+    <arg name="debug"       value="$(arg gazebo_debug)"/>
   </include>
 
   <!-- if enabled, load saved octomap -->
@@ -39,10 +42,10 @@
 
   <!-- rviz -->
   <node if="$(arg rviz)"
-    name="rviz"
-    pkg="rviz"
-    type="rviz"
-    args="-d $(find intel_aero_gazebo)/rviz/swarm7.rviz"/>
+        name="rviz"
+        pkg="rviz"
+        type="rviz"
+        args="-d $(find intel_aero_gazebo)/rviz/swarm.rviz"/>
 
   <!-- network topology visualization
   <node pkg="network_status"
@@ -54,116 +57,302 @@
     <param name="world_frame"      value="$(arg world_frame)"/>
   </node>
  -->
-  <!-- robot 1 -->
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="1" />
-    <arg name="x"                  value="30" />
-    <arg name="y"                  value="-10" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14561" />
-    <arg name="fcu_url"            value="udp://:14541@localhost:14551" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
 
-  <!-- robot 2
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="2" />
-    <arg name="x"                  value="35" />
-    <arg name="y"                  value="0" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14661" />
-    <arg name="fcu_url"            value="udp://:14641@localhost:14651" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
-  <!-- robot 3
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="3" />
-    <arg name="x"                  value="35" />
-    <arg name="y"                  value="-15" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14761" />
-    <arg name="fcu_url"            value="udp://:14741@localhost:14751" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
-  <!-- robot 4
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="4" />
-    <arg name="x"                  value="55" />
-    <arg name="y"                  value="15" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14861" />
-    <arg name="fcu_url"            value="udp://:14841@localhost:14851" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
-  <!-- robot 5
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="5" />
-    <arg name="x"                  value="75" />
-    <arg name="y"                  value="30" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="14961" />
-    <arg name="fcu_url"            value="udp://:14941@localhost:14951" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
-  <!-- robot 6
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="6" />
-    <arg name="x"                  value="0" />
-    <arg name="y"                  value="4" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="150" />
-    <arg name="fcu_url"            value="udp://:15041@localhost:15051" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
-  <!-- robot 7
-  <include file="$(find intel_aero_gazebo)/launch/intel_aero.launch" >
-    <arg name="id"                 value="7" />
-    <arg name="x"                  value="0" />
-    <arg name="y"                  value="4" />
-    <arg name="z"                  value="0" />
-    <arg name="mavlink_udp_port"   value="15161" />
-    <arg name="fcu_url"            value="udp://:15141@localhost:15151" />
-    <arg name="robot_radius"       value="$(arg robot_radius)"/>
-    <arg name="inflation_radius"   value="$(arg inflation_radius)"/>
-    <arg name="octomap_resolution" value="$(arg octomap_resolution)"/>
-    <arg name="static_map"         value="$(arg static_map)"/>
-    <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
-    <arg name="world_frame"        value="$(arg world_frame)"/>
-  </include>
- -->
+  <arg name="intel_aero_launch_file" if="$(arg spawn_only)"     value="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch"/>
+  <arg name="intel_aero_launch_file" unless="$(arg spawn_only)" value="$(find intel_aero_gazebo)/launch/intel_aero.launch"/>
+
+  <!-- quads -->
+
+  <arg name="number_of_agents"   value="32"/>
+  <arg name="radius"             value="8"/>
+  <param name="number_of_agents" value="$(arg number_of_agents)"/>
+
+  <group>
+    <arg name="id" value="1"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="2"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="3"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="4"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="5"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="6"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="7"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="8"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="9"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="10"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="11"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="12"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="13"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="14"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="15"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="16"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="17"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="18"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="19"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="20"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="21"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="22"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="23"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="24"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="25"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="26"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="27"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="28"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="29"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="30"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="31"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="32"/>
+    <include file="$(arg intel_aero_launch_file)">
+      <arg name="id" value="$(arg id)"/>
+      <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+      <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
+    </include>
+  </group>
+
 </launch>
