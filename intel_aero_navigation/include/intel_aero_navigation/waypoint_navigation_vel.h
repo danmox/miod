@@ -84,6 +84,12 @@ class WaypointNavigationVel
 };
 
 
+// return the quaternion corresponding to a yaw aligned with the line segment
+// connecting points p1 and p2: see waypoint_navigation.cpp
+geometry_msgs::Quaternion pathSegmentQuaternion(const geometry_msgs::Point& p1,
+                                                const geometry_msgs::Point& p2);
+
+
 }
 
 

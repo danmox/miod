@@ -4,8 +4,8 @@
   <arg name="robot_ns"           value="aero$(arg id)"/>
 
   <!-- topics / frames args -->
-  <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
-  <arg name="static_map_topic"   default="projected_map"/>
+  <arg name="static_map"         default="true"/> <!-- true: a static map will be provided -->
+  <arg name="static_map_topic"   default="/projected_map"/>
   <arg name="world_frame"        default="world"/>
   <arg name="map_frame"          default="$(arg robot_ns)/map"/>
   <arg name="base_frame"         default="$(arg robot_ns)/base_link"/>
@@ -60,13 +60,6 @@
                 -x $(arg x) -y $(arg y) -z $(arg z)
                 -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
 
-    <!-- static transform to offset robot spawn position -->
-    <node pkg="tf2_ros"
-          type="static_transform_publisher"
-          name="offset_broadcaster"
-          args="$(arg x) $(arg y) $(arg z) $(arg Y) $(arg P) $(arg R)
-                $(arg world_frame) $(arg map_frame)"/>
-
     <!-- model pose tf publisher (for spawn_only so model appears in rviz) -->
     <node pkg="intel_aero_gazebo"
           type="model_tf_publisher"
@@ -84,6 +77,31 @@
     <node name="joint_state_publisher"
           pkg="joint_state_publisher"
           type="joint_state_publisher"/>
+
+    <!-- static transform to offset robot spawn position -->
+    <node pkg="tf2_ros"
+          type="static_transform_publisher"
+          name="offset_broadcaster"
+          args="0 0 0 0 0 0 $(arg world_frame) $(arg map_frame)"/>
+
+    <!-- costmap generation -->
+    <node pkg="costmap_2d"
+          name="costmap_2d"
+          type="costmap_2d_node">
+      <param name="costmap/global_frame"      value="$(arg costmap_frame)" />
+      <param name="costmap/robot_base_frame"  value="$(arg base_frame)" />
+      <param name="costmap/map_topic"         value="$(arg static_map_topic)" />
+      <param name="costmap/inflation_radius"  value="$(arg inflation_radius)"/>
+      <param name="costmap/robot_radius"      value="$(arg robot_radius)"/>
+      <param name="costmap/publish_frequency" value="$(arg costmap_rate)"/>
+      <rosparam ns="costmap">
+        transform_tolerance: 0.3
+        update_frequency: 2.0
+        static_map: true
+        always_send_full_costmap: true
+        map_type: costmap
+      </rosparam>
+    </node>
 
     <node pkg="nodelet"
           type="nodelet"

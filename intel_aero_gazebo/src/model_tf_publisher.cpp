@@ -19,6 +19,11 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
+    if (child_frame.compare(parent_frame) == 0) {
+      ROS_WARN("[model_tf_publisher] nothing to do: parent_frame and child_frame are the same");
+      return 0;
+    }
+
     ros::ServiceClient sc;
     sc = nh.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
 

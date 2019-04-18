@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>intel_aero_demos</name>
+  <version>0.0.0</version>
+  <description>A collection of demos for the intel_aero repo</description>
+  <maintainer email="mox@seas.upenn.edu">Daniel Mox</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>actionlib</depend>
+  <depend>intel_aero_navigation</depend>
+  <depend>roscpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>mavros_msgs</depend>
+
+</package>

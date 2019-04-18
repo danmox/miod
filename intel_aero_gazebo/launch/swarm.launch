@@ -3,13 +3,9 @@
   <!-- px4 or no px4 -->
   <arg name="spawn_only"    default="true"/>
 
-  <!-- gazebo args -->
-  <arg name="gazebo_gui"    default="false"/>
-  <arg name="rviz"          default="true"/>
-  <arg name="world"         default="$(find intel_aero_gazebo)/worlds/empty.world"/>
-  <arg name="verbose"       default="false"/>
-  <arg name="paused"        default="false"/>
-  <arg name="gazebo_debug"  default="false"/>
+  <!-- simulation args -->
+  <arg name="gazebo_gui"    default="false" />
+  <arg name="rviz"          default="true" />
 
   <!-- robot args -->
   <arg name="static_map"         default="true"/>
@@ -21,13 +17,12 @@
   <arg name="inflation_radius"   default="1.0"/>
   <arg name="octomap_resolution" default="0.5"/>
 
-  <!-- launch gazebo -->
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="gui"         value="$(arg gazebo_gui)"/>
-    <arg name="world_name"  value="$(arg world)"/>
-    <arg name="verbose"     value="$(arg verbose)"/>
-    <arg name="paused"      value="$(arg paused)"/>
-    <arg name="debug"       value="$(arg gazebo_debug)"/>
+  <!-- gazebo and rviz -->
+  <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
+    <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
+    <arg name="world"            value="$(find intel_aero_gazebo)/worlds/terrain.world"/>
+    <arg name="rviz"             value="$(arg rviz)"/>
+    <arg name="rviz_config_file" value="$(find intel_aero_gazebo)/rviz/example.rviz"/>
   </include>
 
   <!-- if enabled, load saved octomap -->
@@ -39,13 +34,6 @@
     <remap from="projected_map" to="$(arg static_map_topic)"/>
     <param name="frame_id" value="$(arg world_frame)"/>
   </node>
-
-  <!-- rviz -->
-  <node if="$(arg rviz)"
-        name="rviz"
-        pkg="rviz"
-        type="rviz"
-        args="-d $(find intel_aero_gazebo)/rviz/swarm.rviz"/>
 
   <!-- network topology visualization
   <node pkg="network_status"
