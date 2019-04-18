@@ -3,9 +3,7 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Global Options1
-        - /Status1
+      Expanded: ~
       Splitter Ratio: 0.5
     Tree Height: 1084
   - Class: rviz/Selection
@@ -617,144 +615,6 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero1 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero1/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero2 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero2/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero3 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero3/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero4 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero4/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero5 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero5/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
-      Buffer Length: 1
-      Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
-      Name: aero6 path
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Pose Color: 255; 85; 255
-      Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
-      Topic: /aero6/path
-      Unreliable: false
-      Value: true
-    - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -934,6 +794,726 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero17/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero17/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero17/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero17/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero17/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero17/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero17 model
+      Robot Description: /aero17/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero18/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero18/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero18/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero18/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero18/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero18/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero18 model
+      Robot Description: /aero18/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero19/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero19/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero19/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero19/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero19/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero19/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero19 model
+      Robot Description: /aero19/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero20/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero20/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero20/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero20/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero20/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero20/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero20 model
+      Robot Description: /aero20/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero21/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero21/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero21/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero21/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero21/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero21/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero21 model
+      Robot Description: /aero21/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero22/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero22/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero22/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero22/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero22/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero22/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero22 model
+      Robot Description: /aero22/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero23/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero23/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero23/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero23/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero23/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero23/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero23 model
+      Robot Description: /aero23/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero24/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero24/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero24/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero24/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero24/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero24/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero24 model
+      Robot Description: /aero24/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero25/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero25/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero25/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero25/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero25/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero25/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero25 model
+      Robot Description: /aero25/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero26/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero26/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero26/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero26/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero26/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero26/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero26 model
+      Robot Description: /aero26/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero27/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero27/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero27/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero27/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero27/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero27/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero27 model
+      Robot Description: /aero27/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero28/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero28/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero28/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero28/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero28/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero28/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero28 model
+      Robot Description: /aero28/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero29/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero29/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero29/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero29/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero29/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero29/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero29 model
+      Robot Description: /aero29/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero30/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero30/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero30/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero30/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero30/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero30/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero30 model
+      Robot Description: /aero30/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero31/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero31/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero31/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero31/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero31/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero31/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero31 model
+      Robot Description: /aero31/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        aero32/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        aero32/base_link_inertia:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero32/rotor_0:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero32/rotor_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero32/rotor_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        aero32/rotor_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: aero32 model
+      Robot Description: /aero32/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -959,32 +1539,32 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 102.152214
+      Distance: 34.8237228
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 22.946743
-        Y: -22.0810852
-        Z: -17.6551247
-      Focal Shape Fixed Size: true
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.724797308
+      Pitch: 0.915397823
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 1.90664732
+      Yaw: 0.78039825
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
   Height: 1407
   Hide Left Dock: false
-  Hide Right Dock: true
+  Hide Right Dock: false
   QMainWindow State: 000000ff00000000fd0000000400000000000001ad000004d8fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006600fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000031000004d8000000e400fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c000002610000000100000216000004d8fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000031000004d8000000c200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000a000000004afc0100000002fb0000000800540069006d0065010000000000000a00000003de00fffffffb0000000800540069006d006501000000000000045000000000000000000000084b000004d800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
@@ -993,7 +1573,7 @@ Window Geometry:
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: true
+    collapsed: false
   Width: 2560
   X: 0
   Y: 33

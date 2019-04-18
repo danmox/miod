@@ -1,5 +1,5 @@
-#ifndef INTEL_AERO_NAVIGATION_WAYPOINT_NAVIGATION_H_
-#define INTEL_AERO_NAVIGATION_WAYPOINT_NAVIGATION_H_
+#ifndef INTEL_AERO_NAVIGATION_WAYPOINT_NAVIGATION_VEL_H_
+#define INTEL_AERO_NAVIGATION_WAYPOINT_NAVIGATION_VEL_H_
 
 
 #include <ros/ros.h>
@@ -28,7 +28,7 @@
 namespace intel_aero_navigation {
 
 
-class WaypointNavigation
+class WaypointNavigationVel
 {
   protected:
     MavrosUAV aero; // wrapper class interface to UAV
@@ -40,6 +40,8 @@ class WaypointNavigation
     ros::NodeHandle nh, pnh;
     ros::Subscriber costmap_sub, odom_sub;
     ros::Publisher path_pub;
+    ros::ServiceClient s_client, g_client;
+    ros::Publisher vel_pub;
 
     tf2_ros::Buffer tf2_buff;
     tf2_ros::TransformListener tf2_listener;
@@ -73,7 +75,7 @@ class WaypointNavigation
     void planPath(const geometry_msgs::PoseStamped&);
 
   public:
-    WaypointNavigation(std::string, ros::NodeHandle, ros::NodeHandle);
+    WaypointNavigationVel(std::string, ros::NodeHandle, ros::NodeHandle);
 
     void costmapCB(const nav_msgs::OccupancyGrid::ConstPtr&);
     void odomCB(const nav_msgs::Odometry::ConstPtr&);

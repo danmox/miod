@@ -12,13 +12,12 @@
   <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
   <depend>tf</depend>
-  <depend>tf2</depend>
-  <depend>tf2_ros</depend>
+  <depend>intel_aero_navigation</depend>
+  <depend>actionlib</depend>
   <exec_depend>octomap_server</exec_depend>
   <exec_depend>costmap_2d</exec_depend>
 
   <export>
-    <gazebo_ros plugin_path="${prefix}/lib" gazebo_media_path="${prefix}" />
   </export>
 
 </package>
