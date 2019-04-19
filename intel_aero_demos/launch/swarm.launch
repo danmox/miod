@@ -4,11 +4,11 @@
   <arg name="spawn_only"    default="true"/>
 
   <!-- simulation args -->
-  <arg name="gazebo_gui"    default="false" />
-  <arg name="rviz"          default="true" />
+  <arg name="gazebo_gui"    default="false"/>
+  <arg name="rviz"          default="true"/>
 
   <!-- robot args -->
-  <arg name="static_map"         default="true"/>
+  <arg name="static_map"         default="false"/>
   <arg name="static_map_file"    if="$(arg static_map)"     default="$(find intel_aero_gazebo)/maps/terrain_no_ground.bt"/>
   <arg name="static_map_topic"   if="$(arg static_map)"     value="/projected_map"/>
   <arg name="static_map_topic"   unless="$(arg static_map)" value="projected_map"/>
@@ -20,9 +20,9 @@
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
     <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
-    <arg name="world"            value="$(find intel_aero_gazebo)/worlds/terrain.world"/>
+    <arg name="world"            value="worlds/empty.world"/>
     <arg name="rviz"             value="$(arg rviz)"/>
-    <arg name="rviz_config_file" value="$(find intel_aero_gazebo)/rviz/example.rviz"/>
+    <arg name="rviz_config_file" value="$(find intel_aero_demos)/rviz/swarm.rviz"/>
   </include>
 
   <!-- if enabled, load saved octomap -->
@@ -35,20 +35,6 @@
     <param name="frame_id" value="$(arg world_frame)"/>
   </node>
 
-  <!-- network topology visualization
-  <node pkg="network_status"
-        type="network_visualization_node"
-        name="network_visualization_node"
-        output="screen">
-    <param name="number_of_agents" value="4"/>
-    <param name="task_agent_id"    value="4"/>
-    <param name="world_frame"      value="$(arg world_frame)"/>
-  </node>
- -->
-
-  <arg name="intel_aero_launch_file" if="$(arg spawn_only)"     value="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch"/>
-  <arg name="intel_aero_launch_file" unless="$(arg spawn_only)" value="$(find intel_aero_gazebo)/launch/intel_aero.launch"/>
-
   <!-- quads -->
 
   <arg name="number_of_agents"   value="32"/>
@@ -57,7 +43,7 @@
 
   <group>
     <arg name="id" value="1"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -66,7 +52,7 @@
 
   <group>
     <arg name="id" value="2"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -75,7 +61,7 @@
 
   <group>
     <arg name="id" value="3"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -84,7 +70,7 @@
 
   <group>
     <arg name="id" value="4"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -93,7 +79,7 @@
 
   <group>
     <arg name="id" value="5"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -102,7 +88,7 @@
 
   <group>
     <arg name="id" value="6"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -111,7 +97,7 @@
 
   <group>
     <arg name="id" value="7"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -120,7 +106,7 @@
 
   <group>
     <arg name="id" value="8"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -129,7 +115,7 @@
 
   <group>
     <arg name="id" value="9"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -138,7 +124,7 @@
 
   <group>
     <arg name="id" value="10"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -147,7 +133,7 @@
 
   <group>
     <arg name="id" value="11"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -156,7 +142,7 @@
 
   <group>
     <arg name="id" value="12"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -165,7 +151,7 @@
 
   <group>
     <arg name="id" value="13"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -174,7 +160,7 @@
 
   <group>
     <arg name="id" value="14"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -183,7 +169,7 @@
 
   <group>
     <arg name="id" value="15"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -192,7 +178,7 @@
 
   <group>
     <arg name="id" value="16"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -201,7 +187,7 @@
 
   <group>
     <arg name="id" value="17"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -210,7 +196,7 @@
 
   <group>
     <arg name="id" value="18"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -219,7 +205,7 @@
 
   <group>
     <arg name="id" value="19"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -228,7 +214,7 @@
 
   <group>
     <arg name="id" value="20"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -237,7 +223,7 @@
 
   <group>
     <arg name="id" value="21"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -246,7 +232,7 @@
 
   <group>
     <arg name="id" value="22"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -255,7 +241,7 @@
 
   <group>
     <arg name="id" value="23"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -264,7 +250,7 @@
 
   <group>
     <arg name="id" value="24"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -273,7 +259,7 @@
 
   <group>
     <arg name="id" value="25"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -282,7 +268,7 @@
 
   <group>
     <arg name="id" value="26"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -291,7 +277,7 @@
 
   <group>
     <arg name="id" value="27"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -300,7 +286,7 @@
 
   <group>
     <arg name="id" value="28"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -309,7 +295,7 @@
 
   <group>
     <arg name="id" value="29"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -318,7 +304,7 @@
 
   <group>
     <arg name="id" value="30"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -327,7 +313,7 @@
 
   <group>
     <arg name="id" value="31"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
@@ -336,7 +322,7 @@
 
   <group>
     <arg name="id" value="32"/>
-    <include file="$(arg intel_aero_launch_file)">
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
       <arg name="x"  value="$(eval arg('radius')*cos((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>
       <arg name="y"  value="$(eval arg('radius')*sin((arg('id')-1)*2.0*3.141592/arg('number_of_agents')))"/>

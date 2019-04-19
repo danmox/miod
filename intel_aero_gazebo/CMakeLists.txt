@@ -37,8 +37,5 @@ target_link_libraries(offboard_test ${catkin_LIBRARIES})
 add_executable(model_tf_publisher src/model_tf_publisher.cpp)
 target_link_libraries(model_tf_publisher ${catkin_LIBRARIES})
 
-add_executable(swarm_test src/swarm_test.cpp)
-target_link_libraries(swarm_test ${catkin_LIBRARIES})
-
 add_library(velocity_control src/set_velocity_plugin.cpp)
 target_link_libraries(velocity_control ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})

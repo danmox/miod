@@ -29,3 +29,6 @@ include_directories(
 
 add_executable(patrol_demo src/patrol.cpp)
 target_link_libraries(patrol_demo ${catkin_LIBRARIES})
+
+add_executable(swarm_demo src/swarm.cpp)
+target_link_libraries(swarm_demo ${catkin_LIBRARIES})
