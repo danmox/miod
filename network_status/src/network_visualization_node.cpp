@@ -28,20 +28,19 @@ int main(int argc, char** argv)
 
   ros::Publisher viz_pub = nh.advertise<visualization_msgs::Marker>("network_visualization", 10);
   ros::Publisher rates_pub = nh.advertise<network_status::RatePair>("channel_rates", 10);
-  ros::Publisher task_pub = nh.advertise<std_msgs::Float64>("task_agent_rate", 10);
 
   tf2_ros::Buffer tf2_buff;
   tf2_ros::TransformListener tf2_listener(tf2_buff);
 
-  int number_of_agents, task_agent_id;
+  int task_agent_count, network_agent_count;
   std::string world_frame;
-  double dist_threshold(0.0);
-  if (!nh.getParam("/number_of_agents", number_of_agents) ||
-      !nh.getParam("/task_agent_id", task_agent_id) ||
+  if (!nh.getParam("/task_agent_count", task_agent_count) ||
+      !nh.getParam("/network_agent_count", network_agent_count) ||
       !pnh.getParam("world_frame", world_frame)) {
     ROS_FATAL("[network_visualization_node] failed to fetch parameter(s) from server");
     return -1;
   }
+  int number_of_agents = task_agent_count + network_agent_count;
 
   bool use_map = true;
   CommunicationPredict comm_sim(use_map);
@@ -62,7 +61,6 @@ int main(int argc, char** argv)
 
   ros::Rate rate(10);
   ROS_INFO("[network_visualization_node] starting loop");
-  std_msgs::Float64 task_rate;
   while (ros::ok()) {
     rate.sleep();
     ros::spinOnce();
@@ -115,21 +113,14 @@ int main(int argc, char** argv)
         color.a = pair.rate;
         ROS_DEBUG("[network_visualization_node] alpha = %.2f", pair.rate);
 
-        if (i == task_agent_id-1 || j == task_agent_id-1) {
-          if (pair.rate > task_rate.data)
-            task_rate.data = pair.rate;
-
+        if (i < task_agent_count || j < task_agent_count)
           color.g = 1.0;
-          marker.colors.push_back(color);
-          marker.colors.push_back(color);
-        } else {
+        else
           color.r = 1.0;
-          marker.colors.push_back(color);
-          marker.colors.push_back(color);
-        }
+
+        marker.colors.push_back(color);
+        marker.colors.push_back(color);
       }
-      task_pub.publish(task_rate);
-      task_rate.data = 0.0;
 
       viz_pub.publish(marker);
     } else {

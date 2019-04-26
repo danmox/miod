@@ -12,7 +12,7 @@
 
   <!-- waypoint navigation vel args -->
   <arg name="position_tol"       default="0.2"/> <!-- meters -->
-  <arg name="heading_tol"        default="0.2"/> <!-- ~28deg -->
+  <arg name="heading_tol"        default="0.5"/> <!-- ~28deg -->
 
   <!-- mapping / costmap args -->
   <arg name="robot_radius"       default="1.0"/>

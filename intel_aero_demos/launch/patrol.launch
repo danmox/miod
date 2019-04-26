@@ -21,13 +21,13 @@
     <arg name="rviz_config_file" value="$(find intel_aero_demos)/rviz/patrol.rviz"/>
   </include>
 
-  <!-- network topology visualization
+  <!-- network topology visualization -->
   <include if="$(arg network_viz)"
            file="$(find intel_aero_gazebo)/launch/network_viz.launch">
-    <arg name="static_map_topic" value="$(arg static_map_topic)"/>
-    <arg name="world_frame"      value="$(arg world_frame)"/>
+    <arg name="static_map_topic" value="/projected_map"/>
+    <arg name="world_frame"      value="world"/>
   </include>
- -->
+
   <!-- load saved octomap -->
   <node pkg="octomap_server"
         type="octomap_server_node"
@@ -64,7 +64,7 @@
     <arg name="id" value="3"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="0.0"/>
+      <arg name="x"  value="10.0"/>
       <arg name="y"  value="0.0"/>
     </include>
   </group>
@@ -73,8 +73,8 @@
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="1.0"/>
-      <arg name="y"  value="0.0"/>
+      <arg name="x"  value="0.0"/>
+      <arg name="y"  value="10.0"/>
     </include>
   </group>
 
@@ -82,8 +82,8 @@
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="0.0"/>
-      <arg name="y"  value="1.0"/>
+      <arg name="x"  value="-10.0"/>
+      <arg name="y"  value="0.0"/>
     </include>
   </group>
 
@@ -91,8 +91,8 @@
     <arg name="id" value="6"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="1.0"/>
-      <arg name="y"  value="1.0"/>
+      <arg name="x"  value="0.0"/>
+      <arg name="y"  value="-10.0"/>
     </include>
   </group>
 
