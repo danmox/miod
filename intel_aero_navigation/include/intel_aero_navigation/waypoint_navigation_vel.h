@@ -35,7 +35,7 @@ class WaypointNavigationVel
 
     // parameters
     std::string local_frame, world_frame, costmap_frame;
-    double position_tol, heading_tol;
+    double position_tol, heading_tol, linear_vel_des, angular_vel_des;
 
     ros::NodeHandle nh, pnh;
     ros::Subscriber costmap_sub, odom_sub;

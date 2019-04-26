@@ -16,6 +16,11 @@
 namespace intel_aero_navigation {
 
 
+template <typename T> int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+
 WaypointNavigationVel::WaypointNavigationVel(std::string name, ros::NodeHandle nh_, ros::NodeHandle pnh_):
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1),
   tf2_listener(tf2_buff),
@@ -54,6 +59,12 @@ WaypointNavigationVel::WaypointNavigationVel(std::string name, ros::NodeHandle n
   if (!pnh.getParam("heading_tol", heading_tol)) {
     heading_tol = 0.2;
     ROS_WARN("[WaypointNavigationVel] failed to fetch parameter \"heading_tol\" using default value of %.2fm", heading_tol);
+  }
+  if (!pnh.getParam("linear_vel_des", linear_vel_des) ||
+      !pnh.getParam("angular_vel_des", angular_vel_des)) {
+    linear_vel_des = 3;
+    angular_vel_des = 0.5;
+    ROS_WARN("[WaypointNavigationVel] failed to fetch parameters \"linear_vel_des\" and \"angular_vel_des\"; using default values of %.2f and %.2f", linear_vel_des, angular_vel_des);
   }
 
   costmap_sub = nh.subscribe("costmap", 10, &WaypointNavigationVel::costmapCB, this);
@@ -462,9 +473,6 @@ void WaypointNavigationVel::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
     double goal_x = goal_waypoint.pose.position.x;
     double curr_y = robot_pose.pose.position.y;
     double goal_y = goal_waypoint.pose.position.y;
-
-    double desired_ang_vel = 0.5;
-    double desired_lin_vel = 3;
     double mag = distance(robot_pose, goal_waypoint);
 
     std::vector<double> dist_vec(3);
@@ -473,15 +481,12 @@ void WaypointNavigationVel::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
     dist_vec[2] = (goal_z - curr_z) / mag;
 
     double heading_err = headingError(robot_pose, goal_waypoint);
+    velocity_command.angular.z = angular_vel_des * heading_err;
 
-    if (fabs(heading_err) >= heading_tol) {
-      velocity_command.angular.z = desired_ang_vel * heading_err;
-    } else if (distance(robot_pose, goal_waypoint) >= position_tol) {
-      velocity_command.linear.x = desired_lin_vel * dist_vec[0];
-      velocity_command.linear.y = desired_lin_vel * dist_vec[1];
-      velocity_command.linear.z = desired_lin_vel * dist_vec[2];
-    } else {
-      return;
+    if (distance(robot_pose, goal_waypoint) >= position_tol) {
+      velocity_command.linear.x = linear_vel_des * dist_vec[0];
+      velocity_command.linear.y = linear_vel_des * dist_vec[1];
+      velocity_command.linear.z = linear_vel_des * dist_vec[2];
     }
     vel_pub.publish(velocity_command);
   }
