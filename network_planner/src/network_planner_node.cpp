@@ -22,8 +22,7 @@ int main(int argc, char** argv)
 
   np.comm_reqs = comm_reqs;
 
-  // delay for 5 seconds
-  while (!np.Plan()) {
+  while (ros::ok() && !np.UpdateNetworkConfig()) {
     ros::Rate(2).sleep();
   }
 

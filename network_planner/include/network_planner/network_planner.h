@@ -38,12 +38,14 @@ class NetworkPlanner
     CommunicationPredict channel_sim;
 
     void odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx);
+    bool SOCP(const arma::mat& R_mean, const arma::mat& R_var,
+              std::vector<arma::mat>& alpha_ij_k, double& slack, bool debug);
 
   public:
     CommReqs comm_reqs;
 
     NetworkPlanner(ros::NodeHandle& nh, ros::NodeHandle& pnh);
-    bool Plan();
+    bool UpdateNetworkConfig();
 };
 
 
