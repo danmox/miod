@@ -4,9 +4,11 @@ project(network_planner)
 add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED
+  actionlib
   communication_predict
   geometry_msgs
   grid_mapping
+  intel_aero_navigation
   nav_msgs
   roscpp
   socp
@@ -19,9 +21,11 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
+    actionlib
     communication_predict
     geometry_msgs
     grid_mapping
+    intel_aero_navigation
     nav_msgs
     roscpp
     socp

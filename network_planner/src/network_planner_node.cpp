@@ -16,15 +16,14 @@ int main(int argc, char** argv)
   flow.sources.insert(1);
   flow.dests.insert(2);
   flow.qos = 0.2;
-  flow.confidence = 0.8;
+  flow.confidence = 0.6;
   network_planner::CommReqs comm_reqs;
   comm_reqs.push_back(flow);
 
   np.setCommReqs(comm_reqs);
 
-  while (ros::ok() && !np.updateNetworkConfig()) {
-    ros::Rate(2).sleep();
-  }
+  np.initSystem();
+  np.runPlanningLoop();
 
   return 0;
 }

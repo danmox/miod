@@ -7,6 +7,9 @@
 #include <octomap/octomap.h>
 #include <grid_mapping/grid.hpp>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Pose.h>
+#include <intel_aero_navigation/WaypointNavigationAction.h>
+#include <actionlib/client/simple_action_client.h>
 #include <armadillo>
 #include <vector>
 #include <unordered_set>
@@ -44,6 +47,11 @@ class NetworkPlanner
     bool received_costmap;
     CommReqs comm_reqs;
 
+    // navigation vars
+    typedef intel_aero_navigation::WaypointNavigationAction NavAction;
+    typedef actionlib::SimpleActionClient<NavAction> NavClient;
+    std::vector<std::shared_ptr<NavClient>> nav_clients;
+
     // SOCP vars
     std::map<std::tuple<int,int,int>, int> ijk_to_idx;
     std::map<int, std::tuple<int,int,int>> idx_to_ijk;
@@ -73,6 +81,8 @@ class NetworkPlanner
     void odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx);
     void mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg);
     void setCommReqs(const CommReqs& reqs);
+    void runPlanningLoop();
+    void initSystem();
 };
 
 

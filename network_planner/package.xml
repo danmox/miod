@@ -10,10 +10,12 @@
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>actionlib</depend>
   <depend>armadillo</depend>
   <depend>communication_predict</depend>
   <depend>geometry_msgs</depend>
   <depend>grid_mapping</depend>
+  <depend>intel_aero_navigation</depend>
   <depend>nav_msgs</depend>
   <depend>octomap</depend>
   <depend>roscpp</depend>

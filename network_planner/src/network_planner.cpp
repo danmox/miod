@@ -29,7 +29,7 @@ double PsiInv(double eps) {
 NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
-  channel_sim(true), // use map
+  channel_sim(false), // don't use map
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
@@ -50,6 +50,10 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   for (int i = num_task_agents; i < num_agents; ++i)
     network_agent_inds.push_back(i);
 
+  // costmap for checking if candidate team configurations are valid
+  map_sub = nh.subscribe("/aero5/costmap_2d/costmap/costmap", 10,
+                         &NetworkPlanner::mapCB, this);
+
   // subscribe to odom messages for team configuration
   namespace stdph = std::placeholders;
   for (int i = 1; i <= num_agents; ++i) {
@@ -61,9 +65,15 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     odom_subs.push_back(sub);
   }
 
-  // costmap for checking if candidate team configurations are valid
-  map_sub = nh.subscribe("/aero5/costmap_2d/costmap/costmap", 10,
-                         &NetworkPlanner::mapCB, this);
+  // initialize navigation action clients
+  for (int i = num_task_agents+1; i < num_agents+1; ++i) { // names are 1 indexed
+    std::stringstream ss;
+    ss << "/aero" << i << "/waypoint_navigation_vel_nodelet";
+    std::string sn = ss.str();
+    std::shared_ptr<NavClient> ac_ptr(new NavClient(sn.c_str(), true));
+    nav_clients.push_back(ac_ptr);
+    NP_INFO("connecting to action server %s", sn.c_str());
+  }
 }
 
 
@@ -411,6 +421,29 @@ double NetworkPlanner::computeV(const point_vec& config, bool debug)
 }
 
 
+bool collisionFree(const point_vec& config)
+{
+  for (int i = 0; i < config.size(); ++i)
+    for (int j = i+1; j < config.size(); ++j)
+      if ((config[i] - config[j]).norm() < 2.0)
+        return false;
+  return true;
+}
+
+
+bool obstacleFree(const point_vec& config, const Costmap& costmap)
+{
+  for (const octomap::point3d& pt : config) {
+    grid_mapping::Point pt2d(pt.x(), pt.y());
+    if (!costmap.inBounds(pt2d))
+      continue;
+    else if (costmap.data[costmap.positionToIndex(pt2d)] > 10)
+      return false;
+  }
+  return true;
+}
+
+
 bool NetworkPlanner::updateNetworkConfig()
 {
   // ensure the following conditions are met before planning:
@@ -422,10 +455,12 @@ bool NetworkPlanner::updateNetworkConfig()
     NP_WARN("unable to plan: some agent positions not received yet");
     return false;
   }
+  /*
   if (!channel_sim.mapSet()) {
     NP_WARN("unable to plan: channel simulator has not received a map yet");
     return false;
   }
+  */
   if (comm_reqs.empty()) {
     NP_WARN("unable to plan: no task specification set");
     return false;
@@ -470,36 +505,27 @@ bool NetworkPlanner::updateNetworkConfig()
     steps[i].y() = step_radius*sin(i*2.0*M_PI/num_steps);
   }
   steps.push_back(octomap::point3d(0,0,0)); // hold in place is an option too
-  ++num_steps; // now there are 5 different actions that can be taken
+  ++num_steps; // now there are 5 actions each robot can take
 
   // find config with best margin across all candidate team configurations
 
   std::vector<int> perms = compute_combinations(num_network_agents, num_steps);
   NP_INFO("searching for best configuration in %ld perturbations", perms.size());
-  point_vec candidate_config = team_config;
   double v_star = 0.0;
   point_vec optimal_config = team_config;
   for (int perm : perms) {
     std::vector<int> step_inds = extract_inds(perm, num_network_agents);
 
     // form candidate config, perturbing only network agents
+    point_vec candidate_config = team_config;
     for (int i = 0; i < num_network_agents; ++i)
       candidate_config[network_agent_inds[i]] += steps[step_inds[i]];
 
-    // ensure candidate config is valid (not in an obstacle)
-    bool valid_config = true;
-    for (octomap::point3d& pt : candidate_config) {
-      grid_mapping::Point pt2d(pt.x(), pt.y());
-      if (!costmap.inBounds(pt2d))
-        continue;
-      else if (costmap.data[costmap.positionToIndex(pt2d)] > 10) {
-        valid_config = false;
-        NP_DEBUG("point out of bounds, skipping candidate config");
-        break;
-      }
-    }
-    if (!valid_config)
+    // ensure candidate config is obstacle and collision free
+    if (!obstacleFree(candidate_config, costmap) || !collisionFree(candidate_config)) {
+      NP_DEBUG("candidate configuration not valid; skipping");
       continue;
+    }
 
     //compute v(alpha(x),x)
     double v_alpha_x = computeV(candidate_config, false);
@@ -508,16 +534,79 @@ bool NetworkPlanner::updateNetworkConfig()
       optimal_config = candidate_config;
     }
   }
+  printf("v_star = %f\n", v_star);
   printf("current_config:\n");
   for (const auto& pt : team_config)
-    std::cout << pt << std::endl;
+    printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
   printf("opimal_config:\n");
   for (const auto& pt : optimal_config)
-    std::cout << pt << std::endl;
+    printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
 
+  //
   // reconfigure to optimal value
+  //
+
+  NP_INFO("sending goals");
+  for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
+    geometry_msgs::Pose goal;
+    goal.orientation.w = 1.0;
+    goal.position.x = optimal_config[i+num_task_agents].x();
+    goal.position.y = optimal_config[i+num_task_agents].y();
+    goal.position.z = 3.0; // TODO make param
+
+    intel_aero_navigation::WaypointNavigationGoal goal_msg;
+    goal_msg.waypoints.push_back(goal);
+    goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+
+    nav_clients[i]->sendGoal(goal_msg);
+  }
+
+  NP_INFO("waiting for network agents to reach goals");
+  for (const auto& client : nav_clients)
+    client->waitForResult();
 
   return true;
+}
+
+
+void NetworkPlanner::runPlanningLoop()
+{
+  while (ros::ok())
+    updateNetworkConfig();
+}
+
+
+void NetworkPlanner::initSystem()
+{
+  NP_INFO("waiting for action servers to start");
+  for (auto& client : nav_clients)
+    client->waitForServer();
+  NP_INFO("action servers started");
+
+  NP_INFO("waiting for odom");
+  if (!all(received_odom, true)) ros::Rate(1).sleep();
+  NP_INFO("odom received");
+
+  NP_INFO("sending takeoff goals");
+  for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
+    geometry_msgs::Pose goal;
+    goal.orientation.w = 1.0;
+    goal.position.x = team_config[i+num_task_agents].x();
+    goal.position.y = team_config[i+num_task_agents].y();
+    goal.position.z = 3.0; // TODO make param
+
+    intel_aero_navigation::WaypointNavigationGoal goal_msg;
+    goal_msg.waypoints.push_back(goal);
+    goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+
+    nav_clients[i]->sendGoal(goal_msg);
+  }
+
+  NP_INFO("waiting for agents to complete takeoff");
+  for (const auto& client : nav_clients)
+    client->waitForResult();
+
+  NP_INFO("system ready");
 }
 
 
