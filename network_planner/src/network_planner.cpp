@@ -29,14 +29,15 @@ double PsiInv(double eps) {
 NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
-  channel_sim(false), // don't use map
+  channel_sim(true), // use map
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   namespace stdph = std::placeholders;
 
   if (!nh.getParam("/task_agent_count", num_task_agents) ||
-      !nh.getParam("/network_agent_count", num_network_agents))
+      !nh.getParam("/network_agent_count", num_network_agents) ||
+      !pnh.getParam("step_radius", step_radius))
     NP_FATAL("failed to fetch params from server");
 
   // initialize agent count dependent variables
@@ -498,7 +499,6 @@ bool NetworkPlanner::updateNetworkConfig()
   // compute steps an agent might take in each direction
 
   int num_steps = 4;
-  double step_radius = 1.0; // meters
   point_vec steps(num_steps);
   for (int i = 0; i < num_steps; ++i) {
     steps[i].x() = step_radius*cos(i*2.0*M_PI/num_steps);

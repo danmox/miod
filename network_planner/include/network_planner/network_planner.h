@@ -46,6 +46,7 @@ class NetworkPlanner
     Costmap costmap;
     bool received_costmap;
     CommReqs comm_reqs;
+    double step_radius;
 
     // navigation vars
     typedef intel_aero_navigation::WaypointNavigationAction NavAction;
