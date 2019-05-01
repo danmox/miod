@@ -29,7 +29,9 @@ double PsiInv(double eps) {
 NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
-  channel_sim(true) // use map
+  channel_sim(true), // use map
+  received_costmap(false),
+  costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   namespace stdph = std::placeholders;
 
@@ -42,6 +44,12 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   team_config = point_vec(num_agents);
   received_odom = std::vector<bool>(num_agents, false);
 
+  // TODO don't hard code this
+  // the first n agents are task agents and the remaining m agents are network
+  // agents
+  for (int i = num_task_agents; i < num_agents; ++i)
+    network_agent_inds.push_back(i);
+
   // subscribe to odom messages for team configuration
   namespace stdph = std::placeholders;
   for (int i = 1; i <= num_agents; ++i) {
@@ -52,6 +60,10 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     ros::Subscriber sub = nh.subscribe<nav_msgs::Odometry>(name, 10, fcn);
     odom_subs.push_back(sub);
   }
+
+  // costmap for checking if candidate team configurations are valid
+  map_sub = nh.subscribe("/aero5/costmap_2d/costmap/costmap", 10,
+                         &NetworkPlanner::mapCB, this);
 }
 
 
@@ -63,32 +75,34 @@ void NetworkPlanner::odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx)
 }
 
 
+void NetworkPlanner::mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
+{
+  NP_INFO("received costmap");
+  costmap = Costmap(msg);
+  received_costmap = true;
+}
+
+
 bool all(const std::vector<bool>& vec, bool val)
 {
   return std::find(vec.begin(), vec.end(), !val) == vec.end();
 }
 
 
-bool NetworkPlanner::SOCP(const arma::mat& R_mean,
-                          const arma::mat& R_var,
-                          std::vector<arma::mat>& alpha_ij_k,
-                          double& slack,
-                          bool debug)
+void NetworkPlanner::setCommReqs(const CommReqs& reqs)
 {
-  //
-  // form SOCP constraints of the form ||Ay + b|| <= c^Ty + d
-  //
+  comm_reqs = reqs;
 
   // build useful data structure for converting betweein i,j,k indices and
   // linear indices used for the optimization vars
-  int num_flows = comm_reqs.size();
-  std::map<std::tuple<int,int,int>, int> ijk_to_idx;
-  std::map<int, std::tuple<int,int,int>> idx_to_ijk;
+  num_flows = comm_reqs.size();
+  ijk_to_idx.clear();
+  idx_to_ijk.clear();
   int ind = 0;
   for (int i = 0; i < num_agents; ++i) {
     for (int j = 0; j < num_agents; ++j) {
       for (int k = 0; k < num_flows; ++k) {
-        if (R_mean(i,j) > 0.0) {
+        if (i != j) { // TODO ignore more variables
           std::tuple<int,int,int> subs = std::make_tuple(i,j,k);
           idx_to_ijk[ind] = subs;
           ijk_to_idx[subs] = ind++;
@@ -98,38 +112,27 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
       }
     }
   }
-  int alpha_dim = ijk_to_idx.size(); // # optimization vars (excluding slack)
-  int y_dim = alpha_dim + 1;         // # optimization vars (including slack)
 
-  if (debug) {
-    printf("\noptimization vars:\n");
-    for (int ind = 0; ind < alpha_dim; ++ind) {
-      int i,j,k;
-      std::tie(i,j,k) = idx_to_ijk[ind];
-      printf("a_%d%d_%d(%d)\n", i+1, j+1, k+1, ind);
-    }
-    printf("\n");
-  }
+  alpha_dim = ijk_to_idx.size(); // # optimization vars (excluding slack)
+  y_dim = alpha_dim + 1;         // # optimization vars (including slack)
+}
 
-  // total number of constraints for problem
-  int num_constraints =
-    num_agents * num_flows // probability QoS constraints (for every i,k)
-    + num_agents           // sum_jk alpha_ijk <= 1 (channel availability, for every i)
-    + 2 * alpha_dim          // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
-    + 1;                     // s >= 0 (slack variable)
 
-  // constraint matrices / column vectors
-  std::vector<arma::mat> A_mats(num_constraints);
-  std::vector<arma::vec> b_vecs(num_constraints);
-  std::vector<arma::vec> c_vecs(num_constraints);
-  std::vector<arma::vec> d_vecs(num_constraints);
-
-  int idx = 0; // constraint index
-
+void NetworkPlanner::probConstraints(const arma::mat& R_mean,
+                                     const arma::mat& R_var,
+                                     std::vector<arma::mat>& A_mats,
+                                     std::vector<arma::vec>& b_vecs,
+                                     std::vector<arma::vec>& c_vecs,
+                                     std::vector<arma::vec>& d_vecs,
+                                     int& idx,
+                                     bool divide_psi_inv_eps,
+                                     bool debug)
+{
   // probability constraints (second-order cones) ||Ay|| <= c^Ty + d
-
   for (int k = 0; k < num_flows; ++k) {
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
+    if (!divide_psi_inv_eps)
+      psi_inv_eps = 1.0;
     if (debug) printf("psi_inv_eps = %f\n", psi_inv_eps);
     for (int i = 0; i < num_agents; ++i) {
       A_mats[idx] = arma::zeros<arma::mat>(y_dim, y_dim);
@@ -165,21 +168,62 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   }
 
   if (debug) {
-    for (int n = 0; n < num_agents*num_flows; ++n) {
+    for (int n = 0; n < num_agents*num_flows; ++n) { // num prob constraints
       printf("\ncoefficient %d:", n+1);
-      printf("\nalpha_ij_k     coeff\n");
+      printf("\nalpha_ij_k    A_mats\n");
       printf("----------   -------\n");
       for (int ind = 0; ind < alpha_dim; ++ind) {
         int i,j,k;
         std::tie(i,j,k) = idx_to_ijk[ind];
-        double val = A_mats[k](ind,ind);
-        if (val > 0.0 || val < 0.0)
-          printf("alpha_%d%d_%d   %7.4f\n", i+1, j+1, k+1, A_mats[n](ind,ind));
+        double val = A_mats[n](ind,ind);
+        if (fabs(val) > 1e-4)
+          printf("alpha_%d%d_%d   %7.4f\n", i+1, j+1, k+1, val);
         else
           printf("alpha_%d%d_%d   %7.1f\n", i+1, j+1, k+1, 0.0);
       }
     }
   }
+}
+
+
+bool NetworkPlanner::SOCP(const arma::mat& R_mean,
+                          const arma::mat& R_var,
+                          double& slack,
+                          bool debug)
+{
+  //
+  // form SOCP constraints of the form ||Ay + b|| <= c^Ty + d
+  //
+
+  if (debug) {
+    printf("\noptimization vars:\n");
+    for (int ind = 0; ind < alpha_dim; ++ind) {
+      int i,j,k;
+      std::tie(i,j,k) = idx_to_ijk[ind];
+      printf("a_%d%d_%d(%d)\n", i+1, j+1, k+1, ind);
+    }
+    printf("\n");
+  }
+
+  // total number of constraints for problem
+  int num_constraints =
+    num_agents * num_flows // probability QoS constraints (for every i,k)
+    + num_agents           // sum_jk alpha_ijk <= 1 (channel availability, for every i)
+    + 2 * alpha_dim          // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
+    + 1;                     // s >= 0 (slack variable)
+
+  // constraint matrices / column vectors
+  std::vector<arma::mat> A_mats(num_constraints);
+  std::vector<arma::vec> b_vecs(num_constraints);
+  std::vector<arma::vec> c_vecs(num_constraints);
+  std::vector<arma::vec> d_vecs(num_constraints);
+
+  int idx = 0; // constraint index
+
+  // probability constraints (second-order cones) ||Ay|| <= c^Ty + d
+  // this function requires pre allocated vectors and advances idx according to
+  // the number of constraints inserted
+  probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, true, debug);
 
   // channel availability constraints (sum_jk alpha_ijk <= 1)
   // ||0|| <= -c^Ty + 1
@@ -240,7 +284,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   arma::vec f_obj = arma::zeros<arma::vec>(y_dim);
   f_obj(y_dim-1) = -1; // SOCP solver is a minimizer
 
-  arma::vec y_col; // optimization variables
+  y_col.clear();
   std::vector<arma::vec> z_vecs; //??
   std::vector<double> w_vec; //??
   std::vector<double> primal_ub(y_dim, 1.0);
@@ -255,11 +299,9 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
     return false;
   }
 
-  // populate return values
-
   slack = y_col(y_dim-1);
 
-  alpha_ij_k = std::vector<arma::mat>(3);
+  std::vector<arma::mat> alpha_ij_k(num_flows);
   for (int k = 0; k < num_flows; ++k) {
     alpha_ij_k[k] = arma::zeros<arma::mat>(num_agents, num_agents);
     for (int i = 0; i < num_agents; ++i) {
@@ -307,12 +349,75 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 }
 
 
-bool NetworkPlanner::UpdateNetworkConfig()
+void NetworkPlanner::networkState(const point_vec& state,
+                                  arma::mat& R_mean,
+                                  arma::mat& R_var)
+{
+  R_mean = arma::zeros<arma::mat>(num_agents, num_agents);
+  R_var = arma::zeros<arma::mat>(num_agents, num_agents);
+  for (int i = 0; i < num_agents; ++i) {
+    for (int j = 0; j < num_agents; ++j) {
+      if (i == j) {
+        R_mean(i,j) = R_var(i,j) = 0.0;
+      } else {
+        double xi = state[i].x(), yi = state[i].y();
+        double xj = state[j].x(), yj = state[j].y();
+        channel_sim.Predict(xi, yi, xj, yj, R_mean(i,j), R_var(i,j));
+      }
+    }
+  }
+}
+
+
+double NetworkPlanner::computeV(const point_vec& config, bool debug)
+{
+  // get predicted rates
+  arma::mat R_mean;
+  arma::mat R_var;
+  networkState(config, R_mean, R_var);
+
+  int num_constraints = num_agents * num_flows;
+
+  // constraint matrices / column vectors
+  std::vector<arma::mat> A_mats(num_constraints);
+  std::vector<arma::vec> b_vecs(num_constraints);
+  std::vector<arma::vec> c_vecs(num_constraints);
+  std::vector<arma::vec> d_vecs(num_constraints);
+
+  // compute probability constraints without dividing by psi_inv_eps
+  int idx = 0;
+  probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
+
+  // v(alpha(x),x') excludes slack variable
+  arma::vec y_tmp = y_col;
+  y_tmp(y_dim-1) = 0.0;
+  if (debug) y_tmp.print("y_tmp:");
+
+  // compute v(alpha(x),x')
+  arma::vec v_col(num_constraints);
+  idx = 0;
+  for (int k = 0; k < num_flows; ++k) {
+    double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
+    for (int i = 0; i < num_agents; ++i) {
+      v_col(idx) = arma::as_scalar((c_vecs[idx].t())*y_tmp + d_vecs[idx]);
+      v_col(idx) /= arma::norm(A_mats[idx] * y_tmp, 2);
+      v_col(idx) -= psi_inv_eps;
+      ++idx;
+    }
+  }
+  if (debug) v_col.print("v_col:");
+
+  return v_col.min();
+}
+
+
+bool NetworkPlanner::updateNetworkConfig()
 {
   // ensure the following conditions are met before planning:
   // 1) odom messages have been received for each agent
   // 2) the channel_sim has received a map (i.e. is ready to predict)
   // 3) a task specification has been received
+  // 4) a costmap has been received so that candidate configs can be vetted
   if (!all(received_odom, true)) {
     NP_WARN("unable to plan: some agent positions not received yet");
     return false;
@@ -325,40 +430,92 @@ bool NetworkPlanner::UpdateNetworkConfig()
     NP_WARN("unable to plan: no task specification set");
     return false;
   }
+  if (!received_costmap) {
+    NP_WARN("unable to plan: no costmap received yet");
+    return false;
+  }
 
   //
   // find optimal routing variables for current team configuration
   //
 
-
   // get predicted rates
 
-  arma::mat R_mean(num_agents, num_agents);
-  arma::mat R_var(num_agents, num_agents);
-  for (int i = 0; i < num_agents; ++i) {
-    for (int j = 0; j < num_agents; ++j) {
-      if (i == j) {
-        R_mean(i,j) = R_var(i,j) = 0.0;
-      } else {
-        double xi = team_config[i].x(), yi = team_config[i].y();
-        double xj = team_config[j].x(), yj = team_config[j].y();
-        channel_sim.Predict(xi, yi, xj, yj, R_mean(i,j), R_var(i,j));
-      }
-    }
-  }
+  arma::mat R_mean;
+  arma::mat R_var;
+  networkState(team_config, R_mean, R_var);
 
   // solve SOCP
 
   double slack;
-  std::vector<arma::mat> alpha_ij_k;
-  bool success = SOCP(R_mean, R_var, alpha_ij_k, slack, true);
+  bool success = SOCP(R_mean, R_var, slack, false);
+  NP_DEBUG("found solution to SOCP with slack = %f", slack);
 
   if (!success) {
     NP_ERROR("unable to plan: no valid solution to SOCP found");
     return false;
   }
 
-  // compute gradient of configuration
+  //
+  // find next best network configuration
+  //
+
+  // compute steps an agent might take in each direction
+
+  int num_steps = 4;
+  double step_radius = 1.0; // meters
+  point_vec steps(num_steps);
+  for (int i = 0; i < num_steps; ++i) {
+    steps[i].x() = step_radius*cos(i*2.0*M_PI/num_steps);
+    steps[i].y() = step_radius*sin(i*2.0*M_PI/num_steps);
+  }
+  steps.push_back(octomap::point3d(0,0,0)); // hold in place is an option too
+  ++num_steps; // now there are 5 different actions that can be taken
+
+  // find config with best margin across all candidate team configurations
+
+  std::vector<int> perms = compute_combinations(num_network_agents, num_steps);
+  NP_INFO("searching for best configuration in %ld perturbations", perms.size());
+  point_vec candidate_config = team_config;
+  double v_star = 0.0;
+  point_vec optimal_config = team_config;
+  for (int perm : perms) {
+    std::vector<int> step_inds = extract_inds(perm, num_network_agents);
+
+    // form candidate config, perturbing only network agents
+    for (int i = 0; i < num_network_agents; ++i)
+      candidate_config[network_agent_inds[i]] += steps[step_inds[i]];
+
+    // ensure candidate config is valid (not in an obstacle)
+    bool valid_config = true;
+    for (octomap::point3d& pt : candidate_config) {
+      grid_mapping::Point pt2d(pt.x(), pt.y());
+      if (!costmap.inBounds(pt2d))
+        continue;
+      else if (costmap.data[costmap.positionToIndex(pt2d)] > 10) {
+        valid_config = false;
+        NP_DEBUG("point out of bounds, skipping candidate config");
+        break;
+      }
+    }
+    if (!valid_config)
+      continue;
+
+    //compute v(alpha(x),x)
+    double v_alpha_x = computeV(candidate_config, false);
+    if (v_alpha_x > v_star) {
+      v_star = v_alpha_x;
+      optimal_config = candidate_config;
+    }
+  }
+  printf("current_config:\n");
+  for (const auto& pt : team_config)
+    std::cout << pt << std::endl;
+  printf("opimal_config:\n");
+  for (const auto& pt : optimal_config)
+    std::cout << pt << std::endl;
+
+  // reconfigure to optimal value
 
   return true;
 }

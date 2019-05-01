@@ -13,6 +13,7 @@
   <depend>armadillo</depend>
   <depend>communication_predict</depend>
   <depend>geometry_msgs</depend>
+  <depend>grid_mapping</depend>
   <depend>nav_msgs</depend>
   <depend>octomap</depend>
   <depend>roscpp</depend>

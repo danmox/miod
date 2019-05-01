@@ -20,9 +20,9 @@ int main(int argc, char** argv)
   network_planner::CommReqs comm_reqs;
   comm_reqs.push_back(flow);
 
-  np.comm_reqs = comm_reqs;
+  np.setCommReqs(comm_reqs);
 
-  while (ros::ok() && !np.UpdateNetworkConfig()) {
+  while (ros::ok() && !np.updateNetworkConfig()) {
     ros::Rate(2).sleep();
   }
 

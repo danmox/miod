@@ -6,6 +6,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED
   communication_predict
   geometry_msgs
+  grid_mapping
   nav_msgs
   roscpp
   socp
@@ -20,6 +21,7 @@ catkin_package(
   CATKIN_DEPENDS
     communication_predict
     geometry_msgs
+    grid_mapping
     nav_msgs
     roscpp
     socp
@@ -35,7 +37,7 @@ include_directories(
   ${ARMADILLO_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/network_planner.cpp)
+add_library(${PROJECT_NAME} src/network_planner.cpp src/counting.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${OCTOMAP_LIBRARIES} ${ARMADILLO_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_node src/network_planner_node.cpp)
