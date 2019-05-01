@@ -14,9 +14,11 @@ int main(int argc, char** argv)
   // initialize task spec
   network_planner::Flow flow;
   flow.sources.insert(1);
+  flow.sources.insert(2);
+  flow.dests.insert(1);
   flow.dests.insert(2);
-  flow.qos = 0.2;
-  flow.confidence = 0.6;
+  flow.qos = 0.1;
+  flow.confidence = 0.55;
   network_planner::CommReqs comm_reqs;
   comm_reqs.push_back(flow);
 

@@ -496,50 +496,65 @@ bool NetworkPlanner::updateNetworkConfig()
   // find next best network configuration
   //
 
-  // compute steps an agent might take in each direction
+  // compute perturbation an agent might take in each direction
 
-  int num_steps = 4;
-  point_vec steps(num_steps);
-  for (int i = 0; i < num_steps; ++i) {
-    steps[i].x() = step_radius*cos(i*2.0*M_PI/num_steps);
-    steps[i].y() = step_radius*sin(i*2.0*M_PI/num_steps);
+  int num_perturb = 8;
+  point_vec perturbation(num_perturb);
+  for (int i = 0; i < num_perturb; ++i) {
+    perturbation[i].x() = step_radius*cos(i*2.0*M_PI/num_perturb);
+    perturbation[i].y() = step_radius*sin(i*2.0*M_PI/num_perturb);
   }
-  steps.push_back(octomap::point3d(0,0,0)); // hold in place is an option too
-  ++num_steps; // now there are 5 actions each robot can take
+  perturbation.push_back(octomap::point3d(0,0,0)); // hold in place is an option too
+  ++num_perturb; // now there are 5 actions each robot can take
 
   // find config with best margin across all candidate team configurations
 
-  std::vector<int> perms = compute_combinations(num_network_agents, num_steps);
-  NP_INFO("searching for best configuration in %ld perturbations", perms.size());
-  double v_star = 0.0;
-  point_vec optimal_config = team_config;
+  std::vector<int> perms = compute_combinations(num_network_agents, num_perturb);
+  NP_INFO("computing gradient with %ld perturbations", perms.size());
+  point_vec grad_config(num_agents);
+  double v_alpha_x = computeV(team_config, false);
   for (int perm : perms) {
     std::vector<int> step_inds = extract_inds(perm, num_network_agents);
 
     // form candidate config, perturbing only network agents
-    point_vec candidate_config = team_config;
+    point_vec x_prime = team_config;
     for (int i = 0; i < num_network_agents; ++i)
-      candidate_config[network_agent_inds[i]] += steps[step_inds[i]];
+      x_prime[network_agent_inds[i]] += perturbation[step_inds[i]];
 
     // ensure candidate config is obstacle and collision free
-    if (!obstacleFree(candidate_config, costmap) || !collisionFree(candidate_config)) {
+    if (!obstacleFree(x_prime, costmap) || !collisionFree(x_prime)) {
       NP_DEBUG("candidate configuration not valid; skipping");
       continue;
     }
 
-    //compute v(alpha(x),x)
-    double v_alpha_x = computeV(candidate_config, false);
-    if (v_alpha_x > v_star) {
-      v_star = v_alpha_x;
-      optimal_config = candidate_config;
+    // estimate gradient
+    double v_alpha_x_prime = computeV(x_prime, false);
+    for (int i = num_task_agents; i < num_agents; ++i) {
+      octomap::point3d diff = team_config[i] - x_prime[i];
+      double xi_norm = diff.norm();
+      if (xi_norm > 1e-4) {
+        grad_config[i] += diff * ((float)(v_alpha_x - v_alpha_x_prime)/xi_norm);
+      }
     }
   }
-  printf("v_star = %f\n", v_star);
+
+  // compute optimal move from gradient
+
+  // normalize vectors so that the largest gradient direction is step_radius
+  double largest_norm = 0.0;
+  for (auto& pt : grad_config)
+    if (pt.norm() > largest_norm)
+      largest_norm = pt.norm();
+
+  // compute negative gradient
+  for (int i = 0; i < num_agents; ++i)
+    grad_config[i] = grad_config[i] * (step_radius / largest_norm) + team_config[i];
+
   printf("current_config:\n");
   for (const auto& pt : team_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
-  printf("opimal_config:\n");
-  for (const auto& pt : optimal_config)
+  printf("grad_config:\n");
+  for (const auto& pt : grad_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
 
   //
@@ -550,8 +565,8 @@ bool NetworkPlanner::updateNetworkConfig()
   for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
     geometry_msgs::Pose goal;
     goal.orientation.w = 1.0;
-    goal.position.x = optimal_config[i+num_task_agents].x();
-    goal.position.y = optimal_config[i+num_task_agents].y();
+    goal.position.x = grad_config[i+num_task_agents].x();
+    goal.position.y = grad_config[i+num_task_agents].y();
     goal.position.z = 3.0; // TODO make param
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;

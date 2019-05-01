@@ -8,10 +8,16 @@
   <!-- patrol demo args -->
   <arg name="nta"   value="2"/> <!-- number of task (patrol) agents -->
   <arg name="nna"   value="4"/> <!-- number of network agents -->
-  <arg name="rad"   value="55.0"/> <!-- radius of patrol circle -->
+  <arg name="rad"   value="50.0"/> <!-- radius of patrol circle -->
   <param name="/task_agent_count"    value="$(arg nta)"/>
   <param name="/network_agent_count" value="$(arg nna)"/>
   <param name="/patrol_radius"       value="$(arg rad)"/>
+
+  <!-- channel rate model params -->
+  <param name="/fading_variance" value="18.0"/>
+  <param name="/noise_power"     value="-85"/>
+  <param name="/wall_PL"         value="5.0"/>
+  <param name="/L0"              value="35.0"/>
 
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
