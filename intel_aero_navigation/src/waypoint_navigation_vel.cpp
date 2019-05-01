@@ -359,30 +359,39 @@ void WaypointNavigationVel::planPath(const geometry_msgs::PoseStamped& robot_pos
     }
   }
 
-  auto wp_it = position_waypoints.begin();
-
-  // first waypoint
-  geometry_msgs::PoseStamped waypoint;
-  waypoint.header.frame_id = local_frame;
-  waypoint.header.stamp = ros::Time::now();
-  waypoint.pose.position = *wp_it;
-  waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
   path.clear();
-  path.push_back(waypoint);
+  if (position_waypoints.size() > 1) {
+    auto wp_it = position_waypoints.begin();
 
-  // intermediate waypoints
-  for (++wp_it; wp_it+1 != position_waypoints.end(); ++wp_it) {
-    // position waypoint
+    // first waypoint
+    geometry_msgs::PoseStamped waypoint;
+    waypoint.header.frame_id = local_frame;
+    waypoint.header.stamp = ros::Time::now();
     waypoint.pose.position = *wp_it;
-    path.push_back(waypoint);
-    // yaw waypoint
     waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
     path.push_back(waypoint);
-  }
 
-  // end waypoint
-  waypoint.pose.position = *wp_it;
-  path.push_back(waypoint);
+    // intermediate waypoints
+    ++wp_it;
+    for (; wp_it+1 != position_waypoints.end(); ++wp_it) {
+      // position waypoint
+      waypoint.pose.position = *wp_it;
+      path.push_back(waypoint);
+      // yaw waypoint
+      waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
+      path.push_back(waypoint);
+    }
+
+    // end waypoint
+    waypoint.pose.position = *wp_it;
+    path.push_back(waypoint);
+  } else {
+    geometry_msgs::PoseStamped waypoint;
+    waypoint.header.frame_id = local_frame;
+    waypoint.header.stamp = ros::Time::now();
+    waypoint.pose.position = position_waypoints.front();
+    path.push_back(waypoint);
+  }
 
   // initialize tracker to first point
   path_it = path.begin();
@@ -457,6 +466,10 @@ void WaypointNavigationVel::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 
   geometry_msgs::PoseStamped goal_waypoint;
   geometry_msgs::Twist velocity_command;
+
+  { // probe costmap_mutex to ensure planning has completed
+    std::lock_guard<std::mutex> lock(costmap_mutex);
+  }
 
   // check if the current waypoint has been reached
   if (waypointReached(robot_pose, *path_it, position_tol, heading_tol)) {
