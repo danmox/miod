@@ -40,21 +40,34 @@
 
   <!-- task (patrol) agents -->
 
+  <arg name="task_vel"    value="1.0"/>
+  <arg name="network_vel" value="2.0"/>
+
   <group>
     <arg name="id" value="1"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id"        value="$(arg id)"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="20.0"/>
+      <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg task_vel)"/>
+      <!--
       <arg name="x"         value="$(eval arg('rad')*cos((arg('id')-1)*2.0*3.1415/arg('nta')))"/>
       <arg name="y"         value="$(eval arg('rad')*sin((arg('id')-1)*2.0*3.1415/arg('nta')))"/>
+      -->
     </include>
   </group>
 
   <group>
     <arg name="id" value="2"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id"        value="$(arg id)"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="-20.0"/>
+      <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg task_vel)"/>
+      <!--
       <arg name="x"         value="$(eval arg('rad')*cos((arg('id')-1)*2.0*3.1415/arg('nta')))"/>
       <arg name="y"         value="$(eval arg('rad')*sin((arg('id')-1)*2.0*3.1415/arg('nta')))"/>
+      -->
     </include>
   </group>
 
@@ -63,36 +76,40 @@
   <group>
     <arg name="id" value="3"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="10.0"/>
-      <arg name="y"  value="0.0"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="10.0"/>
+      <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg network_vel)"/>
     </include>
   </group>
 
   <group>
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="0.0"/>
-      <arg name="y"  value="10.0"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="-1.0"/>
+      <arg name="y"              value="5.0"/>
+      <arg name="linear_vel_des" value="$(arg network_vel)"/>
     </include>
   </group>
 
   <group>
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="-10.0"/>
-      <arg name="y"  value="0.0"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="-10.0"/>
+      <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg network_vel)"/>
     </include>
   </group>
 
   <group>
     <arg name="id" value="6"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
-      <arg name="id" value="$(arg id)"/>
-      <arg name="x"  value="0.0"/>
-      <arg name="y"  value="-10.0"/>
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="1.0"/>
+      <arg name="y"              value="-5.0"/>
+      <arg name="linear_vel_des" value="$(arg network_vel)"/>
     </include>
   </group>
 
