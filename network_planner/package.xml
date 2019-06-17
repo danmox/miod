@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+
+  <name>network_planner</name>
+  <version>0.0.0</version>
+  <description>a planning package for mobile autonomous networks</description>
+
+  <maintainer email="daniel@todo.todo">daniel</maintainer>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>actionlib</depend>
+  <depend>armadillo</depend>
+  <depend>communication_predict</depend>
+  <depend>geometry_msgs</depend>
+  <depend>grid_mapping</depend>
+  <depend>intel_aero_navigation</depend>
+  <depend>nav_msgs</depend>
+  <depend>octomap</depend>
+  <depend>roscpp</depend>
+  <depend>socp</depend>
+
+</package>
