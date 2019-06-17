@@ -546,15 +546,17 @@ bool NetworkPlanner::updateNetworkConfig()
     if (pt.norm() > largest_norm)
       largest_norm = pt.norm();
 
-  // compute negative gradient
+  // compute gradient update step
+  point_vec new_config(grad_config.size());
   for (int i = 0; i < num_agents; ++i)
-    grad_config[i] = grad_config[i] * (step_radius / largest_norm) + team_config[i];
+    new_config[i] = grad_config[i] * (step_radius / largest_norm) + team_config[i];
 
+  printf("v_alpha_x = %f\n", v_alpha_x);
   printf("current_config:\n");
   for (const auto& pt : team_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
   printf("grad_config:\n");
-  for (const auto& pt : grad_config)
+  for (const auto& pt : new_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
 
   //
@@ -565,8 +567,8 @@ bool NetworkPlanner::updateNetworkConfig()
   for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
     geometry_msgs::Pose goal;
     goal.orientation.w = 1.0;
-    goal.position.x = grad_config[i+num_task_agents].x();
-    goal.position.y = grad_config[i+num_task_agents].y();
+    goal.position.x = new_config[i+num_task_agents].x();
+    goal.position.y = new_config[i+num_task_agents].y();
     goal.position.z = 3.0; // TODO make param
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
