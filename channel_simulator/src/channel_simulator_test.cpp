@@ -34,6 +34,7 @@ int main(int argc, char** argv)
   pose2.position.y = -5.0;
   pose2.position.z = 0.9;
 
+  // dummy commit
   sim.predict(pose1, pose2);
 
   delete tree;
