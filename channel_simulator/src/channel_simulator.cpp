@@ -5,6 +5,13 @@
 namespace channel_simulator {
 
 
+#define CS_DEBUG(fmt, ...) ROS_DEBUG("[ChannelSimulator] " fmt, ##__VA_ARGS__)
+#define CS_INFO(fmt, ...) ROS_INFO("[ChannelSimulator] " fmt, ##__VA_ARGS__)
+#define CS_WARN(fmt, ...) ROS_WARN("[ChannelSimulator] " fmt, ##__VA_ARGS__)
+#define CS_ERROR(fmt, ...) ROS_ERROR("[ChannelSimulator] " fmt, ##__VA_ARGS__)
+#define CS_FATAL(fmt, ...) {ROS_FATAL("[ChannelSimulator] " fmt, ##__VA_ARGS__); exit(EXIT_FAILURE);}
+
+
 ChannelSimulator::ChannelSimulator() :
   tree(NULL)
 {}
@@ -14,7 +21,7 @@ void ChannelSimulator::mapCB(const octomap_msgs::Octomap::ConstPtr& msg)
 {
   tree = dynamic_cast<octomap::OcTree*>(octomap_msgs::binaryMsgToMap(*msg));
   if (!tree)
-    ROS_WARN("[ChannelSimulator] failed to load octomap from ROS msg");
+    CS_WARN("failed to load octomap from ROS msg");
 }
 
 
@@ -59,7 +66,7 @@ octomap::point3d pointToLineSegment(const octomap::point3d& p1,
 octomap::point3d getTreeBBXMax(const octomap::OcTree* tree)
 {
   if (!tree) {
-    ROS_WARN("[ChannelSimulator] tried to find bbx max but no tree exists");
+    CS_WARN("tried to find bbx max but no tree exists");
     return octomap::point3d();
   }
   double x,y,z;
@@ -71,7 +78,7 @@ octomap::point3d getTreeBBXMax(const octomap::OcTree* tree)
 octomap::point3d getTreeBBXMin(const octomap::OcTree* tree)
 {
   if (!tree) {
-    ROS_WARN("[ChannelSimulator] tried to find bbx min but no tree exists");
+    CS_WARN("tried to find bbx min but no tree exists");
     return octomap::point3d();
   }
   double x,y,z;
@@ -95,9 +102,13 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   if (!p1_ptr || !p2_ptr) {
     // TODO compute octomap bbx intersection
     if (!p1_ptr)
-      ROS_ERROR_STREAM("[ChannelSimulator] p1 " << p1 << " out of bounds of octomap with min_bbx " << getTreeBBXMin(tree) << " and max_bbx " << getTreeBBXMax(tree));
+      ROS_ERROR_STREAM("[ChannelSimulator] p1 " << p1 << " out of bounds of "
+                       "octomap with min_bbx " << getTreeBBXMin(tree)
+                       << " and max_bbx " << getTreeBBXMax(tree));
     if (!p2_ptr)
-      ROS_ERROR_STREAM("[ChannelSimulator] p2 " << p2 << " out of bounds of octomap with min_bbx " << getTreeBBXMin(tree) << " and max_bbx " << getTreeBBXMax(tree));
+      ROS_ERROR_STREAM("[ChannelSimulator] p2 " << p2 << " out of bounds of "
+                       "octomap with min_bbx " << getTreeBBXMin(tree)
+                       << " and max_bbx " << getTreeBBXMax(tree));
     return segments;
   }
 
@@ -114,7 +125,8 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   octomap::KeyRay ray_keys;
   bool success = tree->computeRayKeys(p1, p2, ray_keys);
   if (!success) {
-    ROS_ERROR_STREAM("[ChannelSimulator] computeRayKeys(...) failed between p1 " << p1 << " and p2 " << p2);
+    ROS_ERROR_STREAM("[ChannelSimulator] computeRayKeys(...) failed between p1 "
+                     << p1 << " and p2 " << p2);
     return segments;
   }
   ray_keys.addKey(tree->coordToKey(p2));
@@ -127,7 +139,7 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   while (it != ray_keys.end()) {
     octomap::OcTreeNode* curr_node = tree->search(*it);
     if (!curr_node) {
-      ROS_ERROR("[ChannelSimulator] failed to find node from ray key");
+      CS_ERROR("failed to find node from ray key");
       return segments;
     }
 
@@ -198,7 +210,7 @@ ChannelState ChannelSimulator::predict(const geometry_msgs::Pose& pose1,
                                        const geometry_msgs::Pose& pose2)
 {
   if (!tree) {
-    ROS_ERROR("[ChannelSimulator] no octomap!");
+    CS_ERROR("no octomap!");
     return ChannelState();
   }
 
@@ -206,9 +218,7 @@ ChannelState ChannelSimulator::predict(const geometry_msgs::Pose& pose1,
   octomap::point3d p2(pose2.position.x, pose2.position.y, pose2.position.z);
   std::vector<double> segments = computeSegments(p1, p2);
 
-  for (auto segment : segments) {
-    ROS_INFO("[ChannelSimulator] %.4f", segment);
-  }
+  // TODO implement channel model
 
   return ChannelState();
 }
