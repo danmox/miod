@@ -1,5 +1,7 @@
 #include <network_planner/network_planner.h>
 #include <geometry_msgs/Point.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <armadillo_socp.h>
 
 #include <functional>
@@ -18,11 +20,17 @@ namespace network_planner {
 #define NP_INFO(fmt, ...) ROS_INFO("[NetworkPlanner] " fmt, ##__VA_ARGS__)
 #define NP_WARN(fmt, ...) ROS_WARN("[NetworkPlanner] " fmt, ##__VA_ARGS__)
 #define NP_ERROR(fmt, ...) ROS_ERROR("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-#define NP_FATAL(fmt, ...) {ROS_FATAL("[NetworkPlanner] " fmt, ##__VA_ARGS__); exit(EXIT_FAILURE);}
+#define NP_FATAL(fmt, ...) ROS_FATAL("[NetworkPlanner] " fmt, ##__VA_ARGS__)
 
 
-double PsiInv(double eps) {
+inline double PsiInv(double eps) {
   return sqrt(2.0) * boost::math::erf_inv(2 * eps - 1);
+}
+
+
+bool all(const std::vector<bool>& vec, bool val)
+{
+  return std::find(vec.begin(), vec.end(), !val) == vec.end();
 }
 
 
@@ -33,23 +41,38 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
-  namespace stdph = std::placeholders;
-
-  if (!nh.getParam("/task_agent_count", num_task_agents) ||
-      !nh.getParam("/network_agent_count", num_network_agents) ||
-      !pnh.getParam("step_radius", step_radius))
-    NP_FATAL("failed to fetch params from server");
+  // fetch parameters from ROS parameter server:
+  std::vector<std::string> param_names = {"/task_agent_count",
+                                          "/network_agent_count",
+                                          "sample_count",
+                                          "sample_variance",
+                                          "/desired_altitude",
+                                          "max_step"};
+  std::vector<bool> success;
+  success.push_back(nh.getParam(param_names[0], task_count));
+  success.push_back(nh.getParam(param_names[1], comm_count));
+  success.push_back(pnh.getParam(param_names[2], sample_count));
+  success.push_back(pnh.getParam(param_names[3], sample_var));
+  success.push_back(nh.getParam(param_names[4], desired_altitude));
+  success.push_back(pnh.getParam(param_names[5], max_step));
+  if (!all(success, true)) {
+    for (int i = 0; i < success.size(); ++i)
+      if (!success[i])
+        NP_ERROR("failed to get ROS param: %s", param_names[i].c_str());
+    NP_FATAL("failed to fetch all params from server");
+    exit(EXIT_FAILURE);
+  }
 
   // initialize agent count dependent variables
-  num_agents = num_task_agents + num_network_agents;
-  team_config = point_vec(num_agents);
-  received_odom = std::vector<bool>(num_agents, false);
+  total_agents = task_count + comm_count;
+  team_config = point_vec(total_agents);
+  received_odom = std::vector<bool>(total_agents, false);
 
-  // TODO don't hard code this
+  // TODO don't hard code this; pass parameter vectors
   // the first n agents are task agents and the remaining m agents are network
   // agents
-  for (int i = num_task_agents; i < num_agents; ++i)
-    network_agent_inds.push_back(i);
+  for (int i = task_count; i < total_agents; ++i)
+    comm_idcs.push_back(i);
 
   // costmap for checking if candidate team configurations are valid
   map_sub = nh.subscribe("/aero5/costmap_2d/costmap/costmap", 10,
@@ -57,7 +80,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 
   // subscribe to odom messages for team configuration
   namespace stdph = std::placeholders;
-  for (int i = 1; i <= num_agents; ++i) {
+  for (int i = 1; i <= total_agents; ++i) {
     std::stringstream ss;
     ss << "/aero" << i << "/odom";
     std::string name = ss.str();
@@ -67,7 +90,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   }
 
   // initialize navigation action clients
-  for (int i = num_task_agents+1; i < num_agents+1; ++i) { // names are 1 indexed
+  for (int i = task_count+1; i < total_agents+1; ++i) { // names are 1 indexed
     std::stringstream ss;
     ss << "/aero" << i << "/waypoint_navigation_vel_nodelet";
     std::string sn = ss.str();
@@ -75,6 +98,9 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     nav_clients.push_back(ac_ptr);
     NP_INFO("connecting to action server %s", sn.c_str());
   }
+
+  // publish visualization of gradient based planner
+  viz_pub = nh.advertise<visualization_msgs::MarkerArray>("planner",10);
 }
 
 
@@ -94,12 +120,6 @@ void NetworkPlanner::mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 }
 
 
-bool all(const std::vector<bool>& vec, bool val)
-{
-  return std::find(vec.begin(), vec.end(), !val) == vec.end();
-}
-
-
 void NetworkPlanner::setCommReqs(const CommReqs& reqs)
 {
   comm_reqs = reqs;
@@ -110,8 +130,8 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
   ijk_to_idx.clear();
   idx_to_ijk.clear();
   int ind = 0;
-  for (int i = 0; i < num_agents; ++i) {
-    for (int j = 0; j < num_agents; ++j) {
+  for (int i = 0; i < total_agents; ++i) {
+    for (int j = 0; j < total_agents; ++j) {
       for (int k = 0; k < num_flows; ++k) {
         if (i != j) { // TODO ignore more variables
           std::tuple<int,int,int> subs = std::make_tuple(i,j,k);
@@ -145,13 +165,13 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
     if (!divide_psi_inv_eps)
       psi_inv_eps = 1.0;
     if (debug) printf("psi_inv_eps = %f\n", psi_inv_eps);
-    for (int i = 0; i < num_agents; ++i) {
+    for (int i = 0; i < total_agents; ++i) {
       A_mats[idx] = arma::zeros<arma::mat>(y_dim, y_dim);
       b_vecs[idx] = arma::zeros<arma::vec>(y_dim);
       c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
       d_vecs[idx] = arma::zeros<arma::vec>(1);
 
-      for (int j = 0; j < num_agents; ++j) {
+      for (int j = 0; j < total_agents; ++j) {
         // outgoing data
         auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
         if (it != ijk_to_idx.end()) {
@@ -179,7 +199,7 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
   }
 
   if (debug) {
-    for (int n = 0; n < num_agents*num_flows; ++n) { // num prob constraints
+    for (int n = 0; n < total_agents*num_flows; ++n) { // num prob constraints
       printf("\ncoefficient %d:", n+1);
       printf("\nalpha_ij_k    A_mats\n");
       printf("----------   -------\n");
@@ -218,8 +238,8 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   // total number of constraints for problem
   int num_constraints =
-    num_agents * num_flows // probability QoS constraints (for every i,k)
-    + num_agents           // sum_jk alpha_ijk <= 1 (channel availability, for every i)
+    total_agents * num_flows // probability QoS constraints (for every i,k)
+    + total_agents           // sum_jk alpha_ijk <= 1 (channel avail., for all i)
     + 2 * alpha_dim          // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
     + 1;                     // s >= 0 (slack variable)
 
@@ -239,14 +259,14 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   // channel availability constraints (sum_jk alpha_ijk <= 1)
   // ||0|| <= -c^Ty + 1
 
-  for (int i = 0; i < num_agents; ++i) {
+  for (int i = 0; i < total_agents; ++i) {
     A_mats[idx].set_size(0,0);                   // dummy
     b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
     c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
     d_vecs[idx] = arma::ones<arma::vec>(1);
 
     for (int k = 0; k < num_flows; ++k) {
-      for (int j = 0; j < num_agents; ++j) {
+      for (int j = 0; j < total_agents; ++j) {
         auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
         if (it != ijk_to_idx.end()) {
           c_vecs[idx](it->second) = -1.0;
@@ -314,9 +334,9 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   std::vector<arma::mat> alpha_ij_k(num_flows);
   for (int k = 0; k < num_flows; ++k) {
-    alpha_ij_k[k] = arma::zeros<arma::mat>(num_agents, num_agents);
-    for (int i = 0; i < num_agents; ++i) {
-      for (int j = 0; j < num_agents; ++j) {
+    alpha_ij_k[k] = arma::zeros<arma::mat>(total_agents, total_agents);
+    for (int i = 0; i < total_agents; ++i) {
+      for (int j = 0; j < total_agents; ++j) {
         auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
         if (it != ijk_to_idx.end())
           alpha_ij_k[k](i,j) = y_col(it->second);
@@ -327,7 +347,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   if (debug) {
     // check constraints
     printf("\n");
-    for (int i = 0; i < num_agents * num_flows; ++i) {
+    for (int i = 0; i < total_agents * num_flows; ++i) {
       double lhs = arma::norm(A_mats[i] * y_col, 2);
       arma::mat rhs = arma::trans(c_vecs[i]) * y_col + d_vecs[i];
       printf("constraint %d: %.2f <= %.2f\n", i+1, lhs, rhs(0,0));
@@ -337,9 +357,9 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
     printf("\nslack = %f\n", slack);
     for (int k = 0; k < num_flows; ++k) {
       printf("\nalpha_ij_%d:\n",k+1);
-      for (int i = 0; i < num_agents; ++i) {
+      for (int i = 0; i < total_agents; ++i) {
         printf("   ");
-        for (int j = 0; j < num_agents; ++j) {
+        for (int j = 0; j < total_agents; ++j) {
           if (alpha_ij_k[k](i,j) >= 1e-4)
             printf("%6.4f   ", alpha_ij_k[k](i,j));
           else
@@ -364,10 +384,10 @@ void NetworkPlanner::networkState(const point_vec& state,
                                   arma::mat& R_mean,
                                   arma::mat& R_var)
 {
-  R_mean = arma::zeros<arma::mat>(num_agents, num_agents);
-  R_var = arma::zeros<arma::mat>(num_agents, num_agents);
-  for (int i = 0; i < num_agents; ++i) {
-    for (int j = 0; j < num_agents; ++j) {
+  R_mean = arma::zeros<arma::mat>(total_agents, total_agents);
+  R_var = arma::zeros<arma::mat>(total_agents, total_agents);
+  for (int i = 0; i < total_agents; ++i) {
+    for (int j = 0; j < total_agents; ++j) {
       if (i == j) {
         R_mean(i,j) = R_var(i,j) = 0.0;
       } else {
@@ -387,7 +407,7 @@ double NetworkPlanner::computeV(const point_vec& config, bool debug)
   arma::mat R_var;
   networkState(config, R_mean, R_var);
 
-  int num_constraints = num_agents * num_flows;
+  int num_constraints = total_agents * num_flows;
 
   // constraint matrices / column vectors
   std::vector<arma::mat> A_mats(num_constraints);
@@ -409,7 +429,7 @@ double NetworkPlanner::computeV(const point_vec& config, bool debug)
   idx = 0;
   for (int k = 0; k < num_flows; ++k) {
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
-    for (int i = 0; i < num_agents; ++i) {
+    for (int i = 0; i < total_agents; ++i) {
       v_col(idx) = arma::as_scalar((c_vecs[idx].t())*y_tmp + d_vecs[idx]);
       v_col(idx) /= arma::norm(A_mats[idx] * y_tmp, 2);
       v_col(idx) -= psi_inv_eps;
@@ -453,7 +473,7 @@ bool NetworkPlanner::updateNetworkConfig()
   // 3) a task specification has been received
   // 4) a costmap has been received so that candidate configs can be vetted
   if (!all(received_odom, true)) {
-    NP_WARN("unable to plan: some agent positions not received yet");
+    NP_WARN("unable to plan: odometry not available for all agents");
     return false;
   }
   /*
@@ -484,42 +504,68 @@ bool NetworkPlanner::updateNetworkConfig()
   // solve SOCP
 
   double slack;
-  bool success = SOCP(R_mean, R_var, slack, false);
-  NP_DEBUG("found solution to SOCP with slack = %f", slack);
-
-  if (!success) {
+  if (!SOCP(R_mean, R_var, slack, false)) {
     NP_ERROR("unable to plan: no valid solution to SOCP found");
     return false;
   }
+  NP_DEBUG("found solution to SOCP with slack = %f", slack);
 
   //
   // find next best network configuration
   //
 
-  // compute perturbation an agent might take in each direction
+  // compute set of perturbed team configurations
 
-  int num_perturb = 8;
-  point_vec perturbation(num_perturb);
-  for (int i = 0; i < num_perturb; ++i) {
-    perturbation[i].x() = step_radius*cos(i*2.0*M_PI/num_perturb);
-    perturbation[i].y() = step_radius*sin(i*2.0*M_PI/num_perturb);
+  int n = 2*comm_count;
+  arma::mat mean(n,1,arma::fill::zeros);
+  for (int i = 0; i < comm_count; ++i) {
+    mean(2*i,0) = team_config[comm_idcs[i]].x();
+    mean(2*i+1,0) = team_config[comm_idcs[i]].y();
   }
-  perturbation.push_back(octomap::point3d(0,0,0)); // hold in place is an option too
-  ++num_perturb; // now there are 5 actions each robot can take
+  arma::mat var = sample_var * arma::mat(n,1,arma::fill::ones);
+  arma::gmm_diag ndist;
+  ndist.reset(n,1);
+  ndist.set_means(mean);
+  ndist.set_dcovs(var);
+  arma::mat samples = ndist.generate(sample_count);
 
-  // find config with best margin across all candidate team configurations
+  // form visualization of samples
+  visualization_msgs::MarkerArray plan_viz;
+  visualization_msgs::Marker sample_points;
+  sample_points.header.stamp = ros::Time(0);
+  sample_points.header.frame_id = "world";
+  sample_points.ns = "plan_viz";
+  sample_points.id = 0;
+  sample_points.type = visualization_msgs::Marker::POINTS;
+  sample_points.action = visualization_msgs::Marker::ADD;
+  sample_points.scale.x = 0.02; // meter
+  sample_points.scale.y = 0.02; // meter
+  sample_points.color.r = 1.0;
+  sample_points.color.a = 0.8;
+  for (int j = 0; j < sample_count; ++j) {
+    for (int i = 0; i < comm_count; ++ i) {
+      geometry_msgs::Point sampled_point;
+      sampled_point.x = samples(2*i,j);
+      sampled_point.y = samples(2*i+1,j);
+      sampled_point.z = team_config[comm_idcs[i]].z();
+      sample_points.points.push_back(sampled_point);
+    }
+  }
+  plan_viz.markers.push_back(sample_points);
 
-  std::vector<int> perms = compute_combinations(num_network_agents, num_perturb);
-  NP_INFO("computing gradient with %ld perturbations", perms.size());
-  point_vec grad_config(num_agents);
+  // approximate gradient using samples
+
+  NP_INFO("computing gradient with %d samples", sample_count);
+  point_vec gradient(total_agents);
   double v_alpha_x = computeV(team_config, false);
-  for (int perm : perms) {
-    std::vector<int> step_inds = extract_inds(perm, num_network_agents);
-
+  int used = 0; // some configs might be skipped due to obstacles/collisions
+  for (int j = 0; j < sample_count; ++j) { // samples stored as mat column vecs
     // form candidate config, perturbing only network agents
     point_vec x_prime = team_config;
-    for (int i = 0; i < num_network_agents; ++i)
-      x_prime[network_agent_inds[i]] += perturbation[step_inds[i]];
+    for (int i = 0; i < comm_count; ++i) {
+      octomap::point3d perturbation(samples(2*i,j), samples(2*i+1,j), 0.0);
+      x_prime[comm_idcs[i]] += perturbation;
+    }
 
     // ensure candidate config is obstacle and collision free
     if (!obstacleFree(x_prime, costmap) || !collisionFree(x_prime)) {
@@ -527,35 +573,78 @@ bool NetworkPlanner::updateNetworkConfig()
       continue;
     }
 
-    // estimate gradient
+    // update gradient estimate
     double v_alpha_x_prime = computeV(x_prime, false);
-    for (int i = num_task_agents; i < num_agents; ++i) {
-      octomap::point3d diff = team_config[i] - x_prime[i];
+    for (int i = 0; i < comm_count; ++i) {
+      // TODO switch over to arma::vecs for math operations
+      octomap::point3d diff = team_config[comm_idcs[i]] - x_prime[comm_idcs[i]];
       double xi_norm = diff.norm();
-      if (xi_norm > 1e-4) {
-        grad_config[i] += diff * ((float)(v_alpha_x - v_alpha_x_prime)/xi_norm);
+      if (xi_norm > 1e-3) {
+        gradient[comm_idcs[i]] += diff * ((v_alpha_x - v_alpha_x_prime) / xi_norm);
       }
     }
+    ++used;
   }
+  NP_INFO("skipped %d configs while computing the gradient", sample_count-used);
+
+  // normalize gradient vectors so that the largest step is max_step
+  double largest_norm = 0.0;
+  for (const octomap::point3d& pt : gradient)
+    if (pt.norm() > largest_norm)
+      largest_norm = pt.norm();
+  NP_INFO("largets gradient norm is %.2f", largest_norm);
+  for (octomap::point3d& pt : gradient)
+    pt *= (max_step / largest_norm);
+
+  // add gradient directions to planning visualization
+  visualization_msgs::Marker gradient_arrow;
+  gradient_arrow.header.stamp = ros::Time(0);
+  gradient_arrow.header.frame_id = "world";
+  gradient_arrow.ns = "plan_viz";
+  gradient_arrow.id = 0;
+  gradient_arrow.type = visualization_msgs::Marker::ARROW;
+  gradient_arrow.action = visualization_msgs::Marker::ADD;
+  gradient_arrow.color.b = 1.0;
+  gradient_arrow.color.a = 1.0;
+  for (int i = 0; i < comm_count; ++i) {
+    geometry_msgs::Point start;
+    start.x = team_config[comm_idcs[i]].x();
+    start.y = team_config[comm_idcs[i]].y();
+    start.z = team_config[comm_idcs[i]].z();
+
+    geometry_msgs::Point tip = start;
+    tip.x += gradient[comm_idcs[i]].x();
+    tip.y += gradient[comm_idcs[i]].y();
+    tip.z += gradient[comm_idcs[i]].z(); // this should do nothing
+
+    ++gradient_arrow.id; // each id must be different to be displayed together
+
+    double arrow_length = gradient[comm_idcs[i]].norm();
+    NP_INFO("gradient_arrow %d length is %.3f", i+1, arrow_length);
+    gradient_arrow.points.clear();
+    gradient_arrow.points.push_back(start);
+    gradient_arrow.points.push_back(tip);
+    gradient_arrow.scale.x = arrow_length/10.0; // shaft diameter
+    gradient_arrow.scale.y = arrow_length/5.0;  // head diameter
+    gradient_arrow.scale.z = arrow_length/3.0;  // head length
+
+    plan_viz.markers.push_back(gradient_arrow);
+  }
+  viz_pub.publish(plan_viz);
 
   // compute optimal move from gradient
 
-  // normalize vectors so that the largest gradient direction is step_radius
-  double largest_norm = 0.0;
-  for (auto& pt : grad_config)
-    if (pt.norm() > largest_norm)
-      largest_norm = pt.norm();
-
   // compute gradient update step
-  point_vec new_config(grad_config.size());
-  for (int i = 0; i < num_agents; ++i)
-    new_config[i] = grad_config[i] * (step_radius / largest_norm) + team_config[i];
+  // TODO use Algorithm 1 from Jon Fink thesis: 5.2.1 here
+  point_vec new_config(gradient.size());
+  for (int i = 0; i < total_agents; ++i)
+    new_config[i] = gradient[i] + team_config[i];
 
   printf("v_alpha_x = %f\n", v_alpha_x);
   printf("current_config:\n");
   for (const auto& pt : team_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
-  printf("grad_config:\n");
+  printf("gradient:\n");
   for (const auto& pt : new_config)
     printf("  (%6.2f, %6.2f, %6.2f)\n", pt.x(), pt.y(), pt.z());
 
@@ -563,18 +652,21 @@ bool NetworkPlanner::updateNetworkConfig()
   // reconfigure to optimal value
   //
 
+  // TODO change to velocity control
+
   NP_INFO("sending goals");
-  for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
+  for (int i = 0; i < comm_count; ++i) {
     geometry_msgs::Pose goal;
     goal.orientation.w = 1.0;
-    goal.position.x = new_config[i+num_task_agents].x();
-    goal.position.y = new_config[i+num_task_agents].y();
-    goal.position.z = 3.0; // TODO make param
+    goal.position.x = new_config[comm_idcs[i]].x();
+    goal.position.y = new_config[comm_idcs[i]].y();
+    goal.position.z = desired_altitude;
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
     goal_msg.waypoints.push_back(goal);
     goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::HOVER;
 
+    NP_INFO("sending goal to agend %d", comm_idcs[i]+1);
     nav_clients[i]->sendGoal(goal_msg);
   }
 
@@ -605,12 +697,12 @@ void NetworkPlanner::initSystem()
   NP_INFO("odom received");
 
   NP_INFO("sending takeoff goals");
-  for (int i = 0; i < num_network_agents; ++i) { // optimal config includes task agents
+  for (int i = 0; i < comm_count; ++i) { // optimal config includes task agents
     geometry_msgs::Pose goal;
     goal.orientation.w = 1.0;
-    goal.position.x = team_config[i+num_task_agents].x();
-    goal.position.y = team_config[i+num_task_agents].y();
-    goal.position.z = 3.0; // TODO make param
+    goal.position.x = team_config[i+task_count].x();
+    goal.position.y = team_config[i+task_count].y();
+    goal.position.z = desired_altitude;
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
     goal_msg.waypoints.push_back(goal);

@@ -9,6 +9,7 @@
   <param name="/task_agent_count"    value="2"/>
   <param name="/network_agent_count" value="4"/>
   <param name="/patrol_radius"       value="50.0"/>
+  <param name="/desired_altitude"    value="3.0"/>
 
   <!-- channel rate model params -->
   <param name="/fading_variance" value="18.0"/>

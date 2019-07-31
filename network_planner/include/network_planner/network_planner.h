@@ -35,11 +35,21 @@ typedef grid_mapping::Grid<int8_t> Costmap;
 class NetworkPlanner
 {
   protected:
+    // ROS parameters
+    int task_count;          // number of task agents serviced
+    int comm_count;          // number of supporting network agents
+    int sample_count;        // number of random samples used in gradient step
+    double sample_var;       // variance of samples drawn from a normal
+                             // distribution centered at the agents' positions
+    double desired_altitude; // fixed desired z of quadrotors
+    double max_step;         // limit for largest step from gradient
+
     ros::NodeHandle nh, pnh;
-    int num_task_agents, num_network_agents, num_agents;
-    std::vector<int> network_agent_inds;
     std::vector<ros::Subscriber> odom_subs;
     ros::Subscriber map_sub;
+    ros::Publisher viz_pub;
+    int total_agents;
+    std::vector<int> comm_idcs;
     point_vec team_config;
     std::vector<bool> received_odom;
     CommunicationPredict channel_sim;

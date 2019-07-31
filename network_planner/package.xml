@@ -20,5 +20,6 @@
   <depend>octomap</depend>
   <depend>roscpp</depend>
   <depend>socp</depend>
+  <depend>visualization_msgs</depend>
 
 </package>

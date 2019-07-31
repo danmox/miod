@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
   nav_msgs
   roscpp
   socp
+  visualization_msgs
 )
 
 find_package(octomap REQUIRED)
@@ -29,6 +30,7 @@ catkin_package(
     nav_msgs
     roscpp
     socp
+    visualization_msgs
   DEPENDS
     octomap
     armadillo
