@@ -17,7 +17,6 @@
   <depend>grid_mapping</depend>
   <depend>intel_aero_navigation</depend>
   <depend>nav_msgs</depend>
-  <depend>octomap</depend>
   <depend>roscpp</depend>
   <depend>socp</depend>
   <depend>visualization_msgs</depend>

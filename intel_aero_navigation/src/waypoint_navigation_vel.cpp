@@ -231,16 +231,6 @@ void WaypointNavigationVel::goalCB()
   // if there are no waypoints execute the desired end behavior
   if (action_goal->waypoints.empty()) {
     if (end_behavior == WaypointNavigationGoal::LAND) {
-      geometry_msgs::Twist hold;
-
-      hold.linear.x = 0.0;
-      hold.linear.y = 0.0;
-      hold.linear.z = 0.0;
-      hold.angular.x = 0.0;
-      hold.angular.y = 0.0;
-      hold.angular.z = 0.0;
-      vel_pub.publish(hold);
-
       path.clear();
       nav_server.setSucceeded();
     } else if (end_behavior == WaypointNavigationGoal::HOVER) {
@@ -452,17 +442,8 @@ void WaypointNavigationVel::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   robot_pose.header.stamp = msg->header.stamp;
   robot_pose.pose = msg->pose.pose;
 
-  if (!nav_server.isActive()) {
-    geometry_msgs::Twist hold;
-    hold.linear.x = 0.0;
-    hold.linear.y = 0.0;
-    hold.linear.z = 0.0;
-    hold.angular.x = 0.0;
-    hold.angular.y = 0.0;
-    hold.angular.z = 0.0;
-    vel_pub.publish(hold);
+  if (!nav_server.isActive())
     return;
-  }
 
   geometry_msgs::PoseStamped goal_waypoint;
   geometry_msgs::Twist velocity_command;
@@ -475,6 +456,8 @@ void WaypointNavigationVel::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   if (waypointReached(robot_pose, *path_it, position_tol, heading_tol)) {
     ++path_it;
     if (path_it == path.end()) { // path completed, execute end behavior
+      geometry_msgs::Twist hold;
+      vel_pub.publish(hold);
       nav_server.setSucceeded(); // nav_server.isActive now returns false until new goal is received
       return;
     }

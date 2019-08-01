@@ -4,7 +4,6 @@
 
 #include <ros/ros.h>
 #include <CommunicationPredict.h>
-#include <octomap/octomap.h>
 #include <grid_mapping/grid.hpp>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
@@ -28,7 +27,7 @@ struct Flow
 
 
 typedef std::vector<Flow> CommReqs;
-typedef octomap::point3d_collection point_vec;
+typedef std::vector<arma::vec3> point_vec;
 typedef grid_mapping::Grid<int8_t> Costmap;
 
 
@@ -42,10 +41,11 @@ class NetworkPlanner
     double sample_var;       // variance of samples drawn from a normal
                              // distribution centered at the agents' positions
     double desired_altitude; // fixed desired z of quadrotors
-    double max_step;         // limit for largest step from gradient
+    double max_velocity;     // limit for largest step from gradient
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> odom_subs;
+    std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
     ros::Publisher viz_pub;
     int total_agents;

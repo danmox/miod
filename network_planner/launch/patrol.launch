@@ -4,9 +4,9 @@
         type="network_planner_node"
         name="network_planner_node"
         output="screen">
-    <param name="sample_count"    value="10000"/>
-    <param name="sample_variance" value="3.0"/>
-    <param name="max_step"        value="4.0"/>
+    <param name="sample_count"    value="5000"/>
+    <param name="sample_variance" value="2.0"/>
+    <param name="max_velocity"    value="1.0"/> <!-- m/s -->
   </node>
 
 </launch>
