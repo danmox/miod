@@ -11,6 +11,8 @@
 #include <mavros_msgs/HomePosition.h>
 
 #include <thread>
+#include <mutex>
+#include <atomic>
 
 
 namespace intel_aero_navigation {
@@ -20,31 +22,32 @@ class MavrosUAV
 {
   protected:
     ros::NodeHandle nh, pnh;
-    ros::Subscriber state_sub, home_sub;
-    ros::Publisher local_pos_pub;
+    ros::Subscriber state_sub;
     ros::ServiceClient arming_srv, mode_srv, land_srv;
 
+    ros::Publisher local_pos_pub;
+    std::mutex pub_mutex;
+
     std::thread landing_thread, takeoff_thread;
-    bool takeoff_command_issued, land_command_issued;
+    std::atomic<bool> takeoff_command_issued, land_command_issued;
 
     mavros_msgs::State state;
-    mavros_msgs::HomePosition home_position;
+    std::mutex state_mutex;
 
     void takeoffThread(const geometry_msgs::PoseStamped);
     void landingThread();
 
   public:
     MavrosUAV(ros::NodeHandle, ros::NodeHandle);
+    ~MavrosUAV();
 
     void sendLocalPositionCommand(const geometry_msgs::PoseStamped&);
     void takeoff(const geometry_msgs::PoseStamped);
     void land();
 
-    // get functions
-    mavros_msgs::State getState() const { return state; }
-    mavros_msgs::HomePosition getHomePosition() const { return home_position; }
-    bool takeoffCommandIssued() const { return takeoff_command_issued; }
-    bool landCommandIssued() const { return land_command_issued; }
+    mavros_msgs::State getState();
+    bool takeoffCommandIssued() const;
+    bool landCommandIssued() const;
 
     void stateCB(const mavros_msgs::State::ConstPtr&);
     void homeCB(const mavros_msgs::HomePosition::ConstPtr&);
