@@ -34,7 +34,7 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   }
   if (!pnh.getParam("world_frame", world_frame)) {
     ROS_WARN("[WaypointNavigation] failed to fetch parameter \"world_frame\" "
-             "using default value of \"map\"");
+             "using default value of \"world\"");
     world_frame = "world";
   }
   if (!pnh.getParam("local_frame", local_frame)) {
@@ -59,6 +59,7 @@ WaypointNavigation::WaypointNavigation(std::string name, ros::NodeHandle nh_, ro
   path_pub = nh.advertise<nav_msgs::Path>("path", 10);
 
   // cache transforms needed to convert between local, world and costmap frames
+  // TODO should this be in the constructor? it tends to blocks for a while...
   ROS_INFO("[WaypointNavigation] waiting for transforms to be available");
   ros::Rate rate(1);
   bool transforms_cached = false;
@@ -93,6 +94,7 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
     processed_first_map = true;
   }
 
+  // nothing to do if the server is not active
   if (!nav_server.isActive())
     return;
 
@@ -146,8 +148,10 @@ void WaypointNavigation::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   }
 
   if (!obstacle_free) {
+    // TODO why is this commented out?
     //ROS_INFO("[WaypointNavigation] collision detected! replanning path");
-    ROS_INFO_STREAM("[WaypointNavigation] collision detected between " << pt1 << " and " << pt2);
+    ROS_INFO_STREAM("[WaypointNavigation] collision detected between "
+                    << pt1 << " and " << pt2);
     //planPath(robot_pose);
   }
 
@@ -192,8 +196,9 @@ void WaypointNavigation::goalCB()
       nav_server.setSucceeded();
       aero.land();
     } else if (end_behavior == WaypointNavigationGoal::HOVER) {
+      // TODO what if already hovering at a desired point?
       path.clear();
-      robot_pose.pose.position.z = 2; // default hover height
+      robot_pose.pose.position.z = 2; // TODO should be a param
       path.push_back(robot_pose);
       path_it = path.begin();
     }
@@ -319,7 +324,8 @@ void WaypointNavigation::planPath(const geometry_msgs::PoseStamped& robot_pose)
   waypoint.header.frame_id = local_frame;
   waypoint.header.stamp = ros::Time::now();
   waypoint.pose.position = *wp_it;
-  waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
+  if (wp_it+1 != position_waypoints.end())
+    waypoint.pose.orientation = pathSegmentQuaternion(*wp_it, *(wp_it+1));
   path.clear();
   path.push_back(waypoint);
 
@@ -431,7 +437,7 @@ void WaypointNavigation::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 
   // send takeoff command if UAV is not armed
   if (!aero.takeoffCommandIssued())
-    aero.takeoff(*path_it);
+    aero.takeoff();
 
   geometry_msgs::PoseStamped current_waypoint;
 

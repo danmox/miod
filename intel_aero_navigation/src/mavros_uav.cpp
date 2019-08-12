@@ -16,6 +16,7 @@ MavrosUAV::MavrosUAV(ros::NodeHandle nh_, ros::NodeHandle pnh_) :
   land_command_issued(false)
 {
   state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &MavrosUAV::stateCB, this);
+  local_vel_pub = nh.advertise<geometry_msgs::Twist>("mavros/setpoint_velocity/cmd_vel_unstamped", 10);
   local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
   arming_srv = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
   mode_srv = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
@@ -56,12 +57,20 @@ bool MavrosUAV::landCommandIssued() const
 }
 
 
-void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
+// NOTE: during takeoff local_pos_pub, local_vel_pub are blocked via the
+// pub_mutex held by this thread; thus, any calls to sendLocal***Command(...)
+// will have no effect (i.e. not interfere). The intended behavior is that
+// calling threads immediately begin publishing desired commands after invoking
+// takeoff() so that control of the UAV is gracefully transfered back to the
+// governing program after takeoff has been completed and pub_mutex released.
+void MavrosUAV::takeoffThread()
 {
   ros::Rate rate(10.0); // setpoint publishing rate MUST be faster than 2Hz
 
   // make FCU connection
   ros::Time start = ros::Time::now();
+  // TODO get state could still be default constructed here (but even if it is
+  // it will be false so it shouldn't matter)
   while (ros::ok() && !getState().connected) {
     if ((ros::Time::now() - start).toSec() > 2.0) {
       MU_WARN("waiting for FCU connection");
@@ -75,10 +84,14 @@ void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
   // prevent any other messages from being published for the remainder of takeoff
   std::lock_guard<std::mutex> lock(pub_mutex);
 
+  // vertical flight speed limit governed by px4 param MPC_Z_VEL_MAX_UP
+  geometry_msgs::Twist cmd;
+  cmd.linear.z = 0.2;
+
   // send a few setpoints before starting
   MU_INFO("publishing setpoints before liftoff");
   for (int i = 30; ros::ok() && i > 0; --i) {
-    local_pos_pub.publish(cmd);
+    local_vel_pub.publish(cmd);
     ros::spinOnce();
     rate.sleep();
   }
@@ -87,7 +100,7 @@ void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
   mavros_msgs::SetMode mode_msg;
   mode_msg.request.custom_mode = "OFFBOARD";
   while (ros::ok() && !(mode_srv.call(mode_msg) && mode_msg.response.mode_sent)) {
-    local_pos_pub.publish(cmd); // setpoints must continually be published
+    local_vel_pub.publish(cmd); // setpoints must continually be published
     ros::spinOnce();
     rate.sleep();
   }
@@ -97,7 +110,7 @@ void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
   mavros_msgs::CommandBool arm_cmd;
   arm_cmd.request.value = true;
   while (ros::ok() && !(arming_srv.call(arm_cmd) && arm_cmd.response.success)) {
-    local_pos_pub.publish(cmd); // setpoints must continually be published
+    local_vel_pub.publish(cmd); // setpoints must continually be published
     ros::spinOnce();
     rate.sleep();
   }
@@ -105,7 +118,7 @@ void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
 
   // wait for the system to report the quad is active (i.e. 4: in the air)
   while (ros::ok() && getState().system_status != 4) {
-    local_pos_pub.publish(cmd);
+    local_vel_pub.publish(cmd); // setpoints must continually be published
     ros::spinOnce();
     rate.sleep();
   }
@@ -115,11 +128,12 @@ void MavrosUAV::takeoffThread(const geometry_msgs::PoseStamped cmd)
 }
 
 
-void MavrosUAV::takeoff(const geometry_msgs::PoseStamped pose)
+// see note on takeoffThread()
+void MavrosUAV::takeoff()
 {
   if (!takeoff_thread.joinable()) {
     MU_DEBUG("spawning takeoff thread");
-    takeoff_thread = std::thread(&MavrosUAV::takeoffThread, this, pose);
+    takeoff_thread = std::thread(&MavrosUAV::takeoffThread, this);
     land_command_issued = false; // false until land() is called
     takeoff_command_issued = true; // true until land() is called
   }
@@ -164,12 +178,39 @@ void MavrosUAV::land()
 }
 
 
+// TODO should there be some kind of multiplexing? velocity & position commands
+// could be sent at the same time
+void MavrosUAV::sendLocalVelocityCommand(const geometry_msgs::Twist& cmd)
+{
+  static ros::Time last_pub(0); // time since the last message was published
+
+  // publish is thread safe but we don't want possibly conflicting messages being
+  // sent to the quad while it is trying to take off
+  if (pub_mutex.try_lock()) {
+
+    // limit publishing to 1000Hz to prevent overloading the connection
+    if ((ros::Time::now() - last_pub).toSec() > 1e-3) // 1ms
+      local_vel_pub.publish(cmd);
+
+    pub_mutex.unlock();
+  } else {
+    MU_DEBUG("can't publish local position command: publisher busy");
+  }
+}
+
+
 void MavrosUAV::sendLocalPositionCommand(const geometry_msgs::PoseStamped& cmd)
 {
+  static ros::Time last_pub(0); // time since the last message was published
+
   // publish is thread safe but we don't want possibly conflicting messages being
-  // sent to the quad while it is trying to take off (doesn't matter for landing)
+  // sent to the quad while it is trying to take off
   if (pub_mutex.try_lock()) {
-    local_pos_pub.publish(cmd);
+
+    // limit publishing to 1000Hz to prevent overloading the connection
+    if ((ros::Time::now() - last_pub).toSec() > 1e-3) // 1ms
+      local_pos_pub.publish(cmd);
+
     pub_mutex.unlock();
   } else {
     MU_DEBUG("can't publish local position command: publisher busy");

@@ -4,6 +4,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/CommandTOL.h>
 #include <mavros_msgs/SetMode.h>
@@ -25,7 +26,7 @@ class MavrosUAV
     ros::Subscriber state_sub;
     ros::ServiceClient arming_srv, mode_srv, land_srv;
 
-    ros::Publisher local_pos_pub;
+    ros::Publisher local_pos_pub, local_vel_pub;
     std::mutex pub_mutex;
 
     std::thread landing_thread, takeoff_thread;
@@ -34,7 +35,7 @@ class MavrosUAV
     mavros_msgs::State state;
     std::mutex state_mutex;
 
-    void takeoffThread(const geometry_msgs::PoseStamped);
+    void takeoffThread();
     void landingThread();
 
   public:
@@ -42,7 +43,8 @@ class MavrosUAV
     ~MavrosUAV();
 
     void sendLocalPositionCommand(const geometry_msgs::PoseStamped&);
-    void takeoff(const geometry_msgs::PoseStamped);
+    void sendLocalVelocityCommand(const geometry_msgs::Twist&);
+    void takeoff();
     void land();
 
     mavros_msgs::State getState();
@@ -54,7 +56,7 @@ class MavrosUAV
 };
 
 
-}
+} // namespace intel_aero_navigation
 
 
 #endif
