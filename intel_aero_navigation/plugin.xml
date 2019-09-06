@@ -1,14 +1,14 @@
-<library path="lib/libwaypoint_navigation_nodelet">
-  <class name="intel_aero_navigation/WaypointNavigationNodelet" type="intel_aero_navigation::WaypointNavigationNodelet" base_class_type="nodelet::Nodelet">
+<library path="lib/libpx4_nav_nodelet">
+  <class name="intel_aero_navigation/PX4NavNodelet" type="intel_aero_navigation::PX4NavNodelet" base_class_type="nodelet::Nodelet">
     <description>
-      A nodelet for doing 2D waypoint navigation
+      A nodelet for doing 2D waypoint navigation with the px4 flight stack
     </description>
   </class>
 </library>
-<library path="lib/libwaypoint_navigation_vel_nodelet">
-  <class name="intel_aero_navigation/WaypointNavigationVelNodelet" type="intel_aero_navigation::WaypointNavigationVelNodelet" base_class_type="nodelet::Nodelet">
+<library path="lib/libgazebo_vel_nav_nodelet">
+  <class name="intel_aero_navigation/GazeboVelNavNodelet" type="intel_aero_navigation::GazeboVelNavNodelet" base_class_type="nodelet::Nodelet">
     <description>
-      A nodelet for doing 2D waypoint navigation without px4
+      A nodelet for doing 2D waypoint navigation with velocity control in gazebo
     </description>
   </class>
 </library>

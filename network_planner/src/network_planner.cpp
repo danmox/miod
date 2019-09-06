@@ -712,7 +712,7 @@ void NetworkPlanner::initSystem()
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
     goal_msg.waypoints.push_back(goal);
-    goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+    goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
 
     nav_clients[i]->sendGoal(goal_msg);
   }

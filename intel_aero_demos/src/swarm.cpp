@@ -59,7 +59,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < number_of_agents; ++i) {
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
     goal_msg.waypoints.push_back(wps[i]);
-    goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+    goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
     ROS_INFO("[swarm_test]: sending goal %d", i);
     nav_client_ptrs[i]->sendGoal(goal_msg);
   }

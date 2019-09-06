@@ -12,7 +12,8 @@ namespace grid_mapping {
 
 template <class T>
 Grid<T>::Grid(Point origin_, double res, int w_, int h_, bool alloc_data) :
-  GridBase(origin_, res, w_, h_)
+  GridBase(origin_, res, w_, h_),
+  frame_id("map")
 {
   if (alloc_data)
     data = std::vector<T>(w*h, 0.0);
@@ -22,7 +23,8 @@ Grid<T>::Grid(Point origin_, double res, int w_, int h_, bool alloc_data) :
 template <class T>
 Grid<T>::Grid(const nav_msgs::OccupancyGrid::ConstPtr& msg) :
   GridBase(Point(msg->info.origin.position.x, msg->info.origin.position.y),
-      msg->info.resolution, msg->info.width, msg->info.height)
+           msg->info.resolution, msg->info.width, msg->info.height),
+  frame_id(msg->header.frame_id)
 {
   data.reserve(msg->data.size());
   for (auto cell : msg->data)

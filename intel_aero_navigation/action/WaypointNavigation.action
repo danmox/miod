@@ -1,8 +1,9 @@
 uint8 LAND = 0
 uint8 HOVER = 1
 
-geometry_msgs/Pose[] waypoints
-uint8 end_behavior
+Header header
+geometry_msgs/Pose[] waypoints # TODO should these be geometry_msgs/Point?
+uint8 end_action
 ---
 float32 total_time
 ---

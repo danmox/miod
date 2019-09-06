@@ -12,18 +12,14 @@ find_package(catkin REQUIRED
 )
 
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES intel_aero_demos
   CATKIN_DEPENDS
     actionlib
     roscpp
     geometry_msgs
     mavros_msgs
-#  DEPENDS system_lib
 )
 
 include_directories(
-# include
   ${catkin_INCLUDE_DIRS}
 )
 

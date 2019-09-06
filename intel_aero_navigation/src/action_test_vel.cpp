@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 
   intel_aero_navigation::WaypointNavigationGoal goal_msg;
   goal_msg.waypoints = flight_wp;
-  goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::LAND;
+  goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
 
   ROS_INFO("[action_test] sending goal");
   nav_client.sendGoal(goal_msg);

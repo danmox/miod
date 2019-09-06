@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     intel_aero_navigation::WaypointNavigationGoal goal_msg;
     goal_msg.waypoints = circle_points;
-    goal_msg.end_behavior = intel_aero_navigation::WaypointNavigationGoal::LAND;
+    goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
     agent_goals.push_back(goal_msg);
   }
 

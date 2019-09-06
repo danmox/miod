@@ -33,7 +33,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES waypoint_navigation waypoint_navigation_nodelet waypoint_navigation_vel_nodelet
+  LIBRARIES waypoint_navigation px4_nav_nodelet gazebo_vel_nav_nodelet
   CATKIN_DEPENDS
     roscpp
     std_msgs
@@ -56,8 +56,7 @@ include_directories(
 )
 
 set(LIB_FILES
-  src/waypoint_navigation.cpp
-  src/waypoint_navigation_vel.cpp
+  src/nav_base.cpp
   src/mavros_uav.cpp
 )
 
@@ -65,20 +64,20 @@ add_library(waypoint_navigation ${LIB_FILES})
 add_dependencies(waypoint_navigation ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(waypoint_navigation ${catkin_LIBRARIES})
 
-add_library(waypoint_navigation_nodelet src/waypoint_navigation_nodelet.cpp)
-target_link_libraries(waypoint_navigation_nodelet waypoint_navigation ${catkin_LIBRARIES})
+add_library(px4_nav_nodelet src/px4_nav_nodelet.cpp)
+target_link_libraries(px4_nav_nodelet waypoint_navigation ${catkin_LIBRARIES})
 
-add_executable(waypoint_navigation_node src/waypoint_navigation_node.cpp)
-target_link_libraries(waypoint_navigation_node waypoint_navigation ${catkin_LIBRARIES})
+add_executable(px4_nav_node src/px4_nav_node.cpp)
+target_link_libraries(px4_nav_node waypoint_navigation ${catkin_LIBRARIES})
 
 add_executable(action_test src/action_test.cpp)
 target_link_libraries(action_test waypoint_navigation ${catkin_LIBRARIES})
 
-add_library(waypoint_navigation_vel_nodelet src/waypoint_navigation_vel_nodelet.cpp)
-target_link_libraries(waypoint_navigation_vel_nodelet waypoint_navigation ${catkin_LIBRARIES})
+add_library(gazebo_vel_nav_nodelet src/gazebo_vel_nav_nodelet.cpp)
+target_link_libraries(gazebo_vel_nav_nodelet waypoint_navigation ${catkin_LIBRARIES})
 
-add_executable(waypoint_navigation_vel_node src/waypoint_navigation_vel_node.cpp)
-target_link_libraries(waypoint_navigation_vel_node waypoint_navigation ${catkin_LIBRARIES})
+add_executable(gazebo_vel_nav_node src/gazebo_vel_nav_node.cpp src/gazebo_vel_nav.cpp)
+target_link_libraries(gazebo_vel_nav_node waypoint_navigation ${catkin_LIBRARIES})
 
 add_executable(action_test_vel src/action_test_vel.cpp)
 target_link_libraries(action_test_vel waypoint_navigation ${catkin_LIBRARIES})
