@@ -1,5 +1,9 @@
 <launch>
 
+  <!--
+      ARGS
+  -->
+
   <arg name="id"                 default="1"/>
   <arg name="robot_ns"           value="aero$(arg id)"/>
 
@@ -7,42 +11,44 @@
   <arg name="static_map"         default="true"/> <!-- true: a static map will be provided -->
   <arg name="static_map_topic"   default="/projected_map"/>
   <arg name="world_frame"        default="world"/>
-  <arg name="map_frame"          default="$(arg robot_ns)/map"/>
+  <arg name="map_frame"          default="$(arg world_frame)"          if="$(arg static_map)"/>
+  <arg name="map_frame"          default="$(arg robot_ns)/map"         unless="$(arg static_map)"/>
+  <arg name="odom_frame"         default="$(arg world_frame)"          if="$(arg static_map)"/>
+  <arg name="odom_frame"         default="$(arg robot_ns)/odom"        unless="$(arg static_map)"/>
   <arg name="base_frame"         default="$(arg robot_ns)/base_link"/>
 
   <!-- waypoint navigation vel args -->
-  <arg name="position_tol"       default="0.2"/> <!-- meters -->
-  <arg name="heading_tol"        default="0.5"/> <!-- ~28deg -->
-  <arg name="nav_debug"          default="false"/> <!-- launch node in gdb -->
-  <arg name="linear_vel_des"     default="3.0"/>
-  <arg name="angular_vel_des"    default="0.5"/>
+  <arg name="gdb"                default="false"/> <!-- run nodelet (false) or node in gdb (true) -->
+  <arg name="debug"              default="false"/> <!-- set node/nodelet verbosity level to debug -->
+  <arg name="position_tol"       default="0.2"/>   <!-- meters -->
+  <arg name="heading_tol"        default="0.5"/>   <!-- ~28deg -->
+  <arg name="linear_vel_des"     default="1.0"/>   <!-- m/s -->
+  <arg name="angular_vel_des"    default="0.5"/>   <!-- rad/s -->
 
   <!-- mapping / costmap args -->
   <arg name="robot_radius"       default="1.0"/>
   <arg name="inflation_radius"   default="1.0"/>
   <arg name="octomap_resolution" default="0.1"/>
-  <arg name="costmap_rate"       if="$(arg static_map)"     value="0.1"/>
-  <arg name="costmap_rate"       unless="$(arg static_map)" value="2.0"/>
-  <arg name="costmap_frame"      if="$(arg static_map)"     value="$(arg world_frame)"/>
-  <arg name="costmap_frame"      unless="$(arg static_map)" value="$(arg map_frame)"/>
+  <arg name="costmap_rate"       value="0.1"                if="$(arg static_map)"/>     <!-- Hz -->
+  <arg name="costmap_rate"       value="2.0"                unless="$(arg static_map)"/> <!-- Hz -->
+  <arg name="costmap_frame"      value="$(arg world_frame)" if="$(arg static_map)"/>
+  <arg name="costmap_frame"      value="$(arg map_frame)"   unless="$(arg static_map)"/>
 
   <!-- spawn model args -->
-  <arg name="x"                default="0"/>
-  <arg name="y"                default="0"/>
-  <arg name="z"                default="0"/>
-  <arg name="R"                default="0"/>
-  <arg name="P"                default="0"/>
-  <arg name="Y"                default="0"/>
-  <arg name="enable_realsense" default="false"/>
-  <arg name="pos_args" value="-x $(arg x) -y $(arg y) -z $(arg z)
-                              -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
+  <arg name="x"                  default="0"/>
+  <arg name="y"                  default="0"/>
+  <arg name="z"                  default="0"/>
+  <arg name="R"                  default="0"/>
+  <arg name="P"                  default="0"/>
+  <arg name="Y"                  default="0"/>
+  <arg name="enable_realsense"   default="false" if="$(arg static_map)"/>
+  <arg name="enable_realsense"   default="true"  unless="$(arg static_map)"/>
+  <arg name="pos_args"           value="-x $(arg x) -y $(arg y) -z $(arg z)
+                                        -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
 
-  <!-- SITL args -->
-  <arg name="mavlink_udp_port"      default="14560"/>
-  <arg name="mavlink_tcp_port"      default="4560"/>
-  <arg name="fcu_url"               default="udp://:14541@localhost:14581"/>
-  <arg name="interactive"           default="true"/>
-  <arg name="target_system_id"      default="$(arg id)"/>
+  <!--
+      NODES
+  -->
 
   <group ns="$(arg robot_ns)">
 
@@ -64,6 +70,7 @@
                 -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
 
     <!-- model pose tf publisher (for spawn_only so model appears in rviz) -->
+    <!-- TODO needs to be augmented for non-static map case -->
     <node pkg="intel_aero_gazebo"
           type="model_tf_publisher"
           name="model_tf_publisher"
@@ -72,6 +79,8 @@
       <param name="parent_frame" value="$(arg world_frame)"/>
       <param name="child_frame" value="$(arg base_frame)"/>
     </node>
+
+    <!-- TODO create map (octomap server) if none is provided (static_map is false) -->
 
     <!-- publish joint states to tf -->
     <node name="robot_state_publisher"
@@ -85,7 +94,8 @@
     <node pkg="tf2_ros"
           type="static_transform_publisher"
           name="offset_broadcaster"
-          args="0 0 0 0 0 0 $(arg world_frame) $(arg map_frame)"/>
+          args="0 0 0 0 0 0 $(arg world_frame) $(arg map_frame)"
+          unless="$(arg static_map)"/>
 
     <!-- costmap generation -->
     <node pkg="costmap_2d"
@@ -106,37 +116,36 @@
       </rosparam>
     </node>
 
-    <node unless="$(arg nav_debug)"
+    <node unless="$(arg gdb)"
           pkg="nodelet"
           type="nodelet"
-          name="waypoint_navigation_vel_nodelet"
-          args="standalone intel_aero_navigation/WaypointNavigationVelNodelet"
+          name="gazebo_vel_nav_nodelet"
+          args="standalone intel_aero_navigation/GazeboVelNavNodelet"
           output="screen">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <param name="local_frame"     value="$(arg map_frame)"/>
-      <param name="costmap_frame"   value="$(arg costmap_frame)"/>
-      <param name="world_frame"     value="$(arg world_frame)"/>
+      <param name="odom_frame"      value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>
       <param name="linear_vel_des"  value="$(arg linear_vel_des)"/>
       <param name="angular_vel_des" value="$(arg angular_vel_des)"/>
+      <param name="debug"           value="$(arg debug)"/>
     </node>
 
-    <node if="$(arg nav_debug)"
-          name="waypoint_navigation_vel_nodelet"
+    <node if="$(arg gdb)"
           pkg="intel_aero_navigation"
-          type="waypoint_navigation_vel_node" 
+          type="gazebo_vel_nav_node"
+          name="gazebo_vel_nav_node"
           output="screen"
           launch-prefix="gdb --args">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <param name="local_frame"     value="$(arg map_frame)"/>
-      <param name="costmap_frame"   value="$(arg costmap_frame)"/>
-      <param name="world_frame"     value="$(arg world_frame)"/>
+      <param name="odom_frame"      value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>
       <param name="linear_vel_des"  value="$(arg linear_vel_des)"/>
       <param name="angular_vel_des" value="$(arg angular_vel_des)"/>
+      <param name="debug"           value="$(arg debug)"/>
     </node>
+
 
   </group>
 </launch>

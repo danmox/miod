@@ -85,22 +85,21 @@ void GazeboVelNav::initializeSystem()
 }
 
 
+// assumptions:
+// 1) goal.pose.orientation points along the segment to be traversed
 void GazeboVelNav::sendCommand(const geometry_msgs::PoseStamped& goal)
 {
-  geometry_msgs::Point robot_pt = robot_pose->pose.position;
-  geometry_msgs::Point goal_pt = goal.pose.position;
-
   double goal_vec[3];
-  goal_vec[0] = goal_pt.x - robot_pt.x;
-  goal_vec[1] = goal_pt.y - robot_pt.y;
-  goal_vec[2] = goal_pt.z - robot_pt.z;
+  goal_vec[0] = goal.pose.position.x - robot_pose->pose.position.x;
+  goal_vec[1] = goal.pose.position.y - robot_pose->pose.position.y;
+  goal_vec[2] = goal.pose.position.z - robot_pose->pose.position.z;
 
   double mag = sqrt(goal_vec[0]*goal_vec[0] +
                     goal_vec[1]*goal_vec[1] +
                     goal_vec[2]*goal_vec[2]);
 
   // segment heading error
-  double desired_heading = atan2(goal_pt.y - robot_pt.y, goal_pt.x - robot_pt.x);
+  double desired_heading = tf2::getYaw(goal.pose.orientation);
   double robot_heading = tf2::getYaw(robot_pose->pose.orientation);
   double heading_error = desired_heading - robot_heading;
   if (heading_error > 2.0*M_PI)

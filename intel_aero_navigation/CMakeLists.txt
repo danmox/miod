@@ -58,6 +58,8 @@ include_directories(
 set(LIB_FILES
   src/nav_base.cpp
   src/mavros_uav.cpp
+  src/gazebo_vel_nav.cpp
+  include/intel_aero_navigation/px4_nav.hpp
 )
 
 add_library(waypoint_navigation ${LIB_FILES})

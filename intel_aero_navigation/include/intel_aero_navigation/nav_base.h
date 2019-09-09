@@ -33,7 +33,7 @@ class NavBase
 
     tf2_ros::Buffer tf2_buffer;
     tf2_ros::TransformListener tf2_listener;
-    std::string odom_frame, costmap_frame;
+    std::string odom_frame;
 
     typedef grid_mapping::Grid<int8_t> Costmap;
     Costmap* costmap_ptr;

@@ -1,6 +1,7 @@
 #include <intel_aero_navigation/nav_base.h>
 
 #include <nodelet/nodelet.h>
+#include <ros/console.h>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -50,6 +51,12 @@ NavBase::NavBase(std::string name, ros::NodeHandle& nh_, ros::NodeHandle& pnh_):
   getParamStrict(pnh, "position_tol", position_tol);
   getParamStrict(pnh, "heading_tol", heading_tol);
 
+  // set nodelet verbosity to debug if desired
+  bool debug = false;
+  if (pnh.getParam("debug", debug) && debug)
+    if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
+      ros::console::notifyLoggerLevelsChanged();
+
   costmap_sub = nh.subscribe("costmap", 10, &NavBase::costmapCB, this);
   odom_sub = nh.subscribe("odom", 10, &NavBase::odomCB, this);
   path_pub = nh.advertise<nav_msgs::Path>("path", 10);
@@ -68,10 +75,10 @@ void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   // same frame as the costmap (i.e. no transformations need to take place)
   if (!costmap_ptr) {
     costmap_ptr = new Costmap(msg);
-    NB_INFO("received costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
+    NB_INFO("received first costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
   } else {
     costmap_ptr->insertMap(msg);
-    NB_INFO("inserted costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
+    NB_DEBUG("inserted costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
   }
 
   // nothing more to do if any of the following are satisfied:
@@ -131,8 +138,8 @@ void NavBase::goalCB()
     return;
   }
 
-  // convert waypoints to odom_frame (while planning must happen in
-  // costmap_frame, local position commands sent to the px4 are interpreted as
+  // convert waypoints to odom_frame (while planning must happen in the
+  // costmap frame, local position commands sent to the px4 are interpreted as
   // being in odom_frame so we convert them here to be ready for future
   // publication)
   geometry_msgs::PoseStamped wp;
@@ -152,6 +159,11 @@ void NavBase::goalCB()
     waypoints.push_back(wp);
   }
 
+  planPath();
+
+  NB_DEBUG("waypoints are:");
+  for (const auto& wp : waypoints)
+    NB_DEBUG("{%.2f, %.2f, %.2f}", wp.pose.position.x, wp.pose.position.y, wp.pose.position.z);
 }
 
 
@@ -164,7 +176,7 @@ void NavBase::goalCB()
 void NavBase::planPath()
 {
   // prepare waypoints:
-  // 1) for planning the waypoints must be transformed to costmap_frame
+  // 1) for planning the waypoints must be transformed to the costmap frame
   // 2) waypoints must be inside of the costmap
   // 3) waypoints must be in visitable space
   // 4) for planning convenience add the robot pose as the first waypoint (to be
@@ -175,11 +187,11 @@ void NavBase::planPath()
   bool abort_goal = false;
   for (auto wp_it = costmap_wps.begin(); wp_it != costmap_wps.end() ; ++wp_it) {
 
-    // transform waypoints from odom_frame to costmap_frame
+    // transform waypoints from odom_frame to the costmap frame
     try {
-      tf2_buffer.transform(*wp_it, costmap_frame);
+      tf2_buffer.transform(*wp_it, costmap_ptr->frame_id);
     } catch (tf2::TransformException &e) {
-      NB_ERROR("could not transform waypoint from source frame \"%s\" to costmap_frame \"%s\":", wp_it->header.frame_id.c_str(), costmap_frame.c_str());
+      NB_ERROR("could not transform waypoint from source frame \"%s\" to the costmap frame \"%s\":", wp_it->header.frame_id.c_str(), costmap_ptr->frame_id.c_str());
       NB_ERROR("%s", e.what());
       abort_goal = true;
       break;
@@ -226,25 +238,26 @@ void NavBase::planPath()
       intermediate_waypoint.pose.position.x = pt.x;
       intermediate_waypoint.pose.position.y = pt.y;
       intermediate_waypoint.pose.position.z = cwp_it->pose.position.z;
-      waypoints.insert(cwp_it, intermediate_waypoint);
+      costmap_wps.insert(cwp_it, intermediate_waypoint);
     }
   }
 
   // remove robot pose added for planning convenience
-  waypoints.pop_front();
+  costmap_wps.pop_front();
 
-  // transform waypoints from costmap_frame back to odom_frame for publishing
+  // transform waypoints from the costmap frame back to odom_frame for execution
   for (geometry_msgs::PoseStamped& cwp : costmap_wps) {
     try {
       tf2_buffer.transform(cwp, odom_frame);
     } catch (tf2::TransformException &e) {
-      NB_ERROR("could not transform costmap waypoint from source frame \"%s\" to odom_frame \"%s\":", cwp.header.frame_id.c_str(), odom_frame.c_str());
+      NB_ERROR("could not transform costmap waypoint from frame \"%s\" to odom_frame \"%s\":", cwp.header.frame_id.c_str(), odom_frame.c_str());
       NB_ERROR("%s", e.what());
       NB_ERROR("aborting current goal");
       nav_server.setAborted();
       return;
     }
   }
+  waypoints = costmap_wps;
 
   // visualize path in rviz
   nav_msgs::Path path_msg;
@@ -312,29 +325,32 @@ void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
                           pow(curr_wp.pose.position.y - robot_pt.y, 2.0) +
                           pow(curr_wp.pose.position.z - robot_pt.z, 2.0));
 
-  geometry_msgs::PoseStamped cmd_msg;
   if (abs(yaw_error) > heading_tol && pos_error > position_tol) {
     // turn in place before moving
-    cmd_msg = *robot_pose;
+    NB_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    curr_wp = *robot_pose;
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (pos_error > position_tol) {
     // maintain heading and move towards waypoint
-    cmd_msg = curr_wp;
+    NB_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    curr_wp = curr_wp;
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (waypoints.size() > 1) {
     // waypoint reached; advance to next
+    NB_DEBUG("reached waypoint: {%.2f, %.2f, %.2f}", curr_wp.pose.position.x, curr_wp.pose.position.y, curr_wp.pose.position.z);
     waypoints.pop_front();
+    NB_DEBUG("next waypoint: {%.2f, %.2f, %.2f}", waypoints.front().pose.position.x, waypoints.front().pose.position.y, waypoints.front().pose.position.z);
     if (waypoints.size() == 1)
       nav_server.setSucceeded();
-    cmd_msg = curr_wp; // start the next waypoint next time odom is received
+    curr_wp = curr_wp; // start the next waypoint next time odom is received
   } else {
     // hover in place at final waypoint
     // TODO execute end behavior
-    cmd_msg = curr_wp;
+    NB_DEBUG("hovering at last waypoint");
+    curr_wp = curr_wp;
   }
 
-  sendCommand(cmd_msg); // to be implemented by inheriting class
-  NB_DEBUG("sending local position command");
+  sendCommand(curr_wp); // to be implemented by inheriting class
 }
 
 

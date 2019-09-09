@@ -43,46 +43,18 @@
     <arg name="id" value="1"/>
     <include file="$(arg intel_aero_launch_file)" >
       <arg name="id"                 value="$(arg id)" />
-      <arg name="x"                  value="0" />
-      <arg name="y"                  value="0" />
+      <arg name="x"                  value="5.0" />
+      <arg name="y"                  value="-5.0" />
       <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14561" />
-      <arg name="mavlink_tcp_port"   value="4561" />
-      <arg name="fcu_url"            value="udp://:14541@localhost:14581" />
-      <arg name="target_system_id"   value="$(eval 1 + arg('id'))" />
+      <arg name="mavlink_udp_port"   value="14561"                        unless="$(arg static_map)"/>
+      <arg name="mavlink_tcp_port"   value="4561"                         unless="$(arg static_map)"/>
+      <arg name="fcu_url"            value="udp://:14541@localhost:14581" unless="$(arg static_map)"/>
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"        unless="$(arg static_map)"/>
       <arg name="position_tol"       value="0.2"/>
       <arg name="heading_tol"        value="0.2"/>
+      <arg name="static_map"         value="$(arg static_map)"/>
+      <arg name="world_frame"        value="$(arg world_frame)"/>
     </include>
   </group>
 
-  <!-- aero 2
-  <group>
-    <arg name="id" value="2"/>
-    <include file="$(arg intel_aero_launch_file)" >
-      <arg name="id"                 value="$(arg id)" />
-      <arg name="x"                  value="1" />
-      <arg name="y"                  value="0" />
-      <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14562" />
-      <arg name="mavlink_tcp_port"   value="4562" />
-      <arg name="fcu_url"            value="udp://:14542@localhost:14582" />
-      <arg name="target_system_id"   value="$(eval 1 + arg('id'))" />
-    </include>
-  </group>
- -->
-  <!-- aero 3
-  <group>
-    <arg name="id" value="3"/>
-    <include file="$(arg intel_aero_launch_file)" >
-      <arg name="id"                 value="$(arg id)" />
-      <arg name="x"                  value="1" />
-      <arg name="y"                  value="1" />
-      <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14563" />
-      <arg name="mavlink_tcp_port"   value="4563" />
-      <arg name="fcu_url"            value="udp://:14543@localhost:14583" />
-      <arg name="target_system_id"   value="4" />
-    </include>
-  </group>
- -->
 </launch>

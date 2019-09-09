@@ -16,9 +16,13 @@ typedef actionlib::SimpleActionClient<NavAction> NavClient;
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "flight_navigation");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh, pnh("~");
 
-  std::string sn = "/aero1/waypoint_navigation_vel_nodelet";
+  std::string sn;
+  if (!pnh.getParam("server_name", sn)) {
+    ROS_FATAL("[action_test] failed to get param server name");
+    exit(EXIT_FAILURE);
+  }
   NavClient nav_client(sn.c_str(), true);
   ROS_INFO("[action_test] waiting for %s action server to start", sn.c_str());
   nav_client.waitForServer();
@@ -41,8 +45,14 @@ int main(int argc, char** argv)
   flight_wp.push_back(goal);
 
   intel_aero_navigation::WaypointNavigationGoal goal_msg;
+  goal_msg.header.frame_id = "world";
+  goal_msg.header.stamp = ros::Time::now();
   goal_msg.waypoints = flight_wp;
   goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
+
+  ROS_INFO("[action_test] waypoints are:");
+  for (const auto& pose : goal_msg.waypoints)
+    ROS_INFO("[action_test] {%.2f, %.2f, %.2f}", pose.position.x, pose.position.y, pose.position.z);
 
   ROS_INFO("[action_test] sending goal");
   nav_client.sendGoal(goal_msg);
