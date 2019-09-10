@@ -10,6 +10,7 @@ namespace intel_aero_navigation {
 #define VN_INFO(fmt, ...) ROS_INFO("[GazeboVelNav] " fmt, ##__VA_ARGS__)
 #define VN_ERROR(fmt, ...) ROS_ERROR("[GazeboVelNav] " fmt, ##__VA_ARGS__)
 #define VN_FATAL(fmt, ...) ROS_FATAL("[GazeboVelNav] " fmt, ##__VA_ARGS__)
+#define VN_DEBUG(fmt, ...) ROS_DEBUG("[GazeboVelNav] " fmt, ##__VA_ARGS__)
 
 
 template<typename T>
@@ -116,6 +117,15 @@ void GazeboVelNav::sendCommand(const geometry_msgs::PoseStamped& goal)
     velocity_command.linear.z = linear_vel_des * goal_vec[2] / mag;
   }
   vel_pub.publish(velocity_command);
+}
+
+
+void GazeboVelNav::executeEndAction(const int action)
+{
+  // NOTE for now there really isn't a difference between land and hover as far
+  // as gazebo is concerned
+  waypoints.clear(); // no more velocity commands will be sent
+                     // quad will remain in place
 }
 
 

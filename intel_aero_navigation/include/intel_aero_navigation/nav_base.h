@@ -41,6 +41,7 @@ class NavBase
 
     // path of waypoints to follow
     std::deque<geometry_msgs::PoseStamped> waypoints;
+    int end_action;
 
     // action server
     actionlib::SimpleActionServer<intel_aero_navigation::WaypointNavigationAction> nav_server;
@@ -54,7 +55,7 @@ class NavBase
     virtual bool systemInitialized() = 0;
     virtual void initializeSystem() = 0;
     virtual void sendCommand(const geometry_msgs::PoseStamped&) = 0;
-    // TODO implement end action
+    virtual void executeEndAction(const int action) = 0;
 
  public:
     NavBase(std::string, ros::NodeHandle&, ros::NodeHandle&);

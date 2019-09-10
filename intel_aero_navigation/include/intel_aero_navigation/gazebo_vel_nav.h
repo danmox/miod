@@ -20,6 +20,7 @@ class GazeboVelNav : public NavBase
     virtual bool systemInitialized();
     virtual void initializeSystem();
     virtual void sendCommand(const geometry_msgs::PoseStamped& goal);
+    virtual void executeEndAction(const int action);
 
   public:
     GazeboVelNav(std::string, ros::NodeHandle, ros::NodeHandle);

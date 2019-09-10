@@ -158,6 +158,7 @@ void NavBase::goalCB()
     }
     waypoints.push_back(wp);
   }
+  end_action = action_goal->end_action;
 
   planPath();
 
@@ -333,21 +334,17 @@ void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   } else if (pos_error > position_tol) {
     // maintain heading and move towards waypoint
     NB_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
-    curr_wp = curr_wp;
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (waypoints.size() > 1) {
-    // waypoint reached; advance to next
+    // intermediate waypoint reached: advance to next
     NB_DEBUG("reached waypoint: {%.2f, %.2f, %.2f}", curr_wp.pose.position.x, curr_wp.pose.position.y, curr_wp.pose.position.z);
     waypoints.pop_front();
     NB_DEBUG("next waypoint: {%.2f, %.2f, %.2f}", waypoints.front().pose.position.x, waypoints.front().pose.position.y, waypoints.front().pose.position.z);
-    if (waypoints.size() == 1)
-      nav_server.setSucceeded();
-    curr_wp = curr_wp; // start the next waypoint next time odom is received
-  } else {
-    // hover in place at final waypoint
-    // TODO execute end behavior
-    NB_DEBUG("hovering at last waypoint");
-    curr_wp = curr_wp;
+  } else if (nav_server.isActive()) {
+    // last waypoint reached: set succeeded and execute end action
+    NB_DEBUG("setting goal to succeeded");
+    nav_server.setSucceeded(); // nav_server.isActive() == false now
+    executeEndAction(end_action);
   }
 
   sendCommand(curr_wp); // to be implemented by inheriting class

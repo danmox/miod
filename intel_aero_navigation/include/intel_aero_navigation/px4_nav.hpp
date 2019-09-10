@@ -20,6 +20,15 @@ class PX4Nav : public NavBase
     {
       aero.sendLocalPositionCommand(cmd);
     };
+    virtual void executeEndAction(const int action)
+    {
+      if (action == intel_aero_navigation::WaypointNavigationGoal::HOVER) {
+        ROS_DEBUG("[PX4Nav] end action is hovering in place; no action taken");
+      } else if (action == intel_aero_navigation::WaypointNavigationGoal::LAND) {
+        ROS_DEBUG("[PX4Nav] end action is landing; sending land command to aero");
+        aero.land();
+      }
+    }
 
   public:
     PX4Nav(std::string name, ros::NodeHandle nh_, ros::NodeHandle pnh_):
