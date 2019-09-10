@@ -13,7 +13,7 @@ namespace channel_simulator {
 
 
 ChannelSimulator::ChannelSimulator() :
-  tree(NULL)
+  tree(nullptr)
 {}
 
 
@@ -33,20 +33,14 @@ bool ChannelSimulator::rayIntersection(const octomap::point3d& origin,
   octomap::point3d ray_end;
   bool success = tree->castRay(origin, direction, ray_end);
   if (!success) {
-    ROS_ERROR_STREAM("[ChannelSimulator] rayIntersection(...) failed: "
-                     "castRay(...) returned false with origin " << origin
-                     << " and direction " << direction << "; ray_end "
-                     << ray_end << " may be in unknown space");
+    ROS_ERROR_STREAM("[ChannelSimulator] rayIntersection(...) failed: castRay(...) returned false with origin " << origin << " and direction " << direction << "; ray_end " << ray_end << " may be in unknown space");
     return false;
   }
 
   // compute intersection
   success = tree->getRayIntersection(origin, direction, ray_end, intersection);
   if (!success) {
-    ROS_ERROR_STREAM("[ChannelSimulator] rayIntersection(...) failed: "
-                     "getRayIntersection(...) returned false with origin "
-                     << origin << ", direction " << direction << ", and end "
-                     << ray_end);
+    ROS_ERROR_STREAM("[ChannelSimulator] rayIntersection(...) failed: getRayIntersection(...) returned false with origin " << origin << ", direction " << direction << ", and end " << ray_end);
     return false;
   }
 
@@ -87,6 +81,8 @@ octomap::point3d getTreeBBXMin(const octomap::OcTree* tree)
 }
 
 
+// assumptions:
+// 1) tree points to a valid octomap
 std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
                                                       octomap::point3d p2)
 {
@@ -102,13 +98,9 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   if (!p1_ptr || !p2_ptr) {
     // TODO compute octomap bbx intersection
     if (!p1_ptr)
-      ROS_ERROR_STREAM("[ChannelSimulator] p1 " << p1 << " out of bounds of "
-                       "octomap with min_bbx " << getTreeBBXMin(tree)
-                       << " and max_bbx " << getTreeBBXMax(tree));
+      ROS_ERROR_STREAM("[ChannelSimulator] p1 " << p1 << " out of bounds of octomap with min_bbx " << getTreeBBXMin(tree) << " and max_bbx " << getTreeBBXMax(tree));
     if (!p2_ptr)
-      ROS_ERROR_STREAM("[ChannelSimulator] p2 " << p2 << " out of bounds of "
-                       "octomap with min_bbx " << getTreeBBXMin(tree)
-                       << " and max_bbx " << getTreeBBXMax(tree));
+      ROS_ERROR_STREAM("[ChannelSimulator] p2 " << p2 << " out of bounds of octomap with min_bbx " << getTreeBBXMin(tree) << " and max_bbx " << getTreeBBXMax(tree));
     return segments;
   }
 
@@ -125,8 +117,7 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   octomap::KeyRay ray_keys;
   bool success = tree->computeRayKeys(p1, p2, ray_keys);
   if (!success) {
-    ROS_ERROR_STREAM("[ChannelSimulator] computeRayKeys(...) failed between p1 "
-                     << p1 << " and p2 " << p2);
+    ROS_ERROR_STREAM("[ChannelSimulator] computeRayKeys(...) failed between p1 " << p1 << " and p2 " << p2);
     return segments;
   }
   ray_keys.addKey(tree->coordToKey(p2));
@@ -137,6 +128,7 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
   auto it = ray_keys.begin();
   octomap::OcTreeNode* prev_node = tree->search(*it++);
   while (it != ray_keys.end()) {
+
     octomap::OcTreeNode* curr_node = tree->search(*it);
     if (!curr_node) {
       CS_ERROR("failed to find node from ray key");
@@ -206,21 +198,22 @@ std::vector<double> ChannelSimulator::computeSegments(octomap::point3d p1,
 }
 
 
-ChannelState ChannelSimulator::predict(const geometry_msgs::Pose& pose1,
-                                       const geometry_msgs::Pose& pose2)
+void ChannelSimulator::predict(const geometry_msgs::Point& pt1,
+                               const geometry_msgs::Point& pt2,
+                               double& mean, double& var)
 {
+  octomap::point3d p1(pt1.x, pt1.y, pt1.z);
+  octomap::point3d p2(pt2.x, pt2.y, pt2.z);
+
   if (!tree) {
-    CS_ERROR("no octomap!");
-    return ChannelState();
+    CS_DEBUG("predicting without a map");
+    return model.predict((p2 - p1).norm(), mean, var);
   }
 
-  octomap::point3d p1(pose1.position.x, pose1.position.y, pose1.position.z);
-  octomap::point3d p2(pose2.position.x, pose2.position.y, pose2.position.z);
   std::vector<double> segments = computeSegments(p1, p2);
 
-  // TODO implement channel model
-
-  return ChannelState();
+  // TODO implement NLOS channel model
+  return model.predict((p2 - p1).norm(), mean, var);
 }
 
 

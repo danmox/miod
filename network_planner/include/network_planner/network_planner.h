@@ -3,7 +3,7 @@
 
 
 #include <ros/ros.h>
-#include <CommunicationPredict.h>
+#include <channel_simulator/channel_simulator.h>
 #include <grid_mapping/grid.hpp>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
@@ -19,9 +19,10 @@ namespace network_planner {
 
 struct Flow
 {
-    std::unordered_set<int> sources;
-    std::unordered_set<int> dests;
-    double qos; // minimum bandwidth requirement
+  public:
+    std::unordered_set<int> srcs; // source nodes
+    std::unordered_set<int> dests; // destinatio node
+    double min_margin; // minimum bandwidth requirement
     double confidence; // probability with which requirements are satisfied
 };
 
@@ -52,7 +53,7 @@ class NetworkPlanner
     std::vector<int> comm_idcs;
     point_vec team_config;
     std::vector<bool> received_odom;
-    CommunicationPredict channel_sim;
+    channel_simulator::ChannelSimulator channel_sim;
     Costmap costmap;
     bool received_costmap;
     CommReqs comm_reqs;
@@ -82,10 +83,12 @@ class NetworkPlanner
     void networkState(const point_vec& state, arma::mat& R_mean,
                       arma::mat& R_var);
     bool SOCP(const arma::mat& R_mean, const arma::mat& R_var,
+              std::vector<arma::mat>& alpha_ij_k,
               double& slack, bool debug);
 
   public:
 
+    NetworkPlanner() : costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1) {}
     NetworkPlanner(ros::NodeHandle& nh, ros::NodeHandle& pnh);
 
     bool updateNetworkConfig();

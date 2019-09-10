@@ -5,7 +5,7 @@ add_compile_options(-std=c++11)
 
 find_package(catkin REQUIRED
   actionlib
-  communication_predict
+  channel_simulator
   geometry_msgs
   grid_mapping
   intel_aero_navigation
@@ -22,7 +22,7 @@ catkin_package(
   LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     actionlib
-    communication_predict
+    channel_simulator
     geometry_msgs
     grid_mapping
     intel_aero_navigation
@@ -41,11 +41,11 @@ include_directories(
   ${ARMADILLO_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/network_planner.cpp src/counting.cpp)
+add_library(${PROJECT_NAME} src/network_planner.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${ARMADILLO_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_node src/network_planner_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME} ${catkin_LIBRARIES})
 
-add_executable(test_node src/test.cpp)
-target_link_libraries(test_node ${catkin_LIBRARIES} ${ARMADILLO_LIBRARIES})
+add_executable(network_planner_test src/network_planner_test.cpp)
+target_link_libraries(network_planner_test ${PROJECT_NAME} ${catkin_LIBRARIES} ${ARMADILLO_LIBRARIES})

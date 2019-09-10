@@ -26,16 +26,16 @@ int main(int argc, char** argv)
   channel_simulator::ChannelSimulator sim;
   sim.mapCB(msg_ptr);
 
-  geometry_msgs::Pose pose1, pose2;
-  pose1.position.x = 3.0;
-  pose1.position.y = 5.0;
-  pose1.position.z = 0.1;
-  pose2.position.x = 3.0;
-  pose2.position.y = -5.0;
-  pose2.position.z = 0.9;
+  geometry_msgs::Point pt1, pt2;
+  pt1.x = 3.0;
+  pt1.y = 5.0;
+  pt1.z = 0.1;
+  pt2.x = 3.0;
+  pt2.y = -5.0;
+  pt2.z = 0.9;
 
-  // dummy commit
-  sim.predict(pose1, pose2);
+  double mean, var;
+  sim.predict(pt1, pt2, mean, var);
 
   delete tree;
   return 0;

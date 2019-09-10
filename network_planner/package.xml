@@ -12,7 +12,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>actionlib</depend>
   <depend>armadillo</depend>
-  <depend>communication_predict</depend>
+  <depend>channel_simulator</depend>
   <depend>geometry_msgs</depend>
   <depend>grid_mapping</depend>
   <depend>intel_aero_navigation</depend>

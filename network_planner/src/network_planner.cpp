@@ -45,34 +45,29 @@ arma::vec3 makeVec3(const double x, const double y, const double z)
 }
 
 
+template<typename T>
+void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
+{
+  if (!nh.getParam(param_name, param)) {
+    NP_FATAL("failed to get ROS param \"%s\"", param_name.c_str());
+    exit(EXIT_FAILURE);
+  }
+}
+
+
 NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
-  channel_sim(true), // use map
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   // fetch parameters from ROS parameter server:
-  std::vector<std::string> param_names = {"/task_agent_count",
-                                          "/network_agent_count",
-                                          "sample_count",
-                                          "sample_variance",
-                                          "/desired_altitude",
-                                          "max_velocity"};
-  std::vector<bool> success;
-  success.push_back(nh.getParam(param_names[0], task_count));
-  success.push_back(nh.getParam(param_names[1], comm_count));
-  success.push_back(pnh.getParam(param_names[2], sample_count));
-  success.push_back(pnh.getParam(param_names[3], sample_var));
-  success.push_back(nh.getParam(param_names[4], desired_altitude));
-  success.push_back(pnh.getParam(param_names[5], max_velocity));
-  if (!all(success, true)) {
-    for (int i = 0; i < success.size(); ++i)
-      if (!success[i])
-        NP_ERROR("failed to get ROS param: %s", param_names[i].c_str());
-    NP_FATAL("failed to fetch all params from server");
-    exit(EXIT_FAILURE);
-  }
+  getParamStrict(nh, "/task_agent_count", task_count);
+  getParamStrict(nh, "/network_agent_count", comm_count);
+  getParamStrict(nh, "/desired_altitude", desired_altitude);
+  getParamStrict(pnh, "sample_count", sample_count);
+  getParamStrict(pnh, "sample_variance", sample_var);
+  getParamStrict(pnh, "max_velocity", max_velocity);
 
   // initialize agent count dependent variables
   total_agents = task_count + comm_count;
@@ -141,17 +136,28 @@ void NetworkPlanner::mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 void NetworkPlanner::setCommReqs(const CommReqs& reqs)
 {
   comm_reqs = reqs;
+  num_flows = comm_reqs.size();
+
+  // TODO ignore more variables
 
   // build useful data structure for converting betweein i,j,k indices and
   // linear indices used for the optimization vars
-  num_flows = comm_reqs.size();
   ijk_to_idx.clear();
   idx_to_ijk.clear();
   int ind = 0;
-  for (int i = 0; i < total_agents; ++i) {
-    for (int j = 0; j < total_agents; ++j) {
-      for (int k = 0; k < num_flows; ++k) {
-        if (i != j) { // TODO ignore more variables
+  for (int k = 0; k < num_flows; ++k) { // flow
+    for (int i = 0; i < total_agents; ++i) { // source node
+
+      /*
+      // destination nodes don't rebroadcast
+      if (comm_reqs[k].dests.count(i+1) > 0) { // ids in flow.dests are 1 indexed
+        NP_DEBUG("ignoring alpha_%d*_%d", i+1, k+1);
+        continue;
+      }
+      */
+
+      for (int j = 0; j < total_agents; ++j) { // destination node
+        if (i != j) {
           std::tuple<int,int,int> subs = std::make_tuple(i,j,k);
           idx_to_ijk[ind] = subs;
           ijk_to_idx[subs] = ind++;
@@ -179,64 +185,76 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
 {
   // probability constraints (second-order cones) ||Ay|| <= c^Ty + d
   for (int k = 0; k < num_flows; ++k) {
+
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
     if (!divide_psi_inv_eps)
       psi_inv_eps = 1.0;
     if (debug) printf("psi_inv_eps = %f\n", psi_inv_eps);
+
     for (int i = 0; i < total_agents; ++i) {
       A_mats[idx] = arma::zeros<arma::mat>(y_dim, y_dim);
       b_vecs[idx] = arma::zeros<arma::vec>(y_dim);
       c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
       d_vecs[idx] = arma::zeros<arma::vec>(1);
 
+      // destination nodes do not have constraints
+      if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
+        continue;
+
+      // components for \bar{b}_i^k and \tilde{b}_i^k
       for (int j = 0; j < total_agents; ++j) {
+
         // outgoing data
-        auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
-        if (it != ijk_to_idx.end()) {
-          A_mats[idx](it->second,it->second) = sqrt(R_var(i,j));
-          c_vecs[idx](it->second) = R_mean(i,j) / psi_inv_eps;
+        auto it_out = ijk_to_idx.find(std::make_tuple(i,j,k));
+        if (it_out != ijk_to_idx.end()) {
+          A_mats[idx](it_out->second,it_out->second) = sqrt(R_var(i,j));
+          c_vecs[idx](it_out->second) = R_mean(i,j) / psi_inv_eps;
         }
 
-        // incoming data if *it is not a destination of flow k
-        if (comm_reqs[k].dests.count(i+1) == 0) { // flow.dests is 1 indexed
-          it = ijk_to_idx.find(std::make_tuple(j,i,k));
-          if (it != ijk_to_idx.end()) {
-            A_mats[idx](it->second,it->second) = -sqrt(R_var(j,i));
-            c_vecs[idx](it->second) = -R_mean(j,i) / psi_inv_eps;
-          }
+        // incoming data (NOTE: destination rebroadcast routing variables are
+        // not included in ijk_to_idx/idx_to_ijk)
+        auto it_in = ijk_to_idx.find(std::make_tuple(j,i,k));
+        if (it_in != ijk_to_idx.end()) {
+          A_mats[idx](it_in->second,it_in->second) = sqrt(R_var(j,i));
+          c_vecs[idx](it_in->second) = -R_mean(j,i) / psi_inv_eps;
         }
       }
 
-      c_vecs[idx](y_dim-1) = -1.0 / psi_inv_eps; // slack var
+      // slack var
+      c_vecs[idx](y_dim-1) = -1.0 / psi_inv_eps;
 
-      if (comm_reqs[k].sources.count(i+1) > 0) // flow.sources is 1 indexed
-        d_vecs[idx](0) = -comm_reqs[k].qos / psi_inv_eps; // rate margin
+      // rate margin for the source node
+      if (comm_reqs[k].srcs.count(i+1) > 0) // ids in flow.srcs are 1 indexed
+        d_vecs[idx](0) = -comm_reqs[k].min_margin / psi_inv_eps;
 
       ++idx;
     }
   }
 
   if (debug) {
-    for (int n = 0; n < total_agents*num_flows; ++n) { // num prob constraints
+    for (int n = 0; n < idx; ++n) { // num prob constraints
       printf("\ncoefficient %d:", n+1);
-      printf("\nalpha_ij_k    A_mats\n");
-      printf("----------   -------\n");
+      printf("\nalpha_ij_k    A_mats    B_mats\n");
+        printf("----------   -------   -------\n");
       for (int ind = 0; ind < alpha_dim; ++ind) {
         int i,j,k;
         std::tie(i,j,k) = idx_to_ijk[ind];
-        double val = A_mats[n](ind,ind);
-        if (fabs(val) > 1e-4)
-          printf("alpha_%d%d_%d   %7.4f\n", i+1, j+1, k+1, val);
+        double A_val = A_mats[n](ind,ind);
+        double c_val = c_vecs[n](ind);
+        if (fabs(A_val) > 1e-4 || fabs(c_val) > 1e-4)
+          printf("alpha_%d%d_%d   %7.4f   %7.4f\n", i+1, j+1, k+1, A_val, c_val);
         else
-          printf("alpha_%d%d_%d   %7.1f\n", i+1, j+1, k+1, 0.0);
+          printf("alpha_%d%d_%d   %7.1f   %7.1f\n", i+1, j+1, k+1, 0.0, 0.0);
       }
     }
   }
 }
 
 
+// TODO don't reallicate fixed constraints
 bool NetworkPlanner::SOCP(const arma::mat& R_mean,
                           const arma::mat& R_var,
+                          std::vector<arma::mat>& alpha_ij_k,
                           double& slack,
                           bool debug)
 {
@@ -255,12 +273,19 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   }
 
   // total number of constraints for problem
-  int num_constraints =
-    total_agents * num_flows // probability QoS constraints (for every i,k)
-    + total_agents           // sum_jk alpha_ijk <= 1 (channel avail., for all i)
-    + 2 * alpha_dim          // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
-    + 1;                     // s >= 0 (slack variable)
 
+  int num_dests = 0;
+  for (const auto& flow : comm_reqs)
+    num_dests += flow.dests.size();
+
+  int num_constraints =
+    total_agents * num_flows - num_dests // probability margin constraints (for every i,k except for destination nodes)
+    + total_agents                       // sum_jk alpha_ijk <= 1 (channel Tx availability, for every node)
+    + total_agents                       // sum_ik alpha_ijk <= 1 (channel Rx availability, for every node)
+    + 2 * alpha_dim                      // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
+    + 1;                                 // s >= 0 (slack variable)
+
+  // TODO better initialization
   // constraint matrices / column vectors
   std::vector<arma::mat> A_mats(num_constraints);
   std::vector<arma::vec> b_vecs(num_constraints);
@@ -274,25 +299,43 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   // the number of constraints inserted
   probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, true, debug);
 
-  // channel availability constraints (sum_jk alpha_ijk <= 1)
-  // ||0|| <= -c^Ty + 1
+  // Tx: sum_jk alpha_ijk <= 1
+  // Rx: sum_ik alpha_ijk <= 1
+  // ||0y + 0|| <= c^Ty + 1
 
   for (int i = 0; i < total_agents; ++i) {
+
+    // Tx
     A_mats[idx].set_size(0,0);                   // dummy
     b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
     c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
     d_vecs[idx] = arma::ones<arma::vec>(1);
 
+    // Rx
+    A_mats[idx+1].set_size(0,0);                   // dummy
+    b_vecs[idx+1] = arma::zeros<arma::vec>(0);     // dummy
+    c_vecs[idx+1] = arma::zeros<arma::vec>(y_dim);
+    d_vecs[idx+1] = arma::ones<arma::vec>(1);
+
     for (int k = 0; k < num_flows; ++k) {
       for (int j = 0; j < total_agents; ++j) {
-        auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
-        if (it != ijk_to_idx.end()) {
-          c_vecs[idx](it->second) = -1.0;
+
+        // Tx
+        auto it_tx = ijk_to_idx.find(std::make_tuple(i,j,k));
+        if (it_tx != ijk_to_idx.end()) {
+          c_vecs[idx](it_tx->second) = -1.0;
         }
+
+        // Rx
+        auto it_rx = ijk_to_idx.find(std::make_tuple(j,i,k));
+        if (it_rx != ijk_to_idx.end()) {
+          c_vecs[idx+1](it_rx->second) = -1.0;
+        }
+
       }
     }
 
-    ++idx;
+    idx += 2;
   }
 
   // timeshare constraints (routing variable bounds: 0 <= alpha_ij_k <= 1)
@@ -334,14 +377,14 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   f_obj(y_dim-1) = -1; // SOCP solver is a minimizer
 
   y_col.clear();
-  std::vector<arma::vec> z_vecs; //??
-  std::vector<double> w_vec; //??
+  std::vector<arma::vec> z_vecs; // dual??
+  std::vector<double> w_vec;     // dual??
   std::vector<double> primal_ub(y_dim, 1.0);
   std::vector<double> primal_lb(y_dim, -1e-9);
 
   int ret = SolveSOCP(f_obj, A_mats, b_vecs, c_vecs, d_vecs,
                       y_col, z_vecs, w_vec, primal_ub, primal_lb,
-                      1e-4, false);
+                      1e-4, debug);
 
   if (ret != 0) {
     NP_WARN("SolveSOCP failed with return value: %d", ret);
@@ -350,7 +393,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   slack = y_col(y_dim-1);
 
-  std::vector<arma::mat> alpha_ij_k(num_flows);
+  alpha_ij_k = std::vector<arma::mat>(num_flows);
   for (int k = 0; k < num_flows; ++k) {
     alpha_ij_k[k] = arma::zeros<arma::mat>(total_agents, total_agents);
     for (int i = 0; i < total_agents; ++i) {
@@ -365,7 +408,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   if (debug) {
     // check constraints
     printf("\n");
-    for (int i = 0; i < total_agents * num_flows; ++i) {
+    for (int i = 0; i < total_agents * num_flows - num_dests; ++i) {
       double lhs = arma::norm(A_mats[i] * y_col);
       arma::mat rhs = arma::trans(c_vecs[i]) * y_col + d_vecs[i];
       printf("constraint %d: %.2f <= %.2f\n", i+1, lhs, rhs(0,0));
@@ -409,9 +452,14 @@ void NetworkPlanner::networkState(const point_vec& state,
       if (i == j) {
         R_mean(i,j) = R_var(i,j) = 0.0;
       } else {
-        double xi = state[i](0), yi = state[i](1);
-        double xj = state[j](0), yj = state[j](1);
-        channel_sim.Predict(xi, yi, xj, yj, R_mean(i,j), R_var(i,j));
+        geometry_msgs::Point pi, pj;
+        pi.x = state[i](0);
+        pi.y = state[i](1);
+        pi.z = desired_altitude;
+        pj.x = state[j](0);
+        pj.y = state[j](1);
+        pj.z = desired_altitude;
+        channel_sim.predict(pi, pj, R_mean(i,j), R_var(i,j));
       }
     }
   }
@@ -525,7 +573,8 @@ bool NetworkPlanner::updateNetworkConfig()
   // solve SOCP
 
   double slack;
-  if (!SOCP(R_mean, R_var, slack, false)) {
+  std::vector<arma::mat> alpha_ij_k;
+  if (!SOCP(R_mean, R_var, alpha_ij_k, slack, false)) {
     NP_ERROR("unable to plan: no valid solution to SOCP found");
     return false;
   }
