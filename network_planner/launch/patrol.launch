@@ -6,7 +6,7 @@
         output="screen">
     <param name="sample_count"    value="5000"/>
     <param name="sample_variance" value="1.5"/>
-    <param name="max_velocity"    value="0.0"/> <!-- m/s -->
+    <param name="max_velocity"    value="0.5"/> <!-- m/s -->
   </node>
 
 </launch>
