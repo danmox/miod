@@ -20,7 +20,7 @@
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
     <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
-    <arg name="world"            value="$(find intel_aero_gazebo)/worlds/spawc.world"/>
+    <arg name="world"            value="worlds/empty.world"/>
     <arg name="rviz"             value="$(arg rviz)"/>
     <arg name="rviz_config_file" value="$(find intel_aero_demos)/rviz/patrol.rviz"/>
   </include>
@@ -32,7 +32,7 @@
     <arg name="world_frame"      value="world"/>
   </include>
 
-  <!-- load saved octomap -->
+  <!-- load saved octomap
   <node pkg="octomap_server"
         type="octomap_server_node"
         name="static_map_node"
@@ -40,6 +40,16 @@
         output="screen">
     <remap from="projected_map" to="/projected_map"/>
     <param name="frame_id" value="world"/>
+  </node>
+ -->
+
+  <!-- load saved map -->
+  <node pkg="map_server"
+        type="map_server"
+        name="static_map_node"
+        args="$(find intel_aero_gazebo)/maps/empty.yaml">
+    <remap from="map" to="/projected_map"/>
+    <param name="frame_id"      value="world"/>
   </node>
 
   <!-- task (patrol) agents -->
@@ -52,7 +62,7 @@
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="20.0"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="y"              value="-20.0"/>
       <arg name="linear_vel_des" value="$(arg task_vel)"/>
     </include>
   </group>
@@ -62,7 +72,7 @@
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="-20.0"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="y"              value="-20.0"/>
       <arg name="linear_vel_des" value="$(arg task_vel)"/>
     </include>
   </group>

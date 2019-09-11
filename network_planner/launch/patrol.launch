@@ -5,8 +5,8 @@
         name="network_planner_node"
         output="screen">
     <param name="sample_count"    value="5000"/>
-    <param name="sample_variance" value="2.0"/>
-    <param name="max_velocity"    value="1.0"/> <!-- m/s -->
+    <param name="sample_variance" value="1.5"/>
+    <param name="max_velocity"    value="0.0"/> <!-- m/s -->
   </node>
 
 </launch>
