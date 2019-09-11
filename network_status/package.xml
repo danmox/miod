@@ -17,7 +17,7 @@
   <depend>visualization_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
-  <depend>communication_predict</depend>
+  <depend>channel_simulator</depend>
   <depend>intel_aero_navigation</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>

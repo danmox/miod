@@ -13,7 +13,7 @@ find_package(catkin REQUIRED
   visualization_msgs
   tf2
   tf2_ros
-  communication_predict
+  channel_simulator
   intel_aero_navigation
 )
 
@@ -37,7 +37,7 @@ catkin_package(
     visualization_msgs
     tf2
     tf2_ros
-    communication_predict
+    channel_simulator
     intel_aero_navigation
     message_runtime
 )

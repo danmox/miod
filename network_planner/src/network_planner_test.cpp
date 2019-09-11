@@ -1,13 +1,3 @@
-/*
-  solve test SOCP problem
-  expected results:
-    alpha_ij_1
-          0        0        0        0
-          0        0   0.2110   0.3129
-     1.0000        0        0        0
-          0        0   0.5773        0
-    slack = 0.023
- */
 #include <network_planner/network_planner.h>
 
 
@@ -22,11 +12,31 @@ class NPTest : public NetworkPlanner
     {
     }
 
-    int runTest();
+    int socpTest();
+    int networkConfigTest();
 };
 
-int NPTest::runTest()
+
+int NPTest::socpTest()
 {
+  /*
+    solve test SOCP problem
+
+    settings:
+    flow.srcs.insert(2);
+    flow.dests.insert(1);
+    flow.min_margin = 0.1;
+    flow.confidence = 0.7;
+
+    expected results:
+    alpha_ij_1
+      0        0        0        0
+      0        0   0.2427   0.3339
+      1.0000   0        0        0
+      0        0   0.6093        0
+    slack = 0.051
+  */
+
   // set agent states
   team_config.clear();
   team_config.push_back(arma::vec3("0.0 0.0 0.0"));
@@ -41,7 +51,7 @@ int NPTest::runTest()
   flow.srcs.insert(2);
   flow.dests.insert(1);
   flow.min_margin = 0.1;
-  flow.confidence = 0.8;
+  flow.confidence = 0.7;
   network_planner::CommReqs qos;
   qos.push_back(flow);
   setCommReqs(qos);
@@ -72,15 +82,57 @@ int NPTest::runTest()
 }
 
 
+int NPTest::networkConfigTest()
+{
+  // ensure requirements are met to run updateNetworkConfig()
+  received_odom = std::vector<bool>(1, true);
+  received_costmap = true;
+
+  // set agent states
+  team_config.clear();
+  team_config.push_back(arma::vec3("20.0 -20.0 0.0"));
+  team_config.push_back(arma::vec3("-20.0 -20.0 0.0"));
+  team_config.push_back(arma::vec3("10.0 0.0 0.0"));
+  team_config.push_back(arma::vec3("-1.0 5.0 0.0"));
+  team_config.push_back(arma::vec3("-10.0 0.0 0.0"));
+  team_config.push_back(arma::vec3("1.0 -5.0 0.0"));
+
+  // set parameters
+  total_agents = team_config.size();
+  comm_count = 4;
+  task_count = 2;
+  comm_idcs.clear();
+  for (int i = task_count; i < total_agents; ++i)
+    comm_idcs.push_back(i);
+  sample_var = 1.0;
+  sample_count = 5000;
+
+  // initialize task spec
+  network_planner::Flow flow;
+  flow.srcs.insert(2);
+  flow.dests.insert(1);
+  flow.min_margin = 0.05;
+  flow.confidence = 0.6;
+  network_planner::CommReqs qos;
+  qos.push_back(flow);
+  setCommReqs(qos);
+
+  updateNetworkConfig();
+
+  return 0;
+}
+
+
 } // namespace network_planner
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "network_planner_test_node");
 
-  if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
+  if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
     ros::console::notifyLoggerLevelsChanged();
 
   network_planner::NPTest npt;
-  return npt.runTest();
+  //return npt.socpTest();
+  return npt.networkConfigTest();
 }

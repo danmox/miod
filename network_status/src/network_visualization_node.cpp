@@ -1,4 +1,4 @@
-#include <CommunicationPredict.h>
+#include <channel_simulator/channel_simulator.h>
 
 #include <ros/ros.h>
 #include <std_msgs/Float64.h>
@@ -26,8 +26,12 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "network_visualization_node");
   ros::NodeHandle nh, pnh("~");
 
+  channel_simulator::ChannelSimulator comm_sim;
+
   ros::Publisher viz_pub = nh.advertise<visualization_msgs::Marker>("network_visualization", 10);
   ros::Publisher rates_pub = nh.advertise<network_status::RatePair>("channel_rates", 10);
+
+  ros::Subscriber map_sub = nh.subscribe("map", 2, &channel_simulator::ChannelSimulator::mapCB, &comm_sim);
 
   tf2_ros::Buffer tf2_buff;
   tf2_ros::TransformListener tf2_listener(tf2_buff);
@@ -41,9 +45,6 @@ int main(int argc, char** argv)
     return -1;
   }
   int number_of_agents = task_agent_count + network_agent_count;
-
-  bool use_map = true;
-  CommunicationPredict comm_sim(use_map);
 
   geometry_msgs::Vector3 scale;
   scale.x = 0.5;
@@ -105,9 +106,7 @@ int main(int argc, char** argv)
         marker.points.push_back(node_location[i]);
         marker.points.push_back(node_location[j]);
 
-        comm_sim.Predict(node_location[i].x, node_location[i].y,
-                         node_location[j].x, node_location[j].y,
-                         pair.rate, pair.std);
+        comm_sim.predict(node_location[i], node_location[j], pair.rate, pair.std);
 
         std_msgs::ColorRGBA color;
         color.a = pair.rate;
