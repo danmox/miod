@@ -1,0 +1,53 @@
+<launch>
+
+  <arg name="sim"           default="false"/>
+
+  <!-- simulation args -->
+  <arg name="gazebo_gui"    default="true"/>
+  <arg name="rviz"          default="true"/>
+
+  <!-- robot args -->
+  <arg name="world_frame"        default="world"/>
+  <arg name="static_map"         default="true"/>
+  <arg name="static_map_file"    default="$(find intel_aero_experiments)/maps/empty.yaml"/>
+  <arg name="static_map_topic"   default="/map"/>
+
+  <!-- gazebo and rviz -->
+  <include if="$(arg sim)" file="$(find intel_aero_gazebo)/launch/simulation.launch">
+    <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
+    <arg name="world"            value="worlds/empty.world"/>
+    <arg name="rviz"             value="$(arg rviz)"/>
+    <arg name="rviz_config_file" value="$(find intel_aero_experiments)/rviz/outdoor_test.rviz"/>
+  </include>
+
+  <!-- load empty map -->
+  <node pkg="map_server"
+        type="map_server"
+        name="static_map_node"
+        args="$(arg static_map_file)">
+    <param name="frame_id" value="$(arg world_frame)"/>
+  </node>
+
+  <arg name="intel_aero_launch_file" if="$(arg sim)"     value="$(find intel_aero_gazebo)/launch/intel_aero_px4.launch"/>
+  <arg name="intel_aero_launch_file" unless="$(arg sim)" value="$(find intel_aero_experiments)/launch/intel_aero_live.launch"/>
+
+  <!-- aero 1 -->
+  <group>
+    <arg name="id" value="1"/>
+    <include file="$(arg intel_aero_launch_file)" >
+      <arg name="id"                 value="$(arg id)" />
+      <arg name="x"                  value="0" />
+      <arg name="y"                  value="0" />
+      <arg name="z"                  value="0" />
+      <arg name="mavlink_udp_port"   value="14561" if="$(arg sim)"/>
+      <arg name="mavlink_tcp_port"   value="4561" if="$(arg sim)"/>
+      <arg name="fcu_url"            value="udp://:14541@localhost:14581" if="$(arg sim)"/>
+      <arg name="fcu_url"            value="tcp://127.0.0.1:5760" unless="$(arg sim)"/>
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))" />
+      <arg name="static_map"         value="$(arg static_map)"/>
+      <arg name="static_map_topic"   value="$(arg static_map_topic)"/>
+      <arg name="world_frame"        value="$(arg world_frame)"/>
+    </include>
+  </group>
+
+</launch>
