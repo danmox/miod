@@ -50,7 +50,7 @@ class NetworkPlanner
     std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
     ros::Publisher viz_pub, net_pub;
-    int total_agents;
+    int total_agents, num_dests;
     std::vector<int> comm_idcs;
     point_vec team_config;
     std::vector<bool> received_odom;
@@ -72,6 +72,7 @@ class NetworkPlanner
     arma::vec y_col; // solution of robust routing problem [alpha_ij_k; slack]
 
     double computeV(const point_vec& config, bool debug);
+    double computebik(const point_vec& config, bool debug);
     void probConstraints(const arma::mat& R_mean,
                          const arma::mat& R_var,
                          std::vector<arma::mat>& A_mats,

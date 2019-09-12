@@ -132,6 +132,10 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
   comm_reqs = reqs;
   num_flows = comm_reqs.size();
 
+  num_dests = 0;
+  for (const auto& flow : comm_reqs)
+    num_dests += flow.dests.size();
+
   NP_INFO("received new communication requirements:");
   for (int k = 0; k < reqs.size(); ++k) {
     NP_INFO("  flow %d:", k+1);
@@ -286,10 +290,6 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   }
 
   // total number of constraints for problem
-
-  int num_dests = 0;
-  for (const auto& flow : comm_reqs)
-    num_dests += flow.dests.size();
 
   int num_constraints =
     total_agents * num_flows - num_dests // probability margin constraints (for every i,k except for destination nodes)
@@ -479,16 +479,55 @@ void NetworkPlanner::networkState(const point_vec& state,
 }
 
 
-double NetworkPlanner::computeV(const point_vec& config, bool debug)
+double NetworkPlanner::computebik(const point_vec& config, bool debug)
 {
   // get predicted rates
   arma::mat R_mean;
   arma::mat R_var;
   networkState(config, R_mean, R_var);
 
-  int num_dests = 0;
-  for (const auto& flow : comm_reqs)
-    num_dests += flow.dests.size();
+  int num_constraints = total_agents * num_flows - num_dests;
+
+  // compute probability constraints without dividing by psi_inv_eps
+  int idx = 0;
+  std::vector<arma::mat> A_mats(num_constraints);
+  std::vector<arma::vec> b_vecs(num_constraints);
+  std::vector<arma::vec> c_vecs(num_constraints);
+  std::vector<arma::vec> d_vecs(num_constraints);
+  probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
+
+  // b_ik - m_ik excludes slack variable
+  arma::vec y_tmp = y_col;
+  y_tmp(y_dim-1) = 0.0;
+  if (debug) y_tmp.print("y_tmp:");
+
+  // compute b_ik - m_ik
+  idx = 0;
+  arma::vec bik_col(num_constraints);
+  for (int k = 0; k < num_flows; ++k) {
+    for (int i = 0; i < total_agents; ++i) {
+
+      // destination nodes do not have constraints
+      if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
+        continue;
+
+      // b_ik - m_ik = cT*y + d (NOTE: d is -m_ik)
+      bik_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y_tmp + d_vecs[idx]);
+      ++idx;
+    }
+  }
+  if (debug) bik_col.print("bik_col:");
+
+  return bik_col.min();
+}
+
+
+double NetworkPlanner::computeV(const point_vec& config, bool debug)
+{
+  // get predicted rates
+  arma::mat R_mean;
+  arma::mat R_var;
+  networkState(config, R_mean, R_var);
 
   int num_constraints = total_agents * num_flows - num_dests;
 
@@ -648,12 +687,13 @@ bool NetworkPlanner::updateNetworkConfig()
   }
   plan_viz.markers.push_back(sample_points);
 
-  // approximate gradient using samples
+  // search for local configurations with better node margins
 
-  NP_INFO("computing gradient with %d samples", sample_count);
-  point_vec gradient(total_agents, {0.0, 0.0, 0.0});
-  double v_alpha_x = computeV(team_config, false);
-  printf("v_alpha_x = %f\n", v_alpha_x);
+  NP_INFO("searching for better local configs in %d samples", sample_count);
+  point_vec x_star = team_config;
+  double bik0 = computebik(team_config, false);
+  double bik_star = bik0;
+  printf("bik0 = %f\n", bik_star);
   for (int j = 0; j < sample_count; ++j) {
 
     // form candidate config, perturbing only network agents
@@ -665,14 +705,22 @@ bool NetworkPlanner::updateNetworkConfig()
 
     // update gradient estimate
     double v_alpha_x_prime = computeV(x_prime, false);
-    for (int i = 0; i < comm_count; ++i) {
-      arma::vec3 dx = team_config[comm_idcs[i]] - x_prime[comm_idcs[i]];
-      double dx_norm = arma::norm(dx);
-      if (dx_norm > 1e-3) {
-        gradient[comm_idcs[i]] += dx / dx_norm * (v_alpha_x - v_alpha_x_prime);
+    if (v_alpha_x_prime > 0.0) {
+      double bik_min = computebik(x_prime, false); // TODO this is not efficient
+      if (bik_min > bik_star) {
+        bik_star = bik_min;
+        x_star = x_prime;
       }
     }
   }
+
+  if (abs(bik0 - bik_star) < 1e-6)
+    NP_WARN("better configuration not found: bik0 = %.3f, bik_star = %.3f", bik0, bik_star);
+
+  // optimal direction
+  point_vec gradient = team_config;
+  for (int i = 0; i < gradient.size(); ++i)
+    gradient[i] = x_star[i] - team_config[i];
 
   // scale gradient vectors to satisfy ||.|| <= max_velocity
   // TODO this needs to be done in a more principled manner

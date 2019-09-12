@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   std::vector<std::shared_ptr<NavClient>> nav_clients;
   for (int i = 1; i <= agent_count; ++i) {
     std::stringstream ss;
-    ss << "/aero" << i << "/waypoint_navigation_vel_nodelet";
+    ss << "/aero" << i << "/gazebo_vel_nav_nodelet";
     std::string sn = ss.str();
     std::shared_ptr<NavClient> ac_ptr(new NavClient(sn.c_str(), true));
     ROS_INFO("[patrol_demo] waiting for %s action server to start", sn.c_str());
