@@ -1,0 +1,36 @@
+<package>
+  <name>socp</name>
+  <version>1.0.0</version>
+  <description>socp</description>
+  <maintainer email="a@a.com">Jon Fink</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/socp</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Jon Fink</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>armadillo</build_depend>
+  <build_depend>libblas-dev</build_depend>
+  <build_depend>liblapack-dev</build_depend>
+  <build_depend>atlas</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>armadillo</run_depend>
+  <run_depend>libblas-dev</run_depend>
+  <run_depend>liblapack-dev</run_depend>
+  <run_depend>atlas</run_depend>
+
+  <!-- Dependencies needed only for running tests. -->
+  <!-- <test_depend>armadillo</test_depend> -->
+
+<export>
+    <cpp lflags="-Wl,-rpath,${prefix} -L${prefix}/lib -larmadillo_socp" cflags="-I${prefix}/include"/>
+</export>
+
+</package>
