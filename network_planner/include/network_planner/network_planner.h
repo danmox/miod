@@ -37,13 +37,14 @@ class NetworkPlanner
 {
   protected:
     // ROS parameters
-    int task_count;          // number of task agents serviced
-    int comm_count;          // number of supporting network agents
-    int sample_count;        // number of random samples used in gradient step
-    double sample_var;       // variance of samples drawn from a normal
-                             // distribution centered at the agents' positions
-    double desired_altitude; // fixed desired z of quadrotors
-    double max_velocity;     // limit for largest step from gradient
+    int task_count;            // number of task agents serviced
+    int comm_count;            // number of supporting network agents
+    int sample_count;          // number of random samples used in gradient step
+    double sample_var;         // variance of samples drawn from a normal
+                               // distribution centered at the agents' positions
+    double desired_altitude;   // fixed desired z of quadrotors
+    double max_velocity;       // limit for largest step from gradient
+    double collision_distance; // minimum distance between agents
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> odom_subs;

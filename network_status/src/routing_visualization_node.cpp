@@ -14,11 +14,19 @@
 
 
 routing_msgs::NetworkUpdate::Ptr net_cmd;
-
-
 void networkUpdateCB(const routing_msgs::NetworkUpdate::Ptr& msg)
 {
   net_cmd = msg;
+}
+
+
+template<typename T>
+void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
+{
+  if (!nh.getParam(param_name, param)) {
+    ROS_FATAL("[routing_visualization_node] failed to get ROS param \"%s\"", param_name.c_str());
+    exit(EXIT_FAILURE);
+  }
 }
 
 
@@ -30,23 +38,21 @@ int main(int argc, char** argv)
   ros::Publisher viz_pub = nh.advertise<visualization_msgs::Marker>("network_visualization", 10);
   ros::Subscriber net_sub = nh.subscribe("network_update", 2, networkUpdateCB);
 
-  // TODO change to odom subscribers
+  // TODO change to odom subscribers?
   tf2_ros::Buffer tf2_buff;
   tf2_ros::TransformListener tf2_listener(tf2_buff);
 
   int task_agent_count, network_agent_count;
   std::string world_frame;
-  if (!nh.getParam("/task_agent_count", task_agent_count) ||
-      !nh.getParam("/network_agent_count", network_agent_count) ||
-      !pnh.getParam("world_frame", world_frame)) {
-    ROS_FATAL("[routing_visualization_node] failed to fetch parameter(s) from server");
-    return -1;
-  }
+  getParamStrict(nh, "/task_agent_count", task_agent_count);
+  getParamStrict(nh, "/network_agent_count", network_agent_count);
+  getParamStrict(pnh, "world_frame", world_frame);
   int number_of_agents = task_agent_count + network_agent_count;
 
   ros::Rate rate(10);
   ROS_INFO("[routing_visualization_node] starting loop");
   while (ros::ok()) {
+
     rate.sleep();
     ros::spinOnce();
 
@@ -105,8 +111,10 @@ int main(int argc, char** argv)
         viz_pub.publish(marker);
 
       } else {
-        ROS_WARN("[routing_visualization_node] not publishing this iteration");
+        ROS_DEBUG("[routing_visualization_node] could not fetch all poses from tf: not publishing this iteration");
       }
+    } else {
+      ROS_DEBUG("[routing_visualization_node] no routing solution: not publishing this iteration");
     }
 
   }

@@ -73,6 +73,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
   getParamStrict(pnh, "max_velocity", max_velocity);
+  getParamStrict(pnh, "collision_distance", collision_distance);
 
   // initialize agent count dependent variables
   total_agents = task_count + comm_count;
@@ -583,11 +584,11 @@ double NetworkPlanner::computeV(const point_vec& config, bool debug)
 }
 
 
-bool collisionFree(const point_vec& config)
+bool collisionFree(const point_vec& config, const double min_dist)
 {
   for (int i = 0; i < config.size(); ++i) {
     for (int j = i+1; j < config.size(); ++j) {
-      if (arma::norm(config[i] - config[j]) < 2.0) {
+      if (arma::norm(config[i] - config[j]) < min_dist) {
         return false;
       }
     }
@@ -707,6 +708,7 @@ bool NetworkPlanner::updateNetworkConfig()
   double vax0 = computeV(team_config, false);
   double vax_star = vax0;
   printf("vax0 = %.3f\n", vax0);
+  int new_max_count = 0, proximity_skip_count = 0;
   for (int j = 0; j < sample_count; ++j) {
 
     // form candidate config, perturbing only network agents
@@ -716,14 +718,22 @@ bool NetworkPlanner::updateNetworkConfig()
       x_prime[comm_idcs[i]](1) = samples(2*i+1,j);
     }
 
+    // check for collisions
+    if (!collisionFree(x_prime, collision_distance)) {
+      ++proximity_skip_count;
+      continue;
+    }
+
     // check if config is better
-    double vax_min = computeV(x_prime, false); // TODO this is not efficient
+    double vax_min = computeV(x_prime, false);
     if (vax_min > vax_star) {
       vax_star = vax_min;
       x_star = x_prime;
+      ++new_max_count;
     }
   }
   printf("vax_star = %.3f\n", vax_star);
+  printf("%d skipped due to proximity, max updated %d times\n", proximity_skip_count, new_max_count);
 
   if (abs(vax0 - vax_star) < 1e-6) {
     NP_WARN("better configuration not found: vax0 = %.3f, vax_star = %.3f", vax0, vax_star);
@@ -739,7 +749,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
   printf("team config:                 x_star:                      dist:\n");
   for (int i = 0; i < dist.size(); ++i) {
-    printf("(%7.2f, %7.2f, %7.2f), (%7.2f, %7.2f, %7.2f), (%7.2f, %7.2f, %7.2f)\n",
+    printf("[%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f]\n",
            team_config[i](0), team_config[i](1), team_config[i](2),
            x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
   }
@@ -845,11 +855,13 @@ void NetworkPlanner::runPlanningLoop()
 {
   double alpha = 0.3; // weighted average degree
   ros::Time last_call = ros::Time::now();
+  ros::Rate loop_rate(1); // run at 1 Hz
   while (ros::ok()) {
     updateNetworkConfig();
     update_duration = alpha*update_duration + (1-alpha)*(ros::Time::now() - last_call).toSec();
     last_call = ros::Time::now();
     printf("update_duration = %.3f\n", update_duration);
+    loop_rate.sleep();
   }
 }
 

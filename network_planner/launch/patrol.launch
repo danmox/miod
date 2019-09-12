@@ -1,26 +1,28 @@
 <launch>
 
-  <arg name="sample_count"    default="5000"/>
-  <arg name="sample_variance" default="1.5"/>
-  <arg name="max_velocity"    default="1.0"/>
-  <arg name="costmap_topic"   default="/projected_map"/>
-  <arg name="margin1"         default="0.1"/>
-  <arg name="confidence1"     default="0.8"/>
-  <arg name="margin2"         default="0.1"/>
-  <arg name="confidence2"     default="0.8"/>
+  <arg name="sample_count"       default="5000"/>
+  <arg name="sample_variance"    default="1.5"/>
+  <arg name="max_velocity"       default="1.0"/>
+  <arg name="costmap_topic"      default="/projected_map"/>
+  <arg name="margin1"            default="0.1"/>
+  <arg name="confidence1"        default="0.8"/>
+  <arg name="margin2"            default="0.1"/>
+  <arg name="confidence2"        default="0.8"/>
+  <arg name="collision_distance" default="2.0"/>
 
   <node pkg="network_planner"
         type="network_planner_node"
         name="network_planner_node"
         output="screen">
-    <param name="sample_count"    value="$(arg sample_count)"/>
-    <param name="sample_variance" value="$(arg sample_variance)"/>
-    <param name="max_velocity"    value="$(arg max_velocity)"/>
-    <param name="margin1"         value="$(arg margin1)"/>
-    <param name="confidence1"     value="$(arg confidence1)"/>
-    <param name="margin2"         value="$(arg margin2)"/>
-    <param name="confidence2"     value="$(arg confidence2)"/>
-    <remap from="costmap"         to="$(arg costmap_topic)"/>
+    <param name="sample_count"       value="$(arg sample_count)"/>
+    <param name="sample_variance"    value="$(arg sample_variance)"/>
+    <param name="max_velocity"       value="$(arg max_velocity)"/>
+    <param name="margin1"            value="$(arg margin1)"/>
+    <param name="confidence1"        value="$(arg confidence1)"/>
+    <param name="margin2"            value="$(arg margin2)"/>
+    <param name="confidence2"        value="$(arg confidence2)"/>
+    <param name="collision_distance" value="$(arg collision_distance)"/>
+    <remap from="costmap"            to="$(arg costmap_topic)"/>
   </node>
 
 </launch>
