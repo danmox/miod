@@ -7,6 +7,7 @@
 #include <grid_mapping/grid.hpp>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
+#include <routing_msgs/NetworkUpdate.h>
 #include <intel_aero_navigation/WaypointNavigationAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <armadillo>
@@ -48,7 +49,7 @@ class NetworkPlanner
     std::vector<ros::Subscriber> odom_subs;
     std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
-    ros::Publisher viz_pub;
+    ros::Publisher viz_pub, net_pub;
     int total_agents;
     std::vector<int> comm_idcs;
     point_vec team_config;

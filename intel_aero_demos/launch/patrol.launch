@@ -46,11 +46,12 @@
   </node>
 
   <!-- network topology visualization -->
-  <include if="$(arg network_viz)"
-           file="$(find intel_aero_gazebo)/launch/network_viz.launch">
-    <arg name="static_map_topic" value="/projected_map"/>
-    <arg name="world_frame"      value="world"/>
-  </include>
+  <node pkg="network_status"
+        type="routing_visualization_node"
+        name="routing_visualization_node"
+        output="screen">
+    <param name="world_frame"      value="world"/>
+  </node>
 
   <!-- network planner node -->
   <include file="$(find network_planner)/launch/patrol.launch">

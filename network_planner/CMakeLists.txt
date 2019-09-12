@@ -11,6 +11,7 @@ find_package(catkin REQUIRED
   intel_aero_navigation
   nav_msgs
   roscpp
+  routing_msgs
   socp
   visualization_msgs
 )
@@ -28,6 +29,7 @@ catkin_package(
     intel_aero_navigation
     nav_msgs
     roscpp
+    routing_msgs
     socp
     visualization_msgs
   DEPENDS

@@ -104,6 +104,9 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 
   // publish visualization of gradient based planner
   viz_pub = nh.advertise<visualization_msgs::MarkerArray>("planner", 10);
+
+  // publish network update messages
+  net_pub = nh.advertise<routing_msgs::NetworkUpdate>("network_update", 10);
 }
 
 
@@ -740,6 +743,46 @@ bool NetworkPlanner::updateNetworkConfig()
     cmd_msg.linear.y = max_velocity * gradient[comm_idcs[i]](1);
     vel_pubs[i].publish(cmd_msg);
   }
+
+  // print out routing solution
+  for (int k = 0; k < num_flows; ++k) {
+    alpha_ij_k[k].elem(find(alpha_ij_k[k] < 0.01)).zeros(); // clear out small values
+    alpha_ij_k[k].print(std::string("flow ") + std::to_string(k+1) + std::string(" routes:"));
+  }
+
+  // send network update command
+  routing_msgs::NetworkUpdate net_cmd;
+  for (int i = 0; i < total_agents; ++i) {
+
+    // probabilistic routing table entry for node i (all outgoing routes)
+    routing_msgs::PRTableEntry rt_entry;
+    rt_entry.node[0] = i;
+
+    // check for outgoing traffic to all other nodes
+    for (int j = 0; j < total_agents; ++j) {
+
+      // no self transmissions
+      if (i == j)
+        continue;
+
+      // combine alpha_ij for all flows k
+      double alpha_ij = 0;
+      for (int k = 0; k < num_flows; ++k) {
+        alpha_ij += alpha_ij_k[k](i,j);
+      }
+
+      // only include routing table entry for significant usage
+      if (alpha_ij > 0.01) { // ignore small routing vars
+        routing_msgs::ProbGateway gway;
+        gway.IP[0] = j;
+        gway.prob = alpha_ij;
+        rt_entry.gateways.push_back(gway);
+      }
+    }
+
+    net_cmd.routes.push_back(rt_entry);
+  }
+  net_pub.publish(net_cmd);
 
   return true;
 }

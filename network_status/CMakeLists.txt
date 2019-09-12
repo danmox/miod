@@ -15,6 +15,7 @@ find_package(catkin REQUIRED
   tf2_ros
   channel_simulator
   intel_aero_navigation
+  routing_msgs
 )
 
 add_message_files(
@@ -40,13 +41,18 @@ catkin_package(
     channel_simulator
     intel_aero_navigation
     message_runtime
+    routing_msgs
 )
 
 include_directories(${catkin_INCLUDE_DIRS})
 
-add_executable(network_visualization_node src/network_visualization_node.cpp)
-add_dependencies(network_visualization_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(network_visualization_node ${catkin_LIBRARIES})
+add_executable(channel_visualization_node src/channel_visualization_node.cpp)
+add_dependencies(channel_visualization_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(channel_visualization_node ${catkin_LIBRARIES})
+
+add_executable(routing_visualization_node src/routing_visualization_node.cpp)
+add_dependencies(routing_visualization_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(routing_visualization_node ${catkin_LIBRARIES})
 
 add_executable(intel_demo src/intel_demo.cpp)
 target_link_libraries(intel_demo ${catkin_LIBRARIES})

@@ -21,5 +21,6 @@
   <depend>intel_aero_navigation</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
+  <depend>routing_msgs</depend>
 
 </package>
