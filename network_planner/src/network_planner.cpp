@@ -48,6 +48,7 @@ void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
+  channel_sim(nh_),
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
@@ -71,8 +72,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     comm_idcs.push_back(i);
 
   // costmap for checking if candidate team configurations are valid
-  map_sub = nh.subscribe("/aero5/costmap_2d/costmap/costmap", 10,
-                         &NetworkPlanner::mapCB, this);
+  map_sub = nh.subscribe("costmap", 10, &NetworkPlanner::mapCB, this);
 
   // subscribe to odom messages for team configuration
   namespace stdph = std::placeholders;
@@ -128,6 +128,22 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
 {
   comm_reqs = reqs;
   num_flows = comm_reqs.size();
+
+  NP_INFO("received new communication requirements:");
+  for (int k = 0; k < reqs.size(); ++k) {
+    NP_INFO("  flow %d:", k+1);
+    std::stringstream src_ss, dest_ss;
+    for (const int src : reqs[k].srcs)
+      src_ss << " " << src;
+    std::string src_str = src_ss.str();
+    NP_INFO("    sources:%s", src_str.c_str());
+    for (const int dest : reqs[k].dests)
+      dest_ss << " " << dest;
+    std::string dest_str = dest_ss.str();
+    NP_INFO("    destinations:%s", dest_str.c_str());
+    NP_INFO("    margin = %.2f", reqs[k].min_margin);
+    NP_INFO("    confidence = %.2f", reqs[k].confidence);
+  }
 
   // TODO ignore more variables
 
@@ -749,6 +765,13 @@ void NetworkPlanner::initSystem()
   NP_INFO("waiting for odom");
   if (!all(received_odom, true)) ros::Rate(1).sleep();
   NP_INFO("odom received");
+
+  ros::Rate loop_rate(1);
+  for (int i = 5; i > 0; --i) {
+    ROS_INFO("starting network planner in %d...", i);
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
 
   NP_INFO("sending takeoff goals");
   for (int i = 0; i < comm_count; ++i) {

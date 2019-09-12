@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <math.h>
+#include <sstream>
 
 
 namespace channel_simulator {
@@ -16,17 +17,50 @@ namespace channel_simulator {
 class ChannelModel {
   protected:
     double L0;       // transmit power (dBm)
-    double PL0;      // transmit power (mW)
+    //double PL0;      // transmit power (mW)
     double n;        // decay exponent
-    double sigma_F2; // noise variance
+    //double sigma_F2; // noise variance
     double N0;       // noise at receiver (dBm)
     double PN0;      // noise at receiver (mW)
+    double a;        // sigmoid param 1
+    double b;        // sigmoid param 2
 
   public:
     ChannelModel() :
-      L0(-53.0), n(2.52), sigma_F2(40.0), N0(-70.0)
+      L0(-53.0), n(2.52), N0(-70.0), a(0.2), b(0.6)
     {
-      PL0 = dBm2mW(L0);
+      PN0 = dBm2mW(N0);
+      printf("channel model parameters:\n");
+      printf("L0 = %.1f\n", L0);
+      printf("n  = %.2f\n", n);
+      printf("N0 = %.1f\n", N0);
+      printf("a  = %.2f\n", a);
+      printf("b  = %.2f\n", b);
+    }
+
+    template<typename T>
+    void getParamWarn(const ros::NodeHandle& nh, std::string name, T& param, T default_val)
+    {
+      if (!nh.getParam(name, param)) {
+        std::stringstream ss;
+        ss << default_val;
+        std::string default_val_str = ss.str();
+        ROS_WARN("[ChannelModel] failed to get ROS param \"%s\"; using default value %s", name.c_str(), default_val_str.c_str());
+      } else {
+        std::stringstream ss;
+        ss << param;
+        std::string val_str = ss.str();
+        ROS_INFO("[ChannelModel] using %s for %s", val_str.c_str(), name.c_str());
+      }
+    }
+
+    ChannelModel(const ros::NodeHandle& nh)
+    {
+      getParamWarn(nh, "/N0", N0, -70.0);
+      getParamWarn(nh, "/n", n, 2.52);
+      getParamWarn(nh, "/L0", L0, -53.0);
+      getParamWarn(nh, "/a", a, 0.2);
+      getParamWarn(nh, "/b", b, 0.6);
       PN0 = dBm2mW(N0);
     }
 
@@ -34,7 +68,7 @@ class ChannelModel {
     void predict(const double d, double& mean, double& var)
     {
       mean = erf(sqrt(dBm2mW(L0 - 10*n*log10(d)) / PN0));
-      var = pow((0.2 * d / (6.0 + d)), 2.0);
+      var = pow((a * d / (b + d)), 2.0);
     }
 };
 
@@ -53,6 +87,7 @@ class ChannelSimulator
 
   public:
     ChannelSimulator();
+    ChannelSimulator(const ros::NodeHandle& nh);
 
     void mapCB(const octomap_msgs::Octomap::ConstPtr& msg);
     void predict(const geometry_msgs::Point& pose1,

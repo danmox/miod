@@ -17,6 +17,12 @@ ChannelSimulator::ChannelSimulator() :
 {}
 
 
+ChannelSimulator::ChannelSimulator(const ros::NodeHandle& nh) :
+  tree(nullptr),
+  model(nh)
+{}
+
+
 void ChannelSimulator::mapCB(const octomap_msgs::Octomap::ConstPtr& msg)
 {
   tree = dynamic_cast<octomap::OcTree*>(octomap_msgs::binaryMsgToMap(*msg));

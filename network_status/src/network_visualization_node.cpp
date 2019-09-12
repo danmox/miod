@@ -16,8 +16,7 @@
 
 double distance(const geometry_msgs::Point p1, const geometry_msgs::Point p2)
 {
-  return sqrt(pow(p2.x - p1.x, 2.0) + pow(p2.y - p1.y, 2.0)
-              + pow(p2.z - p1.z, 2.0));
+  return sqrt(pow(p2.x - p1.x, 2.0) + pow(p2.y - p1.y, 2.0) + pow(p2.z - p1.z, 2.0));
 }
 
 
@@ -26,7 +25,7 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "network_visualization_node");
   ros::NodeHandle nh, pnh("~");
 
-  channel_simulator::ChannelSimulator comm_sim;
+  channel_simulator::ChannelSimulator comm_sim(nh);
 
   ros::Publisher viz_pub = nh.advertise<visualization_msgs::Marker>("network_visualization", 10);
   ros::Publisher rates_pub = nh.advertise<network_status::RatePair>("channel_rates", 10);
