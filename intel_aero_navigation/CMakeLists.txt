@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
   actionlib
   nav_msgs
   grid_mapping
+  gazebo_msgs
   nodelet
   mavros_msgs
   tf2
@@ -43,6 +44,7 @@ catkin_package(
     actionlib
     nav_msgs
     grid_mapping
+    gazebo_msgs
     nodelet
     mavros_msgs
     tf2
