@@ -35,6 +35,19 @@ bool all(const std::vector<bool>& vec, bool val)
 }
 
 
+template <typename T> int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+
+double clamp(const double var, const double max_val)
+{
+  if (abs(var) > max_val)
+    return sgn(var)*max_val;
+  return var;
+}
+
+
 template<typename T>
 void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 {
@@ -49,6 +62,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
   channel_sim(nh_),
+  update_duration(2.0), // conservative 2.0s initial update duration estimate
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
@@ -639,7 +653,7 @@ bool NetworkPlanner::updateNetworkConfig()
     NP_ERROR("unable to plan: no valid solution to SOCP found");
     return false;
   }
-  NP_INFO("found solution to SOCP with slack = %f", slack);
+  printf("found solution to SOCP with slack = %f\n", slack);
 
   //
   // compute the gradient of the team config w.r.t the min comm margin
@@ -689,11 +703,10 @@ bool NetworkPlanner::updateNetworkConfig()
 
   // search for local configurations with better node margins
 
-  NP_INFO("searching for better local configs in %d samples", sample_count);
   point_vec x_star = team_config;
-  double bik0 = computebik(team_config, false);
-  double bik_star = bik0;
-  printf("bik0 = %f\n", bik_star);
+  double vax0 = computeV(team_config, false);
+  double vax_star = vax0;
+  printf("vax0 = %.3f\n", vax0);
   for (int j = 0; j < sample_count; ++j) {
 
     // form candidate config, perturbing only network agents
@@ -703,58 +716,47 @@ bool NetworkPlanner::updateNetworkConfig()
       x_prime[comm_idcs[i]](1) = samples(2*i+1,j);
     }
 
-    // update gradient estimate
-    double v_alpha_x_prime = computeV(x_prime, false);
-    if (v_alpha_x_prime > 0.0) {
-      double bik_min = computebik(x_prime, false); // TODO this is not efficient
-      if (bik_min > bik_star) {
-        bik_star = bik_min;
-        x_star = x_prime;
-      }
+    // check if config is better
+    double vax_min = computeV(x_prime, false); // TODO this is not efficient
+    if (vax_min > vax_star) {
+      vax_star = vax_min;
+      x_star = x_prime;
     }
   }
+  printf("vax_star = %.3f\n", vax_star);
 
-  if (abs(bik0 - bik_star) < 1e-6)
-    NP_WARN("better configuration not found: bik0 = %.3f, bik_star = %.3f", bik0, bik_star);
-
-  // optimal direction
-  point_vec gradient = team_config;
-  for (int i = 0; i < gradient.size(); ++i)
-    gradient[i] = x_star[i] - team_config[i];
-
-  // scale gradient vectors to satisfy ||.|| <= max_velocity
-  // TODO this needs to be done in a more principled manner
-
-  double largest_norm = 0.0;
-  for (const arma::vec3& pt : gradient)
-    if (arma::norm(pt) > largest_norm)
-      largest_norm = arma::norm(pt);
-  printf("largest norm: %f\n", largest_norm);
-
-  if (largest_norm > max_velocity) {
-    for (arma::vec3& pt : gradient)
-      pt *= 1.0 / largest_norm;
-    printf("scaled gradient:\n");
-    for (const arma::vec3& pt : gradient)
-      printf("(%7.2f, %7.2f, %7.2f), ||.|| = %f\n", pt(0), pt(1), pt(2), arma::norm(pt));
-    printf("\n");
-  } else {
-    printf("unscaled gradient:\n");
-    for (const arma::vec3& pt : gradient)
-      printf("(%7.2f, %7.2f, %7.2f), ||.|| = %f\n", pt(0), pt(1), pt(2), arma::norm(pt));
+  if (abs(vax0 - vax_star) < 1e-6) {
+    NP_WARN("better configuration not found: vax0 = %.3f, vax_star = %.3f", vax0, vax_star);
+    for (int i = 0; i < comm_count; ++i)
+      vel_pubs[i].publish(geometry_msgs::Twist()); // zero command
+    return true;
   }
 
-  // visualize the gradient directions
+  // optimal direction
+  point_vec dist = team_config;
+  for (int i = 0; i < dist.size(); ++i)
+    dist[i] = x_star[i] - team_config[i];
 
-  visualization_msgs::Marker gradient_arrow;
-  gradient_arrow.header.stamp = ros::Time(0);
-  gradient_arrow.header.frame_id = "world";
-  gradient_arrow.ns = "plan_viz";
-  gradient_arrow.id = 0;
-  gradient_arrow.type = visualization_msgs::Marker::ARROW;
-  gradient_arrow.action = visualization_msgs::Marker::ADD;
-  gradient_arrow.color.b = 1.0;
-  gradient_arrow.color.a = 1.0;
+  printf("team config:                 x_star:                      dist:\n");
+  for (int i = 0; i < dist.size(); ++i) {
+    printf("(%7.2f, %7.2f, %7.2f), (%7.2f, %7.2f, %7.2f), (%7.2f, %7.2f, %7.2f)\n",
+           team_config[i](0), team_config[i](1), team_config[i](2),
+           x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
+  }
+
+  //
+  // visualize commanded velocity directions
+  //
+
+  visualization_msgs::Marker vel_arrow;
+  vel_arrow.header.stamp = ros::Time(0);
+  vel_arrow.header.frame_id = "world";
+  vel_arrow.ns = "plan_viz";
+  vel_arrow.id = 0;
+  vel_arrow.type = visualization_msgs::Marker::ARROW;
+  vel_arrow.action = visualization_msgs::Marker::ADD;
+  vel_arrow.color.b = 1.0;
+  vel_arrow.color.a = 1.0;
   for (int i = 0; i < comm_count; ++i) {
     geometry_msgs::Point start;
     start.x = team_config[comm_idcs[i]](0);
@@ -763,21 +765,21 @@ bool NetworkPlanner::updateNetworkConfig()
 
     double length_scale = 3.0; // max norm == 1 so max arrow length will be 5m
     geometry_msgs::Point tip = start;
-    tip.x += length_scale * gradient[comm_idcs[i]](0);
-    tip.y += length_scale * gradient[comm_idcs[i]](1);
-    tip.z += length_scale * gradient[comm_idcs[i]](2); // this should do nothing
+    tip.x += length_scale * dist[comm_idcs[i]](0);
+    tip.y += length_scale * dist[comm_idcs[i]](1);
+    tip.z += length_scale * dist[comm_idcs[i]](2); // this should do nothing
 
-    ++gradient_arrow.id; // messages with the same ns and id are overwritten
+    ++vel_arrow.id; // messages with the same ns and id are overwritten
 
-    double arrow_length = length_scale * arma::norm(gradient[comm_idcs[i]]);
-    gradient_arrow.points.clear();
-    gradient_arrow.points.push_back(start);
-    gradient_arrow.points.push_back(tip);
-    gradient_arrow.scale.x = arrow_length / 10.0; // shaft diameter
-    gradient_arrow.scale.y = arrow_length / 5.0;  // head diameter
-    gradient_arrow.scale.z = arrow_length / 3.0;  // head length
+    double arrow_length = length_scale * arma::norm(dist[comm_idcs[i]]);
+    vel_arrow.points.clear();
+    vel_arrow.points.push_back(start);
+    vel_arrow.points.push_back(tip);
+    vel_arrow.scale.x = arrow_length / 10.0; // shaft diameter
+    vel_arrow.scale.y = arrow_length / 5.0;  // head diameter
+    vel_arrow.scale.z = arrow_length / 3.0;  // head length
 
-    plan_viz.markers.push_back(gradient_arrow);
+    plan_viz.markers.push_back(vel_arrow);
   }
   viz_pub.publish(plan_viz);
 
@@ -787,8 +789,8 @@ bool NetworkPlanner::updateNetworkConfig()
 
   for (int i = 0; i < comm_count; ++i) {
     geometry_msgs::Twist cmd_msg;
-    cmd_msg.linear.x = max_velocity * gradient[comm_idcs[i]](0);
-    cmd_msg.linear.y = max_velocity * gradient[comm_idcs[i]](1);
+    cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
+    cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
     vel_pubs[i].publish(cmd_msg);
   }
 
@@ -798,7 +800,10 @@ bool NetworkPlanner::updateNetworkConfig()
     alpha_ij_k[k].print(std::string("flow ") + std::to_string(k+1) + std::string(" routes:"));
   }
 
+  //
   // send network update command
+  //
+
   routing_msgs::NetworkUpdate net_cmd;
   for (int i = 0; i < total_agents; ++i) {
 
@@ -838,10 +843,13 @@ bool NetworkPlanner::updateNetworkConfig()
 
 void NetworkPlanner::runPlanningLoop()
 {
-  ros::Rate loop_rate(1);
+  double alpha = 0.3; // weighted average degree
+  ros::Time last_call = ros::Time::now();
   while (ros::ok()) {
     updateNetworkConfig();
-    loop_rate.sleep();
+    update_duration = alpha*update_duration + (1-alpha)*(ros::Time::now() - last_call).toSec();
+    last_call = ros::Time::now();
+    printf("update_duration = %.3f\n", update_duration);
   }
 }
 

@@ -50,15 +50,19 @@ class NetworkPlanner
     std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
     ros::Publisher viz_pub, net_pub;
+
     int total_agents, num_dests;
     std::vector<int> comm_idcs;
+
     point_vec team_config;
     std::vector<bool> received_odom;
+
     channel_simulator::ChannelSimulator channel_sim;
     Costmap costmap;
     bool received_costmap;
     CommReqs comm_reqs;
-    double step_radius;
+
+    double update_duration; // estimated rate that updateNetworkConfig() runs at
 
     // navigation vars
     typedef intel_aero_navigation::WaypointNavigationAction NavAction;
