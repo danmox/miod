@@ -48,8 +48,8 @@
 
   <!-- network topology visualization -->
   <node pkg="network_status"
-        type="routing_visualization_node"
-        name="routing_visualization_node"
+        type="routing_channel_visualization_node"
+        name="routing_channel_visualization_node"
         output="screen">
     <param name="world_frame" value="world"/>
   </node>

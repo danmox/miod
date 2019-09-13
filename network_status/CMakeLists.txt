@@ -54,5 +54,9 @@ add_executable(routing_visualization_node src/routing_visualization_node.cpp)
 add_dependencies(routing_visualization_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(routing_visualization_node ${catkin_LIBRARIES})
 
+add_executable(routing_channel_visualization_node src/routing_channel_visualization_node.cpp)
+add_dependencies(routing_channel_visualization_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(routing_channel_visualization_node ${catkin_LIBRARIES})
+
 add_executable(intel_demo src/intel_demo.cpp)
 target_link_libraries(intel_demo ${catkin_LIBRARIES})
