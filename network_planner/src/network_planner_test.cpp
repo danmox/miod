@@ -199,8 +199,22 @@ int main(int argc, char** argv)
   if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
     ros::console::notifyLoggerLevelsChanged();
 
-  network_planner::NPTest npt;
-  //return npt.socpDebug();
-  //return npt.socpTest();
-  return npt.networkConfigTest();
+  if (argc > 1) {
+    network_planner::NPTest npt;
+    switch (atoi(argv[1])) {
+      case 0:
+        printf("running socpDebug()\n");
+        return npt.socpDebug();
+      case 1:
+        printf("running socpTest()\n");
+        return npt.socpTest();
+      case 2:
+        printf("running networkConfigTest()\n");
+        return npt.networkConfigTest();
+    }
+  } else {
+    printf("provide an argument\n");
+  }
+
+  return 0;
 }

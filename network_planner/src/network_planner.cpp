@@ -223,10 +223,10 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
       printf("psi_inv_eps = %f\n", psi_inv_eps);
 
     for (int i = 0; i < total_agents; ++i) {
-      A_mats[idx] = arma::zeros<arma::mat>(y_dim, y_dim);
-      b_vecs[idx] = arma::zeros<arma::vec>(y_dim);
-      c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
-      d_vecs[idx] = arma::zeros<arma::vec>(1);
+      A_mats[idx].zeros(y_dim, y_dim);
+      b_vecs[idx].zeros(y_dim);
+      c_vecs[idx].zeros(y_dim);
+      d_vecs[idx].zeros(1);
 
       // destination nodes do not have constraints
       if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
@@ -333,16 +333,16 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   for (int i = 0; i < total_agents; ++i) {
 
     // Tx
-    A_mats[idx].set_size(0,0);                   // dummy
-    b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
-    c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
-    d_vecs[idx] = arma::ones<arma::vec>(1);
+    A_mats[idx].zeros(0,0);   // dummy
+    b_vecs[idx].zeros(0);     // dummy
+    c_vecs[idx].zeros(y_dim);
+    d_vecs[idx].ones(1);
 
     // Rx
-    A_mats[idx+1].set_size(0,0);                   // dummy
-    b_vecs[idx+1] = arma::zeros<arma::vec>(0);     // dummy
-    c_vecs[idx+1] = arma::zeros<arma::vec>(y_dim);
-    d_vecs[idx+1] = arma::ones<arma::vec>(1);
+    A_mats[idx+1].zeros(0,0);                   // dummy
+    b_vecs[idx+1].zeros(0);     // dummy
+    c_vecs[idx+1].zeros(y_dim);
+    d_vecs[idx+1].ones(1);
 
     for (int k = 0; k < num_flows; ++k) {
       for (int j = 0; j < total_agents; ++j) {
@@ -369,29 +369,29 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   for (int i = 0; i < alpha_dim; ++i) {
     // ||()|| <= alpha_ij_k + 0.0 (i.e. 0.0 <= alpha_ij_k)
-    A_mats[idx].set_size(0,0);                   // dummy
-    b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
-    c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
+    A_mats[idx].zeros(0,0);                   // dummy
+    b_vecs[idx].zeros(0);     // dummy
+    c_vecs[idx].zeros(y_dim);
     c_vecs[idx](i) = 1.0;
-    d_vecs[idx] = arma::zeros<arma::vec>(1);
+    d_vecs[idx].zeros(1);
     ++idx;
 
     // ||()|| <= -alpha_ij_k + 1.0 (i.e. alpha_ij_k <= 1.0)
-    A_mats[idx].set_size(0,0);                   // dummy
-    b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
-    c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
+    A_mats[idx].zeros(0,0);                   // dummy
+    b_vecs[idx].zeros(0);     // dummy
+    c_vecs[idx].zeros(y_dim);
     c_vecs[idx](i) = -1.0;
-    d_vecs[idx] = arma::ones<arma::vec>(1);
+    d_vecs[idx].ones(1);
     ++idx;
   }
 
   // slack constraint ||()|| <= s + 0.0 (i.e.: s >= 0)
 
-  A_mats[idx].set_size(0,0);                   // dummy
-  b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
-  c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
+  A_mats[idx].zeros(0,0);                   // dummy
+  b_vecs[idx].zeros(0);     // dummy
+  c_vecs[idx].zeros(y_dim);
   c_vecs[idx](y_dim-1) = 1.0;
-  d_vecs[idx] = arma::zeros<arma::vec>(1);
+  d_vecs[idx].zeros(1);
 
   NP_DEBUG("number of constraints %d", num_constraints);
 
@@ -704,7 +704,7 @@ bool NetworkPlanner::updateNetworkConfig()
     }
   }
   plan_viz.markers.push_back(sample_points);
-  //viz_pub.publish(plan_viz);
+  viz_pub.publish(plan_viz);
 
   // search for local configurations with better node margins
 
@@ -795,7 +795,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
     plan_viz.markers.push_back(vel_arrow);
   }
-  //viz_pub.publish(plan_viz);
+  viz_pub.publish(plan_viz);
 
   //
   // send velocity control messages
@@ -805,7 +805,7 @@ bool NetworkPlanner::updateNetworkConfig()
     geometry_msgs::Twist cmd_msg;
     cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
     cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
-    //vel_pubs[i].publish(cmd_msg);
+    vel_pubs[i].publish(cmd_msg);
   }
 
   // print out routing solution
@@ -849,7 +849,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
     net_cmd.routes.push_back(rt_entry);
   }
-  //net_pub.publish(net_cmd);
+  net_pub.publish(net_cmd);
 
   return true;
 }
