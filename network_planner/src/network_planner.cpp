@@ -81,6 +81,8 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   // TODO don't hard code this; pass parameter vectors
   // the first n agents are task agents and the remaining m agents are network
   // agents
+  for (int i = 0; i < task_count; ++i)
+    task_idcs.push_back(i);
   for (int i = task_count; i < total_agents; ++i)
     comm_idcs.push_back(i);
 
@@ -283,12 +285,17 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
 
 
 // TODO don't reallicate fixed constraints
-bool NetworkPlanner::SOCP(const arma::mat& R_mean,
-                          const arma::mat& R_var,
-                          std::vector<arma::mat>& alpha_ij_k,
+bool NetworkPlanner::SOCP(const point_vec& config,
+                          std::vector<arma::mat>& alpha,
                           double& slack,
                           bool debug)
 {
+  // get predicted rates
+
+  arma::mat R_mean;
+  arma::mat R_var;
+  networkState(config, R_mean, R_var);
+
   //
   // form SOCP constraints of the form ||Ay + b|| <= c^Ty + d
   //
@@ -403,7 +410,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   arma::vec f_obj = arma::zeros<arma::vec>(y_dim);
   f_obj(y_dim-1) = -1; // SOCP solver is a minimizer
 
-  y_col.clear();
+  arma::vec y_col;
   std::vector<arma::vec> z_vecs; // dual??
   std::vector<double> w_vec;     // dual??
   double primal_ub = 1.0;
@@ -420,14 +427,14 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   slack = y_col(y_dim-1);
 
-  alpha_ij_k = std::vector<arma::mat>(num_flows);
+  alpha = std::vector<arma::mat>(num_flows);
   for (int k = 0; k < num_flows; ++k) {
-    alpha_ij_k[k] = arma::zeros<arma::mat>(total_agents, total_agents);
+    alpha[k] = arma::zeros<arma::mat>(total_agents, total_agents);
     for (int i = 0; i < total_agents; ++i) {
       for (int j = 0; j < total_agents; ++j) {
         auto it = ijk_to_idx.find(std::make_tuple(i,j,k));
         if (it != ijk_to_idx.end())
-          alpha_ij_k[k](i,j) = y_col(it->second);
+          alpha[k](i,j) = y_col(it->second);
       }
     }
   }
@@ -448,8 +455,8 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
       for (int i = 0; i < total_agents; ++i) {
         printf("   ");
         for (int j = 0; j < total_agents; ++j) {
-          if (alpha_ij_k[k](i,j) >= 1e-4)
-            printf("%6.4f   ", alpha_ij_k[k](i,j));
+          if (alpha[k](i,j) >= 1e-4)
+            printf("%6.4f   ", alpha[k](i,j));
           else
             printf("%6d   ", 0);
         }
@@ -463,6 +470,10 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
     printf("\n");
     R_var.print("R_var:");
   }
+
+  // remove small values for alpha
+  for (arma::mat& alpha_ij : alpha)
+    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
 
   return true;
 }
@@ -493,7 +504,9 @@ void NetworkPlanner::networkState(const point_vec& state,
 }
 
 
-double NetworkPlanner::computebik(const point_vec& config, bool debug)
+double NetworkPlanner::computeV(const point_vec& config,
+                                const std::vector<arma::mat>& alpha,
+                                bool debug)
 {
   // get predicted rates
   arma::mat R_mean;
@@ -510,53 +523,14 @@ double NetworkPlanner::computebik(const point_vec& config, bool debug)
   std::vector<arma::vec> d_vecs(num_constraints);
   probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
 
-  // b_ik - m_ik excludes slack variable
-  arma::vec y_tmp = y_col;
-  y_tmp(y_dim-1) = 0.0;
-  if (debug) y_tmp.print("y_tmp:");
-
-  // compute b_ik - m_ik
-  idx = 0;
-  arma::vec bik_col(num_constraints);
-  for (int k = 0; k < num_flows; ++k) {
-    for (int i = 0; i < total_agents; ++i) {
-
-      // destination nodes do not have constraints
-      if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
-        continue;
-
-      // b_ik - m_ik = cT*y + d (NOTE: d is -m_ik)
-      bik_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y_tmp + d_vecs[idx]);
-      ++idx;
-    }
+  // construct solution vector from routing matrices
+  arma::vec y = arma::zeros<arma::vec>(y_dim);
+  for (const auto& idx_ijk : idx_to_ijk) {
+    int i,j,k;
+    std::tie(i,j,k) = idx_ijk.second;
+    y[idx_ijk.first] = alpha[k](i,j);
   }
-  if (debug) bik_col.print("bik_col:");
-
-  return bik_col.min();
-}
-
-
-double NetworkPlanner::computeV(const point_vec& config, bool debug)
-{
-  // get predicted rates
-  arma::mat R_mean;
-  arma::mat R_var;
-  networkState(config, R_mean, R_var);
-
-  int num_constraints = total_agents * num_flows - num_dests;
-
-  // compute probability constraints without dividing by psi_inv_eps
-  int idx = 0;
-  std::vector<arma::mat> A_mats(num_constraints);
-  std::vector<arma::vec> b_vecs(num_constraints);
-  std::vector<arma::vec> c_vecs(num_constraints);
-  std::vector<arma::vec> d_vecs(num_constraints);
-  probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
-
-  // v(alpha(x),x') excludes slack variable
-  arma::vec y_tmp = y_col;
-  y_tmp(y_dim-1) = 0.0;
-  if (debug) y_tmp.print("y_tmp:");
+  if (debug) y.print("y:");
 
   // compute v(alpha(x),x')
   idx = 0;
@@ -571,8 +545,8 @@ double NetworkPlanner::computeV(const point_vec& config, bool debug)
       if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
         continue;
 
-      v_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y_tmp + d_vecs[idx]);
-      v_col(idx) /= arma::norm(A_mats[idx] * y_tmp);
+      v_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y + d_vecs[idx]);
+      v_col(idx) /= arma::norm(A_mats[idx] * y);
       v_col(idx) -= psi_inv_eps;
       ++idx;
     }
@@ -611,6 +585,8 @@ bool obstacleFree(const point_vec& config, const Costmap& costmap)
 
 bool NetworkPlanner::updateNetworkConfig()
 {
+  static point_vec x_star = team_config;
+
   // ensure the following conditions are met before planning:
   // 1) odom messages have been received for each agent
   // 2) the channel_sim has received a map (i.e. is ready to predict)
@@ -636,34 +612,38 @@ bool NetworkPlanner::updateNetworkConfig()
   }
 
   //
-  // find optimal routing variables for current team configuration
+  // find optimal routing variables
   //
 
-  // get predicted rates
-
-  arma::mat R_mean;
-  arma::mat R_var;
-  networkState(team_config, R_mean, R_var);
-
-  // solve SOCP
+  // solve SOCP for team_config
 
   double slack;
-  std::vector<arma::mat> alpha_ij_k;
-  if (!SOCP(R_mean, R_var, alpha_ij_k, slack, false)) {
-    NP_ERROR("unable to plan: no valid solution to SOCP found");
+  std::vector<arma::mat> alpha;
+  if (!SOCP(team_config, alpha, slack, false)) {
+    NP_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
-  printf("found solution to SOCP with slack = %f\n", slack);
+  printf("slack = %f\n", slack);
 
-  // remove small values
-  for (arma::mat& alpha_ij : alpha_ij_k)
-    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
+  // solve SOCP for x_star
+
+  // update task agent positions in x_star
+  for (int i = 0; i < task_count; ++i)
+    x_star[task_idcs[i]] = team_config[task_idcs[i]];
+
+  double slack_star;
+  std::vector<arma::mat> alpha_star;
+  if (!SOCP(x_star, alpha_star, slack_star, false)) {
+    NP_ERROR("no valid solution to SOCP found for x_star");
+    return false;
+  }
+  printf("slack_star = %f\n", slack_star);
 
   //
-  // compute the gradient of the team config w.r.t the min comm margin
+  // sample based local search
   //
 
-  // compute set of perturbed team configurations
+  // compute set of perturbed configurations
 
   int n = 2 * comm_count; // 2D
   arma::mat mean(n, 1, arma::fill::zeros);
@@ -679,6 +659,111 @@ bool NetworkPlanner::updateNetworkConfig()
   ndist.set_means(mean);
   ndist.set_dcovs(var);
   arma::mat samples = ndist.generate(sample_count); // n x sample_count
+
+  // search for local configurations with better node margins
+
+  int new_max_count = 0, proximity_skip_count = 0;
+  double vax_star = computeV(x_star, alpha_star, false);
+  for (int j = 0; j < sample_count; ++j) {
+
+    // form candidate config, perturbing only network agents
+    point_vec x_prime = team_config;
+    for (int i = 0; i < comm_count; ++i) {
+      x_prime[comm_idcs[i]](0) = samples(2*i,j);
+      x_prime[comm_idcs[i]](1) = samples(2*i+1,j);
+    }
+
+    // check for collisions
+    if (!collisionFree(x_prime, collision_distance)) {
+      ++proximity_skip_count;
+      continue;
+    }
+
+    // check if x_prime is a better config
+    double vax_prime = computeV(x_prime, alpha, false);
+    if (vax_prime > vax_star) {
+      vax_star = vax_prime;
+      x_star = x_prime;
+      ++new_max_count;
+    }
+  }
+  printf("%d samples skipped due to proximity, max updated %d times\n", proximity_skip_count, new_max_count);
+  printf("vax_star = %.3f\n", vax_star);
+
+  if (new_max_count == 0)
+    NP_WARN("at local optimum");
+
+  // optimal direction
+  point_vec dist = team_config;
+  for (int i = 0; i < dist.size(); ++i)
+    dist[i] = x_star[i] - team_config[i];
+
+  printf("team config:                 x_star:                      dist:\n");
+  for (int i = 0; i < dist.size(); ++i) {
+    printf("[%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f]\n",
+           team_config[i](0), team_config[i](1), team_config[i](2),
+           x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
+  }
+
+  //
+  // send velocity control messages
+  //
+
+  for (int i = 0; i < comm_count; ++i) {
+    geometry_msgs::Twist cmd_msg;
+    cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
+    cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
+    vel_pubs[i].publish(cmd_msg);
+  }
+
+  /*
+  // print out routing solution
+  for (int k = 0; k < num_flows; ++k) {
+    std::stringstream ss;
+    ss << "flow " << k+1 << " routes:";
+    alpha[k].print(ss.str());
+  }
+  */
+
+  //
+  // send network update command
+  //
+
+  routing_msgs::NetworkUpdate net_cmd;
+  for (int i = 0; i < total_agents; ++i) {
+
+    // probabilistic routing table entry for node i (all outgoing routes)
+    routing_msgs::PRTableEntry rt_entry;
+    rt_entry.node[0] = i;
+
+    // check for outgoing traffic to all other nodes
+    for (int j = 0; j < total_agents; ++j) {
+
+      // no self transmissions
+      if (i == j)
+        continue;
+
+      // combine alpha_ij for all flows k
+      double alpha_ij = 0;
+      for (int k = 0; k < num_flows; ++k)
+        alpha_ij += alpha[k](i,j);
+
+      // only include routing table entry for significant usage
+      if (alpha_ij > 0.01) { // ignore small routing vars
+        routing_msgs::ProbGateway gway;
+        gway.IP[0] = j;
+        gway.prob = alpha_ij;
+        rt_entry.gateways.push_back(gway);
+      }
+    }
+
+    net_cmd.routes.push_back(rt_entry);
+  }
+  net_pub.publish(net_cmd);
+
+  //
+  // visualizations
+  //
 
   // visualize the sampled points
 
@@ -706,61 +791,7 @@ bool NetworkPlanner::updateNetworkConfig()
   plan_viz.markers.push_back(sample_points);
   viz_pub.publish(plan_viz);
 
-  // search for local configurations with better node margins
-
-  point_vec x_star = team_config;
-  double vax0 = computeV(team_config, false);
-  double vax_star = vax0;
-  printf("vax0 = %.3f\n", vax0);
-  int new_max_count = 0, proximity_skip_count = 0;
-  for (int j = 0; j < sample_count; ++j) {
-
-    // form candidate config, perturbing only network agents
-    point_vec x_prime = team_config;
-    for (int i = 0; i < comm_count; ++i) {
-      x_prime[comm_idcs[i]](0) = samples(2*i,j);
-      x_prime[comm_idcs[i]](1) = samples(2*i+1,j);
-    }
-
-    // check for collisions
-    if (!collisionFree(x_prime, collision_distance)) {
-      ++proximity_skip_count;
-      continue;
-    }
-
-    // check if config is better
-    double vax_min = computeV(x_prime, false);
-    if (vax_min > vax_star) {
-      vax_star = vax_min;
-      x_star = x_prime;
-      ++new_max_count;
-    }
-  }
-  printf("vax_star = %.3f\n", vax_star);
-  printf("%d skipped due to proximity, max updated %d times\n", proximity_skip_count, new_max_count);
-
-  if (abs(vax0 - vax_star) < 1e-6) {
-    NP_WARN("better configuration not found: vax0 = %.3f, vax_star = %.3f", vax0, vax_star);
-    for (int i = 0; i < comm_count; ++i)
-      vel_pubs[i].publish(geometry_msgs::Twist()); // zero command
-    return true;
-  }
-
-  // optimal direction
-  point_vec dist = team_config;
-  for (int i = 0; i < dist.size(); ++i)
-    dist[i] = x_star[i] - team_config[i];
-
-  printf("team config:                 x_star:                      dist:\n");
-  for (int i = 0; i < dist.size(); ++i) {
-    printf("[%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f]\n",
-           team_config[i](0), team_config[i](1), team_config[i](2),
-           x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
-  }
-
-  //
-  // visualize commanded velocity directions
-  //
+  // visualize velocity commands
 
   visualization_msgs::Marker vel_arrow;
   vel_arrow.header.stamp = ros::Time(0);
@@ -797,74 +828,27 @@ bool NetworkPlanner::updateNetworkConfig()
   }
   viz_pub.publish(plan_viz);
 
-  //
-  // send velocity control messages
-  //
-
-  for (int i = 0; i < comm_count; ++i) {
-    geometry_msgs::Twist cmd_msg;
-    cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
-    cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
-    vel_pubs[i].publish(cmd_msg);
-  }
-
-  // print out routing solution
-  for (int k = 0; k < num_flows; ++k) {
-    std::stringstream ss;
-    ss << "flow " << k+1 << " routes:";
-    alpha_ij_k[k].print(ss.str());
-  }
-
-  //
-  // send network update command
-  //
-
-  routing_msgs::NetworkUpdate net_cmd;
-  for (int i = 0; i < total_agents; ++i) {
-
-    // probabilistic routing table entry for node i (all outgoing routes)
-    routing_msgs::PRTableEntry rt_entry;
-    rt_entry.node[0] = i;
-
-    // check for outgoing traffic to all other nodes
-    for (int j = 0; j < total_agents; ++j) {
-
-      // no self transmissions
-      if (i == j)
-        continue;
-
-      // combine alpha_ij for all flows k
-      double alpha_ij = 0;
-      for (int k = 0; k < num_flows; ++k)
-        alpha_ij += alpha_ij_k[k](i,j);
-
-      // only include routing table entry for significant usage
-      if (alpha_ij > 0.01) { // ignore small routing vars
-        routing_msgs::ProbGateway gway;
-        gway.IP[0] = j;
-        gway.prob = alpha_ij;
-        rt_entry.gateways.push_back(gway);
-      }
-    }
-
-    net_cmd.routes.push_back(rt_entry);
-  }
-  net_pub.publish(net_cmd);
-
   return true;
 }
 
 
 void NetworkPlanner::runPlanningLoop()
 {
-  double alpha = 0.3; // weighted average degree
+  static int iter_count = 1;
+
+  double a = 0.3; // weighted average degree
   ros::Time last_call = ros::Time::now();
-  ros::Rate loop_rate(1); // run at 1 Hz
+  ros::Rate loop_rate(1); // minimum loop rate is 1 Hz
   while (ros::ok()) {
+    printf("\n\niteration %d\n\n", iter_count);
+
     updateNetworkConfig();
-    update_duration = alpha*update_duration + (1-alpha)*(ros::Time::now() - last_call).toSec();
+    update_duration = a*update_duration + (1-a)*(ros::Time::now()-last_call).toSec();
     last_call = ros::Time::now();
+
     printf("update_duration = %.3f\n", update_duration);
+
+    ++iter_count;
     loop_rate.sleep();
   }
 }

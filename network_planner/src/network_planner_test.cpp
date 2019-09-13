@@ -47,16 +47,11 @@ int NPTest::socpDebug()
   qos.push_back(flow2);
   setCommReqs(qos);
 
-  // fetch network state
-  arma::mat R_mean;
-  arma::mat R_var;
-  networkState(team_config, R_mean, R_var);
-
   // solve SOCP
   bool debug = false;
   double slack;
   std::vector<arma::mat> alpha_ij_k;
-  if (!SOCP(R_mean, R_var, alpha_ij_k, slack, debug)) {
+  if (!SOCP(team_config, alpha_ij_k, slack, debug)) {
     ROS_ERROR("SOCP failed");
     return -1;
   }
@@ -114,16 +109,11 @@ int NPTest::socpTest()
   qos.push_back(flow);
   setCommReqs(qos);
 
-  // fetch network state
-  arma::mat R_mean;
-  arma::mat R_var;
-  networkState(team_config, R_mean, R_var);
-
   // solve SOCP
   bool debug = true;
   double slack;
   std::vector<arma::mat> alpha_ij_k;
-  if (!SOCP(R_mean, R_var, alpha_ij_k, slack, debug)) {
+  if (!SOCP(team_config, alpha_ij_k, slack, debug)) {
     ROS_ERROR("SOCP failed");
     return -1;
   }

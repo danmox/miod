@@ -22,15 +22,15 @@ struct Flow
 {
   public:
     std::unordered_set<int> srcs; // source nodes
-    std::unordered_set<int> dests; // destinatio node
+    std::unordered_set<int> dests; // destination node
     double min_margin; // minimum bandwidth requirement
     double confidence; // probability with which requirements are satisfied
 };
 
 
-typedef std::vector<Flow> CommReqs;
 typedef std::vector<arma::vec3> point_vec;
 typedef grid_mapping::Grid<int8_t> Costmap;
+typedef std::vector<Flow> CommReqs;
 
 
 class NetworkPlanner
@@ -54,6 +54,7 @@ class NetworkPlanner
 
     int total_agents, num_dests;
     std::vector<int> comm_idcs;
+    std::vector<int> task_idcs;
 
     point_vec team_config;
     std::vector<bool> received_odom;
@@ -74,10 +75,10 @@ class NetworkPlanner
     std::map<std::tuple<int,int,int>, int> ijk_to_idx;
     std::map<int, std::tuple<int,int,int>> idx_to_ijk;
     int num_flows, alpha_dim, y_dim;
-    arma::vec y_col; // solution of robust routing problem [alpha_ij_k; slack]
 
-    double computeV(const point_vec& config, bool debug);
-    double computebik(const point_vec& config, bool debug);
+    double computeV(const point_vec& config,
+                    const std::vector<arma::mat>& alpha,
+                    bool debug);
     void probConstraints(const arma::mat& R_mean,
                          const arma::mat& R_var,
                          std::vector<arma::mat>& A_mats,
@@ -87,10 +88,11 @@ class NetworkPlanner
                          int& idx,
                          bool divide_psi_inv_eps,
                          bool debug);
-    void networkState(const point_vec& state, arma::mat& R_mean,
+    void networkState(const point_vec& state,
+                      arma::mat& R_mean,
                       arma::mat& R_var);
-    bool SOCP(const arma::mat& R_mean, const arma::mat& R_var,
-              std::vector<arma::mat>& alpha_ij_k,
+    bool SOCP(const point_vec& config,
+              std::vector<arma::mat>& alpha,
               double& slack, bool debug);
 
   public:
