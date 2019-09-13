@@ -42,9 +42,7 @@ template <typename T> int sgn(T val) {
 
 double clamp(const double var, const double max_val)
 {
-  if (abs(var) > max_val)
-    return sgn(var)*max_val;
-  return var;
+  return std::max(std::min(var, max_val), -max_val);
 }
 
 
@@ -221,7 +219,8 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
     if (!divide_psi_inv_eps)
       psi_inv_eps = 1.0;
-    if (debug) printf("psi_inv_eps = %f\n", psi_inv_eps);
+    if (debug)
+      printf("psi_inv_eps = %f\n", psi_inv_eps);
 
     for (int i = 0; i < total_agents; ++i) {
       A_mats[idx] = arma::zeros<arma::mat>(y_dim, y_dim);
@@ -329,7 +328,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
 
   // Tx: sum_jk alpha_ijk <= 1
   // Rx: sum_ik alpha_ijk <= 1
-  // ||0y + 0|| <= c^Ty + 1
+  // ||()|| <= c^Ty + 1
 
   for (int i = 0; i < total_agents; ++i) {
 
@@ -369,7 +368,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   // timeshare constraints (routing variable bounds: 0 <= alpha_ij_k <= 1)
 
   for (int i = 0; i < alpha_dim; ++i) {
-    // ||0.0|| <= alpha_ij_k + 0.0 (i.e. 0.0 <= alpha_ij_k)
+    // ||()|| <= alpha_ij_k + 0.0 (i.e. 0.0 <= alpha_ij_k)
     A_mats[idx].set_size(0,0);                   // dummy
     b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
     c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
@@ -377,7 +376,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
     d_vecs[idx] = arma::zeros<arma::vec>(1);
     ++idx;
 
-    // ||0.0|| <= -alpha_ij_k + 1.0 (i.e. alpha_ij_k <= 1.0)
+    // ||()|| <= -alpha_ij_k + 1.0 (i.e. alpha_ij_k <= 1.0)
     A_mats[idx].set_size(0,0);                   // dummy
     b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
     c_vecs[idx] = arma::zeros<arma::vec>(y_dim);
@@ -386,7 +385,7 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
     ++idx;
   }
 
-  // slack constraint ||0.0|| <= s + 0.0 (i.e.: s >= 0)
+  // slack constraint ||()|| <= s + 0.0 (i.e.: s >= 0)
 
   A_mats[idx].set_size(0,0);                   // dummy
   b_vecs[idx] = arma::zeros<arma::vec>(0);     // dummy
@@ -407,12 +406,12 @@ bool NetworkPlanner::SOCP(const arma::mat& R_mean,
   y_col.clear();
   std::vector<arma::vec> z_vecs; // dual??
   std::vector<double> w_vec;     // dual??
-  std::vector<double> primal_ub(y_dim, 1.0);
-  std::vector<double> primal_lb(y_dim, -1e-9);
-
+  double primal_ub = 1.0;
+  double primal_lb = -1e-9;
+  double rel_tol = 1e-4;
   int ret = SolveSOCP(f_obj, A_mats, b_vecs, c_vecs, d_vecs,
                       y_col, z_vecs, w_vec, primal_ub, primal_lb,
-                      1e-4, debug);
+                      rel_tol, debug);
 
   if (ret != 0) {
     NP_WARN("SolveSOCP failed with return value: %d", ret);
@@ -656,6 +655,10 @@ bool NetworkPlanner::updateNetworkConfig()
   }
   printf("found solution to SOCP with slack = %f\n", slack);
 
+  // remove small values
+  for (arma::mat& alpha_ij : alpha_ij_k)
+    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
+
   //
   // compute the gradient of the team config w.r.t the min comm margin
   //
@@ -701,6 +704,7 @@ bool NetworkPlanner::updateNetworkConfig()
     }
   }
   plan_viz.markers.push_back(sample_points);
+  //viz_pub.publish(plan_viz);
 
   // search for local configurations with better node margins
 
@@ -791,7 +795,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
     plan_viz.markers.push_back(vel_arrow);
   }
-  viz_pub.publish(plan_viz);
+  //viz_pub.publish(plan_viz);
 
   //
   // send velocity control messages
@@ -801,13 +805,14 @@ bool NetworkPlanner::updateNetworkConfig()
     geometry_msgs::Twist cmd_msg;
     cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
     cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
-    vel_pubs[i].publish(cmd_msg);
+    //vel_pubs[i].publish(cmd_msg);
   }
 
   // print out routing solution
   for (int k = 0; k < num_flows; ++k) {
-    alpha_ij_k[k].elem(find(alpha_ij_k[k] < 0.01)).zeros(); // clear out small values
-    alpha_ij_k[k].print(std::string("flow ") + std::to_string(k+1) + std::string(" routes:"));
+    std::stringstream ss;
+    ss << "flow " << k+1 << " routes:";
+    alpha_ij_k[k].print(ss.str());
   }
 
   //
@@ -830,9 +835,8 @@ bool NetworkPlanner::updateNetworkConfig()
 
       // combine alpha_ij for all flows k
       double alpha_ij = 0;
-      for (int k = 0; k < num_flows; ++k) {
+      for (int k = 0; k < num_flows; ++k)
         alpha_ij += alpha_ij_k[k](i,j);
-      }
 
       // only include routing table entry for significant usage
       if (alpha_ij > 0.01) { // ignore small routing vars
@@ -845,7 +849,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
     net_cmd.routes.push_back(rt_entry);
   }
-  net_pub.publish(net_cmd);
+  //net_pub.publish(net_cmd);
 
   return true;
 }

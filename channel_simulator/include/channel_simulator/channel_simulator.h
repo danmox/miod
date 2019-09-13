@@ -27,7 +27,7 @@ class ChannelModel {
 
   public:
     ChannelModel() :
-      L0(-53.0), n(2.52), N0(-70.0), a(0.2), b(0.6)
+      L0(-53.0), n(2.52), N0(-70.0), a(0.2), b(6.0)
     {
       PN0 = dBm2mW(N0);
       printf("channel model parameters:\n");
@@ -36,6 +36,12 @@ class ChannelModel {
       printf("N0 = %.1f\n", N0);
       printf("a  = %.2f\n", a);
       printf("b  = %.2f\n", b);
+    }
+
+    ChannelModel(double L0_, double n_, double N0_, double a_, double b_) :
+      L0(L0_), n(n_), N0(N0_), a(a_), b(b_)
+    {
+      PN0 = dBm2mW(N0);
     }
 
     template<typename T>
@@ -60,7 +66,7 @@ class ChannelModel {
       getParamWarn(nh, "/n", n, 2.52);
       getParamWarn(nh, "/L0", L0, -53.0);
       getParamWarn(nh, "/a", a, 0.2);
-      getParamWarn(nh, "/b", b, 0.6);
+      getParamWarn(nh, "/b", b, 6.0);
       PN0 = dBm2mW(N0);
     }
 
@@ -87,6 +93,7 @@ class ChannelSimulator
 
   public:
     ChannelSimulator();
+    ChannelSimulator(double L0_, double n_, double N0_, double a_, double b_);
     ChannelSimulator(const ros::NodeHandle& nh);
 
     void mapCB(const octomap_msgs::Octomap::ConstPtr& msg);

@@ -17,6 +17,12 @@ ChannelSimulator::ChannelSimulator() :
 {}
 
 
+ChannelSimulator::ChannelSimulator(double L0_, double n_, double N0_, double a_, double b_) :
+  tree(nullptr),
+  model(L0_, n_, N0_, a_, b_)
+{}
+
+
 ChannelSimulator::ChannelSimulator(const ros::NodeHandle& nh) :
   tree(nullptr),
   model(nh)
