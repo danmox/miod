@@ -40,12 +40,6 @@ template <typename T> int sgn(T val) {
 }
 
 
-double clamp(const double var, const double max_val)
-{
-  return std::max(std::min(var, max_val), -max_val);
-}
-
-
 template<typename T>
 void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 {
@@ -710,9 +704,12 @@ bool NetworkPlanner::updateNetworkConfig()
   //
 
   for (int i = 0; i < comm_count; ++i) {
+    arma::vec3 vel = dist[comm_idcs[i]] / update_duration;
+    if (arma::norm(vel) > max_velocity)
+      vel = vel / arma::norm(vel) * max_velocity;
     geometry_msgs::Twist cmd_msg;
-    cmd_msg.linear.x = clamp(dist[comm_idcs[i]](0) / update_duration, max_velocity);
-    cmd_msg.linear.y = clamp(dist[comm_idcs[i]](1) / update_duration, max_velocity);
+    cmd_msg.linear.x = vel(0);
+    cmd_msg.linear.y = vel(1);
     vel_pubs[i].publish(cmd_msg);
   }
 
