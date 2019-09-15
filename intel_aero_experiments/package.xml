@@ -12,5 +12,7 @@
   <depend>nav_msgs</depend>
   <depend>actionlib</depend>
   <depend>intel_aero_navigation</depend>
+  <exec_depend>map_server</exec_depend>
+  <exec_depend>octomap_server</exec_depend>
 
 </package>

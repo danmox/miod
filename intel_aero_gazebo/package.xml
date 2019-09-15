@@ -16,6 +16,7 @@
   <depend>actionlib</depend>
   <exec_depend>octomap_server</exec_depend>
   <exec_depend>costmap_2d</exec_depend>
+  <exec_depend>map_server</exec_depend>
 
   <export>
   </export>
