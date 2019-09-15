@@ -168,6 +168,8 @@ int NPTest::networkConfigTest()
   comm_count = 1;
   task_count = 2;
   comm_idcs.clear();
+  for (int i = 0; i < task_count; ++i)
+    task_idcs.push_back(i);
   for (int i = task_count; i < total_agents; ++i)
     comm_idcs.push_back(i);
   sample_var = 1.0;

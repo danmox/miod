@@ -224,35 +224,51 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
       c_vecs[idx].zeros(y_dim);
       d_vecs[idx].zeros(1);
 
-      // destination nodes do not have constraints
-      if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
-        continue;
+      // destination nodes only have incoming data constraints
+      if (comm_reqs[k].dests.count(i+1) > 0) {
 
-      // components for \bar{b}_i^k and \tilde{b}_i^k
-      for (int j = 0; j < total_agents; ++j) {
-
-        // outgoing data
-        auto it_out = ijk_to_idx.find(std::make_tuple(i,j,k));
-        if (it_out != ijk_to_idx.end()) {
-          A_mats[idx](it_out->second,it_out->second) = sqrt(R_var(i,j));
-          c_vecs[idx](it_out->second) = R_mean(i,j) / psi_inv_eps;
+        for (int j = 0; j < total_agents; ++j) {
+          // incoming data (NOTE: destination rebroadcast routing variables are
+          // not included in ijk_to_idx/idx_to_ijk)
+          auto it_in = ijk_to_idx.find(std::make_tuple(j,i,k));
+          if (it_in != ijk_to_idx.end()) {
+            A_mats[idx](it_in->second,it_in->second) = sqrt(R_var(j,i));
+            c_vecs[idx](it_in->second) = R_mean(j,i) / psi_inv_eps;
+          }
         }
 
-        // incoming data (NOTE: destination rebroadcast routing variables are
-        // not included in ijk_to_idx/idx_to_ijk)
-        auto it_in = ijk_to_idx.find(std::make_tuple(j,i,k));
-        if (it_in != ijk_to_idx.end()) {
-          A_mats[idx](it_in->second,it_in->second) = sqrt(R_var(j,i));
-          c_vecs[idx](it_in->second) = -R_mean(j,i) / psi_inv_eps;
+        // rate margin for the destination nodes
+        d_vecs[idx](0) = -comm_reqs[k].min_margin / psi_inv_eps;
+
+      } else { // source or network node
+
+        // components for \bar{b}_i^k and \tilde{b}_i^k
+        for (int j = 0; j < total_agents; ++j) {
+
+          // outgoing data
+          auto it_out = ijk_to_idx.find(std::make_tuple(i,j,k));
+          if (it_out != ijk_to_idx.end()) {
+            A_mats[idx](it_out->second,it_out->second) = sqrt(R_var(i,j));
+            c_vecs[idx](it_out->second) = R_mean(i,j) / psi_inv_eps;
+          }
+
+          // incoming data (NOTE: destination rebroadcast routing variables are
+          // not included in ijk_to_idx/idx_to_ijk)
+          auto it_in = ijk_to_idx.find(std::make_tuple(j,i,k));
+          if (it_in != ijk_to_idx.end()) {
+            A_mats[idx](it_in->second,it_in->second) = sqrt(R_var(j,i));
+            c_vecs[idx](it_in->second) = -R_mean(j,i) / psi_inv_eps;
+          }
         }
+
+        // rate margin for the source node
+        if (comm_reqs[k].srcs.count(i+1) > 0) // ids in flow.srcs are 1 indexed
+          d_vecs[idx](0) = -comm_reqs[k].min_margin / psi_inv_eps;
+
       }
 
       // slack var
       c_vecs[idx](y_dim-1) = -1.0 / psi_inv_eps;
-
-      // rate margin for the source node
-      if (comm_reqs[k].srcs.count(i+1) > 0) // ids in flow.srcs are 1 indexed
-        d_vecs[idx](0) = -comm_reqs[k].min_margin / psi_inv_eps;
 
       ++idx;
     }
@@ -307,11 +323,11 @@ bool NetworkPlanner::SOCP(const point_vec& config,
   // total number of constraints for problem
 
   int num_constraints =
-    total_agents * num_flows - num_dests // probability margin constraints (for every i,k except for destination nodes)
-    + total_agents                       // sum_jk alpha_ijk <= 1 (channel Tx availability, for every node)
-    + total_agents                       // sum_ik alpha_ijk <= 1 (channel Rx availability, for every node)
-    + 2 * alpha_dim                      // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
-    + 1;                                 // s >= 0 (slack variable)
+    total_agents * num_flows // probability margin constraints (for every i,k)
+    + total_agents           // sum_jk alpha_ijk <= 1 (channel Tx availability, for every node)
+    + total_agents           // sum_ik alpha_ijk <= 1 (channel Rx availability, for every node)
+    + 2 * alpha_dim          // 0 <= alpha_ijk <= 1 (timeshare, for every opt var)
+    + 1;                     // s >= 0 (slack variable)
 
   // TODO better initialization
   // constraint matrices / column vectors
@@ -436,7 +452,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
   if (debug) {
     // check constraints
     printf("\n");
-    for (int i = 0; i < total_agents * num_flows - num_dests; ++i) {
+    for (int i = 0; i < total_agents * num_flows; ++i) {
       double lhs = arma::norm(A_mats[i] * y_col);
       arma::mat rhs = arma::trans(c_vecs[i]) * y_col + d_vecs[i];
       printf("constraint %d: %.2f <= %.2f\n", i+1, lhs, rhs(0,0));
@@ -507,7 +523,7 @@ double NetworkPlanner::computeV(const point_vec& config,
   arma::mat R_var;
   networkState(config, R_mean, R_var);
 
-  int num_constraints = total_agents * num_flows - num_dests;
+  int num_constraints = total_agents * num_flows;
 
   // compute probability constraints without dividing by psi_inv_eps
   int idx = 0;
