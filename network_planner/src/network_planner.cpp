@@ -406,13 +406,14 @@ bool NetworkPlanner::SOCP(const point_vec& config,
     ++idx;
   }
 
-  // slack constraint ||()|| <= s + 0.0 (i.e.: s >= 0)
+  // slack constraint ||()|| <= s + 2.0 (i.e.: s >= -2.0: slack is unconstrained)
 
   A_mats[idx].zeros(0,0);     // dummy
   b_vecs[idx].zeros(0);       // dummy
   c_vecs[idx].zeros(y_dim);
   c_vecs[idx](y_dim-1) = 1.0;
   d_vecs[idx].zeros(1);
+  d_vecs[idx](0) = 2.0;
 
   NP_DEBUG("number of constraints %d", num_constraints);
 
@@ -432,7 +433,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
   double rel_tol = 1e-4;
   int ret = SolveSOCP(f_obj, A_mats, b_vecs, c_vecs, d_vecs,
                       y_col, z_vecs, w_vec, primal_ub, primal_lb,
-                      rel_tol, debug);
+                      rel_tol, false);
 
   if (ret != 0) {
     NP_WARN("SolveSOCP failed with return value: %d", ret);
@@ -462,12 +463,17 @@ bool NetworkPlanner::SOCP(const point_vec& config,
 
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
     arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
-    double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
+    double std = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
 
     qos_msg.data.push_back(margin(0,0));
     qos_msg.data.push_back(var);
   }
-  qos_pub.publish(qos_msg);
+  if (debug) {
+    for (const double val : qos_msg.data)
+      printf("%.3f ", val);
+    printf("\n");
+  }
+  if (qos_pub) qos_pub.publish(qos_msg);
 
   if (debug) {
     // check constraints
@@ -570,11 +576,6 @@ double NetworkPlanner::computeV(const point_vec& config,
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
 
     for (int i = 0; i < total_agents; ++i) {
-
-      // destination nodes do not have constraints
-      if (comm_reqs[k].dests.count(i+1) > 0) // ids in flow.dests are 1 indexed
-        continue;
-
       v_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y + d_vecs[idx]);
       v_col(idx) /= arma::norm(A_mats[idx] * y);
       v_col(idx) -= psi_inv_eps;
@@ -736,9 +737,34 @@ bool NetworkPlanner::updateNetworkConfig()
   }
 
   //
+  // send waypoint updates
+  //
+
+  if (new_max_count != 0) {
+    printf("sending navigation goal\n");
+    for (int i = 0; i < comm_count; ++i) {
+      geometry_msgs::Pose goal;
+      goal.orientation.w = 1.0;
+      goal.position.x = x_star[comm_idcs[i]](0);
+      goal.position.y = x_star[comm_idcs[i]](1);
+      goal.position.z = desired_altitude;
+
+      intel_aero_navigation::WaypointNavigationGoal goal_msg;
+      goal_msg.waypoints.push_back(goal);
+      goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+      // TODO this should not be hardcoded!!
+      goal_msg.header.frame_id = "world";
+      goal_msg.header.stamp = ros::Time::now();
+
+      nav_clients[i]->sendGoal(goal_msg);
+    }
+  }
+
+  //
   // send velocity control messages
   //
 
+  /*
   for (int i = 0; i < comm_count; ++i) {
     arma::vec3 vel = dist[comm_idcs[i]] / update_duration;
     if (arma::norm(vel) > max_velocity)
@@ -748,6 +774,7 @@ bool NetworkPlanner::updateNetworkConfig()
     cmd_msg.linear.y = vel(1);
     vel_pubs[i].publish(cmd_msg);
   }
+  */
 
   /*
   // print out routing solution
@@ -792,7 +819,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
     net_cmd.routes.push_back(rt_entry);
   }
-  net_pub.publish(net_cmd);
+  if (net_pub) net_pub.publish(net_cmd);
 
   //
   // visualizations
@@ -822,44 +849,30 @@ bool NetworkPlanner::updateNetworkConfig()
     }
   }
   plan_viz.markers.push_back(sample_points);
-  viz_pub.publish(plan_viz);
 
   // visualize velocity commands
 
-  visualization_msgs::Marker vel_arrow;
-  vel_arrow.header.stamp = ros::Time(0);
-  vel_arrow.header.frame_id = "world";
-  vel_arrow.ns = "plan_viz";
-  vel_arrow.id = 0;
-  vel_arrow.type = visualization_msgs::Marker::ARROW;
-  vel_arrow.action = visualization_msgs::Marker::ADD;
-  vel_arrow.color.b = 1.0;
-  vel_arrow.color.a = 1.0;
+  visualization_msgs::Marker goal_config;
+  goal_config.header.stamp = ros::Time(0);
+  goal_config.header.frame_id = "world";
+  goal_config.ns = "plan_viz";
+  goal_config.id = 1;
+  goal_config.type = visualization_msgs::Marker::SPHERE_LIST;
+  goal_config.action = visualization_msgs::Marker::ADD;
+  goal_config.color.b = 1.0;
+  goal_config.color.a = 1.0;
+  goal_config.scale.x = 1.0;
+  goal_config.scale.y = 1.0;
+  goal_config.scale.z = 1.0;
   for (int i = 0; i < comm_count; ++i) {
-    geometry_msgs::Point start;
-    start.x = team_config[comm_idcs[i]](0);
-    start.y = team_config[comm_idcs[i]](1);
-    start.z = team_config[comm_idcs[i]](2);
-
-    double length_scale = 3.0; // max norm == 1 so max arrow length will be 5m
-    geometry_msgs::Point tip = start;
-    tip.x += length_scale * dist[comm_idcs[i]](0);
-    tip.y += length_scale * dist[comm_idcs[i]](1);
-    tip.z += length_scale * dist[comm_idcs[i]](2); // this should do nothing
-
-    ++vel_arrow.id; // messages with the same ns and id are overwritten
-
-    double arrow_length = length_scale * arma::norm(dist[comm_idcs[i]]);
-    vel_arrow.points.clear();
-    vel_arrow.points.push_back(start);
-    vel_arrow.points.push_back(tip);
-    vel_arrow.scale.x = arrow_length / 10.0; // shaft diameter
-    vel_arrow.scale.y = arrow_length / 5.0;  // head diameter
-    vel_arrow.scale.z = arrow_length / 3.0;  // head length
-
-    plan_viz.markers.push_back(vel_arrow);
+    geometry_msgs::Point goal;
+    goal.x = x_star[comm_idcs[i]](0);
+    goal.y = x_star[comm_idcs[i]](1);
+    goal.z = x_star[comm_idcs[i]](2);
+    goal_config.points.push_back(goal);
   }
-  viz_pub.publish(plan_viz);
+  plan_viz.markers.push_back(goal_config);
+  if (viz_pub) viz_pub.publish(plan_viz);
 
   return true;
 }

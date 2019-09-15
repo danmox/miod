@@ -35,20 +35,14 @@ int NPTest::socpDebug()
   network_planner::Flow flow1;
   flow1.srcs.insert(2);
   flow1.dests.insert(1);
-  flow1.min_margin = 0.05;
-  flow1.confidence = 0.7;
-  network_planner::Flow flow2;
-  flow2.srcs.insert(1);
-  flow2.dests.insert(2);
-  flow2.min_margin = 0.05;
-  flow2.confidence = 0.7;
+  flow1.min_margin = 0.2;
+  flow1.confidence = 0.90;
   network_planner::CommReqs qos;
   qos.push_back(flow1);
-  qos.push_back(flow2);
   setCommReqs(qos);
 
   // solve SOCP
-  bool debug = false;
+  bool debug = true;
   double slack;
   std::vector<arma::mat> alpha_ij_k;
   if (!SOCP(team_config, alpha_ij_k, slack, debug)) {
