@@ -10,11 +10,10 @@
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
   <arg name="sample_count"           default="5000"/>
   <arg name="sample_variance"        default="2.0"/>
-  <arg name="margin1"                default="0.025"/> <!-- [0 1] -->
-  <arg name="confidence1"            default="0.70"/> <!-- (0.5 1) -->
-  <arg name="margin2"                default="0.025"/> <!-- [0 1] -->
-  <arg name="confidence2"            default="0.70"/> <!-- (0.5 1) -->
+  <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
+  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
+  <arg name="minimum_update_rate"    default="10"/>   <!-- Hz -->
 
   <!-- patrol demo params -->
   <param name="/task_agent_count"    value="3"/> <!-- must match number of agents spawned! -->
@@ -55,17 +54,20 @@
   </node>
 
   <!-- network planner node -->
-  <include file="$(find network_planner)/launch/patrol.launch">
-    <arg name="max_velocity"       value="$(arg network_agent_velocity)"/>
-    <arg name="sample_count"       value="$(arg sample_count)"/>
-    <arg name="sample_variance"    value="$(arg sample_variance)"/>
-    <arg name="costmap_topic"      value="/projected_map"/>
-    <arg name="margin1"            value="$(arg margin1)"/>
-    <arg name="confidence1"        value="$(arg confidence1)"/>
-    <arg name="margin2"            value="$(arg margin2)"/>
-    <arg name="confidence2"        value="$(arg confidence2)"/>
-    <arg name="collision_distance" value="$(arg collision_distance)"/>
-  </include> 
+  <!-- network planner node -->
+  <node pkg="network_planner"
+        type="network_planner_patrol_node"
+        name="network_planner_patrol_node"
+        output="screen">
+    <param name="sample_count"          value="$(arg sample_count)"/>
+    <param name="sample_variance"       value="$(arg sample_variance)"/>
+    <param name="max_velocity"          value="$(arg task_agent_velocity)"/>
+    <param name="margin"                value="$(arg margin)"/>
+    <param name="confidence"            value="$(arg confidence)"/>
+    <param name="collision_distance"    value="$(arg collision_distance)"/>
+    <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
+    <remap from="costmap"               to="/projected_map"/>
+  </node>
 
   <!-- load saved octomap
   <node pkg="octomap_server"
@@ -112,12 +114,14 @@
 
   <!-- network agents -->
 
+  <arg name="rad" value="8.0"/>
+
   <group>
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="7.5"/>
-      <arg name="y"              value="-8.5"/>
+      <arg name="x"              value="0.0"/>
+      <arg name="y"              value="0.0"/>
     </include>
   </group>
 
@@ -125,8 +129,8 @@
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="7.5"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
     </include>
   </group>
 
@@ -134,8 +138,8 @@
     <arg name="id" value="6"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="7.5"/>
-      <arg name="y"              value="8.5"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
     </include>
   </group>
   
@@ -143,8 +147,8 @@
     <arg name="id" value="7"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-2.5"/>
-      <arg name="y"              value="-8.5"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
     </include>
   </group>
 
@@ -152,8 +156,8 @@
     <arg name="id" value="8"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-2.5"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
     </include>
   </group>
 
@@ -161,8 +165,8 @@
     <arg name="id" value="9"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-2.5"/>
-      <arg name="y"              value="8.5"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
     </include>
   </group>
 

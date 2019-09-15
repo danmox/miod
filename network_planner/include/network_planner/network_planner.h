@@ -37,14 +37,14 @@ class NetworkPlanner
 {
   protected:
     // ROS parameters
-    int task_count;            // number of task agents serviced
-    int comm_count;            // number of supporting network agents
-    int sample_count;          // number of random samples used in gradient step
-    double sample_var;         // variance of samples drawn from a normal
-                               // distribution centered at the agents' positions
-    double desired_altitude;   // fixed desired z of quadrotors
-    double max_velocity;       // limit for largest step from gradient
-    double collision_distance; // minimum distance between agents
+    int task_count;             // number of task agents serviced
+    int comm_count;             // number of supporting network agents
+    int sample_count;           // number of random samples used in gradient step
+    double sample_var;          // variance of planning samples
+    double desired_altitude;    // fixed desired z of quadrotors
+    double max_velocity;        // limit for largest step from gradient
+    double collision_distance;  // minimum distance between agents
+    double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> odom_subs;
@@ -63,8 +63,6 @@ class NetworkPlanner
     Costmap costmap;
     bool received_costmap;
     CommReqs comm_reqs;
-
-    double update_duration; // estimated rate that updateNetworkConfig() runs at
 
     // navigation vars
     typedef intel_aero_navigation::WaypointNavigationAction NavAction;

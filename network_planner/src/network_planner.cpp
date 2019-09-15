@@ -55,7 +55,6 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
   channel_sim(nh_),
-  update_duration(2.0), // conservative 2.0s initial update duration estimate
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
@@ -67,6 +66,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(pnh, "sample_variance", sample_var);
   getParamStrict(pnh, "max_velocity", max_velocity);
   getParamStrict(pnh, "collision_distance", collision_distance);
+  getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
 
   // initialize agent count dependent variables
   total_agents = task_count + comm_count;
@@ -463,9 +463,11 @@ bool NetworkPlanner::SOCP(const point_vec& config,
 
     double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
     arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
-    double std = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
+    double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
 
+    qos_msg.data.push_back(comm_reqs[k].min_margin);
     qos_msg.data.push_back(margin(0,0));
+    qos_msg.data.push_back(comm_reqs[k].confidence);
     qos_msg.data.push_back(var);
   }
   if (debug) {
@@ -760,22 +762,6 @@ bool NetworkPlanner::updateNetworkConfig()
     }
   }
 
-  //
-  // send velocity control messages
-  //
-
-  /*
-  for (int i = 0; i < comm_count; ++i) {
-    arma::vec3 vel = dist[comm_idcs[i]] / update_duration;
-    if (arma::norm(vel) > max_velocity)
-      vel = vel / arma::norm(vel) * max_velocity;
-    geometry_msgs::Twist cmd_msg;
-    cmd_msg.linear.x = vel(0);
-    cmd_msg.linear.y = vel(1);
-    vel_pubs[i].publish(cmd_msg);
-  }
-  */
-
   /*
   // print out routing solution
   for (int k = 0; k < num_flows; ++k) {
@@ -882,17 +868,15 @@ void NetworkPlanner::runPlanningLoop()
 {
   static int iter_count = 1;
 
-  double a = 0.3; // weighted average degree
   ros::Time last_call = ros::Time::now();
-  ros::Rate loop_rate(1); // minimum loop rate is 1 Hz
+  ros::Rate loop_rate(minimum_update_rate);
   while (ros::ok()) {
     printf("\n\niteration %d\n\n", iter_count);
 
     updateNetworkConfig();
-    update_duration = a*update_duration + (1-a)*(ros::Time::now()-last_call).toSec();
-    last_call = ros::Time::now();
 
-    printf("update_duration = %.3f\n", update_duration);
+    printf("update_duration = %.3f\n", (ros::Time::now()-last_call).toSec());
+    last_call = ros::Time::now();
 
     ++iter_count;
     loop_rate.sleep();
