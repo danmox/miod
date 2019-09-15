@@ -3,6 +3,7 @@
 #include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <armadillo_socp.h>
 
 #include <functional>
@@ -116,6 +117,9 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 
   // publish network update messages
   net_pub = nh.advertise<routing_msgs::NetworkUpdate>("network_update", 10);
+
+  // publish rate margin of source nodes
+  qos_pub = nh.advertise<std_msgs::Float64MultiArray>("qos", 10);
 }
 
 
@@ -386,7 +390,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
 
   for (int i = 0; i < alpha_dim; ++i) {
     // ||()|| <= alpha_ij_k + 0.0 (i.e. 0.0 <= alpha_ij_k)
-    A_mats[idx].zeros(0,0);                   // dummy
+    A_mats[idx].zeros(0,0);   // dummy
     b_vecs[idx].zeros(0);     // dummy
     c_vecs[idx].zeros(y_dim);
     c_vecs[idx](i) = 1.0;
@@ -394,7 +398,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
     ++idx;
 
     // ||()|| <= -alpha_ij_k + 1.0 (i.e. alpha_ij_k <= 1.0)
-    A_mats[idx].zeros(0,0);                   // dummy
+    A_mats[idx].zeros(0,0);   // dummy
     b_vecs[idx].zeros(0);     // dummy
     c_vecs[idx].zeros(y_dim);
     c_vecs[idx](i) = -1.0;
@@ -404,8 +408,8 @@ bool NetworkPlanner::SOCP(const point_vec& config,
 
   // slack constraint ||()|| <= s + 0.0 (i.e.: s >= 0)
 
-  A_mats[idx].zeros(0,0);                   // dummy
-  b_vecs[idx].zeros(0);     // dummy
+  A_mats[idx].zeros(0,0);     // dummy
+  b_vecs[idx].zeros(0);       // dummy
   c_vecs[idx].zeros(y_dim);
   c_vecs[idx](y_dim-1) = 1.0;
   d_vecs[idx].zeros(1);
@@ -448,6 +452,22 @@ bool NetworkPlanner::SOCP(const point_vec& config,
       }
     }
   }
+
+  // publish delivered qos
+  std_msgs::Float64MultiArray qos_msg; // qos for each node
+  arma::vec y_tmp = y_col;
+  y_tmp(y_dim-1) = 0.0;
+  for (int k = 0; k < num_flows; ++k) {
+    int src_idx = *comm_reqs[k].srcs.begin()-1 + k*total_agents; // flow.srcs are 1 indexed
+
+    double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
+    arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
+    double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
+
+    qos_msg.data.push_back(margin(0,0));
+    qos_msg.data.push_back(var);
+  }
+  qos_pub.publish(qos_msg);
 
   if (debug) {
     // check constraints

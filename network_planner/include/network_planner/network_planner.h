@@ -21,7 +21,7 @@ namespace network_planner {
 struct Flow
 {
   public:
-    std::unordered_set<int> srcs; // source nodes
+    std::unordered_set<int> srcs;  // source node
     std::unordered_set<int> dests; // destination node
     double min_margin; // minimum bandwidth requirement
     double confidence; // probability with which requirements are satisfied
@@ -50,7 +50,7 @@ class NetworkPlanner
     std::vector<ros::Subscriber> odom_subs;
     std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
-    ros::Publisher viz_pub, net_pub;
+    ros::Publisher viz_pub, net_pub, qos_pub;
 
     int total_agents, num_dests;
     std::vector<int> comm_idcs;
