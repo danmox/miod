@@ -13,12 +13,14 @@
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
   <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
+  <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="10"/>   <!-- Hz -->
+  <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
 
   <!-- patrol demo params -->
   <param name="/task_agent_count"    value="3"/> <!-- must match number of agents spawned! -->
   <param name="/network_agent_count" value="6"/> <!-- must match number of agents spawned! -->
-  <param name="/patrol_radius"       value="20.0"/>
+  <param name="/patrol_radius"       value="$(arg patrol_radius)"/>
   <param name="/desired_altitude"    value="2.0"/>
 
   <!-- channel rate model params -->
@@ -54,7 +56,6 @@
   </node>
 
   <!-- network planner node -->
-  <!-- network planner node -->
   <node pkg="network_planner"
         type="network_planner_patrol_node"
         name="network_planner_patrol_node"
@@ -69,26 +70,16 @@
     <remap from="costmap"               to="/projected_map"/>
   </node>
 
-  <!-- load saved octomap
-  <node pkg="octomap_server"
-        type="octomap_server_node"
-        name="static_map_node"
-        args="$(find intel_aero_gazebo)/maps/spawc_no_ground.bt"
-        output="screen">
-    <remap from="projected_map" to="/projected_map"/>
-    <param name="frame_id" value="world"/>
-  </node>
- -->
-
   <!-- task (patrol) agents -->
 
   <group>
     <arg name="id" value="1"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="20.0"/>
-      <arg name="y"              value="0"/>
+      <arg name="x"              value="$(eval arg('patrol_radius')*cos(2.0*3.141592/3.0*(arg('id')-1)))"/>
+      <arg name="y"              value="$(eval arg('patrol_radius')*sin(2.0*3.141592/3.0*(arg('id')-1)))"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -96,9 +87,10 @@
     <arg name="id" value="2"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-10"/>
-      <arg name="y"              value="17.32"/>
+      <arg name="x"              value="$(eval arg('patrol_radius')*cos(2.0*3.141592/3.0*(arg('id')-1)))"/>
+      <arg name="y"              value="$(eval arg('patrol_radius')*sin(2.0*3.141592/3.0*(arg('id')-1)))"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -106,9 +98,10 @@
     <arg name="id" value="3"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-10.00"/>
-      <arg name="y"              value="-17.32"/>
+      <arg name="x"              value="$(eval arg('patrol_radius')*cos(2.0*3.141592/3.0*(arg('id')-1)))"/>
+      <arg name="y"              value="$(eval arg('patrol_radius')*sin(2.0*3.141592/3.0*(arg('id')-1)))"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -122,6 +115,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="0.0"/>
       <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -131,6 +126,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -140,6 +137,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
   
@@ -149,6 +148,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -158,6 +159,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
@@ -167,6 +170,8 @@
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
 
