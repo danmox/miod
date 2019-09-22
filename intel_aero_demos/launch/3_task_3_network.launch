@@ -49,8 +49,8 @@
 
   <!-- network topology visualization -->
   <node pkg="network_status"
-        type="routing_channel_visualization_node"
-        name="routing_channel_visualization_node"
+        type="routing_visualization_node"
+        name="routing_visualization_node"
         output="screen">
     <param name="world_frame" value="world"/>
   </node>
@@ -69,6 +69,11 @@
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
     <remap from="costmap"               to="/projected_map"/>
   </node>
+
+  <node pkg="socp"
+        type="robust_routing_socp_server.py"
+        name="robust_routing_socp_server"
+        output="screen"/>
 
   <!-- task (patrol) agents -->
 
@@ -107,14 +112,14 @@
 
   <!-- network agents -->
 
-  <arg name="rad" value="8.0"/>
+  <arg name="net_rad" default="8.0"/>
 
   <group>
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -124,8 +129,8 @@
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -135,8 +140,8 @@
     <arg name="id" value="6"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>

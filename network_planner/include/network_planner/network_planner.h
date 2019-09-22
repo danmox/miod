@@ -8,6 +8,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
 #include <routing_msgs/NetworkUpdate.h>
+#include <socp/RobustRoutingSOCP.h>
 #include <intel_aero_navigation/WaypointNavigationAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <armadillo>
@@ -51,8 +52,9 @@ class NetworkPlanner
     std::vector<ros::Publisher> vel_pubs;
     ros::Subscriber map_sub;
     ros::Publisher viz_pub, net_pub, qos_pub;
+    ros::ServiceClient socp_srv;
 
-    int total_agents, num_dests;
+    int total_agents, num_dests, num_flows;
     std::vector<int> comm_idcs;
     std::vector<int> task_idcs;
 
@@ -72,7 +74,7 @@ class NetworkPlanner
     // SOCP vars
     std::map<std::tuple<int,int,int>, int> ijk_to_idx;
     std::map<int, std::tuple<int,int,int>> idx_to_ijk;
-    int num_flows, alpha_dim, y_dim;
+    int alpha_dim, y_dim;
 
     double computeV(const point_vec& config,
                     const std::vector<arma::mat>& alpha,
@@ -89,9 +91,12 @@ class NetworkPlanner
     void networkState(const point_vec& state,
                       arma::mat& R_mean,
                       arma::mat& R_var);
+    bool SOCPsrv(const point_vec& config,
+                 std::vector<arma::mat>& alpha,
+                 double& slack, bool publish_qos, bool debug);
     bool SOCP(const point_vec& config,
               std::vector<arma::mat>& alpha,
-              double& slack, bool debug);
+              double& slack, bool publish_qos, bool debug);
 
   public:
 

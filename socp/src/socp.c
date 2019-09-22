@@ -251,7 +251,7 @@ void socp_getwork(
 
 
 
-int socp(
+int solve_socp(
  int L,
  int *N,
  int n,

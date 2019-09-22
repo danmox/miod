@@ -49,13 +49,14 @@
 
   <!-- network topology visualization -->
   <node pkg="network_status"
-        type="routing_channel_visualization_node"
-        name="routing_channel_visualization_node"
+        type="routing_visualization_node"
+        name="routing_visualization_node"
         output="screen">
     <param name="world_frame" value="world"/>
   </node>
 
-  <!-- network planner node -->
+  <!-- network planner nodes -->
+
   <node pkg="network_planner"
         type="network_planner_patrol_node"
         name="network_planner_patrol_node"
@@ -69,6 +70,11 @@
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
     <remap from="costmap"               to="/projected_map"/>
   </node>
+
+  <node pkg="socp"
+        type="robust_routing_socp_server.py"
+        name="robust_routing_socp_server"
+        output="screen"/>
 
   <!-- task (patrol) agents -->
 

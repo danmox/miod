@@ -62,7 +62,7 @@ void socp_getwork(
     /*   number of doubles, pointers and ints required for workspace */
     int *mhist, int *nhist, int *ndbl, int *nint);
 
-int socp(                      /* problem dimensions */
+int solve_socp(                      /* problem dimensions */
          int L, int *N, int n, /* problem data */
          double *f, double *A, double *b,
          /* in:  initial primal and dual strictly feasible points */

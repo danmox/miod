@@ -671,7 +671,7 @@ int SolveSOCP(const Col<double> &fCol, const vector<Mat<double> > &AMats,
 
   }
 
-  int err = socp(
+  int err = solve_socp(
       L + (use_primal_norm_bound ? 1 : 0) + (use_primal_box_bound ? 2 * n : 0),
       N, n, f, A, b, x, z, abs_tol, rel_tol, target, &iter, Nu, &info, out_mode,
       hist, dblwork, intwork);

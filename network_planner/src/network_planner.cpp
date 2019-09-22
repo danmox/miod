@@ -120,6 +120,9 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 
   // publish rate margin of source nodes
   qos_pub = nh.advertise<std_msgs::Float64MultiArray>("qos", 10);
+
+  // SOCP service
+  socp_srv = nh.serviceClient<socp::RobustRoutingSOCP>("RobustRoutingSOCP");
 }
 
 
@@ -298,10 +301,120 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
 }
 
 
+bool NetworkPlanner::SOCPsrv(const point_vec& config,
+                             std::vector<arma::mat>& alpha,
+                             double& slack,
+                             bool publish_qos,
+                             bool debug)
+{
+  // call Robust Routing SOCP service
+
+  socp::RobustRoutingSOCP srv;
+  for (const arma::vec3& pt : team_config) {
+    geometry_msgs::Point point;
+    point.x = pt(0);
+    point.y = pt(1);
+    point.z = pt(2);
+    srv.request.config.push_back(point);
+  }
+
+  for (const Flow& flow : comm_reqs) {
+    socp::QoS qos;
+    qos.src = *flow.srcs.begin();
+    qos.dest.insert(qos.dest.begin(), flow.dests.begin(), flow.dests.end());
+    qos.margin = flow.min_margin;
+    qos.confidence = flow.confidence;
+    srv.request.qos.push_back(qos);
+  }
+
+  if (!socp_srv.call(srv)) {
+    NP_WARN("socp service call failed");
+    return false;
+  }
+
+  if (srv.response.status.compare("optimal") != 0) {
+    NP_ERROR("socp service returned with status: %s", srv.response.status.c_str());
+    return false;
+  }
+
+  if (srv.response.routes.size() != total_agents * total_agents * num_flows) {
+    NP_ERROR("socp service solution inconsistant");
+    return false;
+  }
+
+  // unpack result
+
+  slack = srv.response.slack;
+
+  alpha = std::vector<arma::mat>(num_flows);
+  for (int k = 0; k < num_flows; ++k) {
+    alpha[k] = arma::zeros<arma::mat>(total_agents, total_agents);
+    for (int i = 0; i < total_agents; ++i) {
+      for (int j = 0; j < total_agents; ++j) {
+        int ind = k*total_agents*total_agents + j*total_agents + i;
+        alpha[k](i,j) = srv.response.routes[ind];
+      }
+    }
+  }
+
+  // remove small values for alpha
+
+  for (arma::mat& alpha_ij : alpha) {
+    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
+    if (debug) alpha_ij.print("alpha_ij");
+  }
+
+  // publish delivered qos
+
+  if (publish_qos) {
+
+    // get predicted rates
+    arma::mat R_mean;
+    arma::mat R_var;
+    networkState(config, R_mean, R_var);
+
+    // probability constraints without dividing by psi_inv_eps
+
+    int num_constraints = total_agents * num_flows;
+    int idx = 0;
+    std::vector<arma::mat> A_mats(num_constraints);
+    std::vector<arma::vec> b_vecs(num_constraints);
+    std::vector<arma::vec> c_vecs(num_constraints);
+    std::vector<arma::vec> d_vecs(num_constraints);
+    probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
+
+    // construct solution vector from routing matrices
+    arma::vec y = arma::zeros<arma::vec>(y_dim);
+    for (const auto& idx_ijk : idx_to_ijk) {
+      int i,j,k;
+      std::tie(i,j,k) = idx_ijk.second;
+      y[idx_ijk.first] = alpha[k](i,j);
+    }
+
+    std_msgs::Float64MultiArray qos_msg; // qos for each node
+    for (int k = 0; k < num_flows; ++k) {
+      int src_idx = *comm_reqs[k].srcs.begin()-1 + k*total_agents; // flow.srcs are 1 indexed
+
+      arma::mat margin = arma::trans(c_vecs[src_idx]) * y;
+      double var = pow(arma::norm(A_mats[src_idx] * y), 2.0);
+
+      qos_msg.data.push_back(comm_reqs[k].min_margin);
+      qos_msg.data.push_back(margin(0,0));
+      qos_msg.data.push_back(comm_reqs[k].confidence);
+      qos_msg.data.push_back(var);
+    }
+    if (qos_pub) qos_pub.publish(qos_msg);
+  }
+
+  return true;
+}
+
+
 // TODO don't reallicate fixed constraints
 bool NetworkPlanner::SOCP(const point_vec& config,
                           std::vector<arma::mat>& alpha,
                           double& slack,
+                          bool publish_qos,
                           bool debug)
 {
   // get predicted rates
@@ -455,27 +568,29 @@ bool NetworkPlanner::SOCP(const point_vec& config,
   }
 
   // publish delivered qos
-  std_msgs::Float64MultiArray qos_msg; // qos for each node
-  arma::vec y_tmp = y_col;
-  y_tmp(y_dim-1) = 0.0;
-  for (int k = 0; k < num_flows; ++k) {
-    int src_idx = *comm_reqs[k].srcs.begin()-1 + k*total_agents; // flow.srcs are 1 indexed
+  if (publish_qos) {
+    std_msgs::Float64MultiArray qos_msg; // qos for each node
+    arma::vec y_tmp = y_col;
+    y_tmp(y_dim-1) = 0.0;
+    for (int k = 0; k < num_flows; ++k) {
+      int src_idx = *comm_reqs[k].srcs.begin()-1 + k*total_agents; // flow.srcs are 1 indexed
 
-    double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
-    arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
-    double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
+      double psi_inv_eps = PsiInv(comm_reqs[k].confidence);
+      arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
+      double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
 
-    qos_msg.data.push_back(comm_reqs[k].min_margin);
-    qos_msg.data.push_back(margin(0,0));
-    qos_msg.data.push_back(comm_reqs[k].confidence);
-    qos_msg.data.push_back(var);
+      qos_msg.data.push_back(comm_reqs[k].min_margin);
+      qos_msg.data.push_back(margin(0,0));
+      qos_msg.data.push_back(comm_reqs[k].confidence);
+      qos_msg.data.push_back(var);
+    }
+    if (debug) {
+      for (const double val : qos_msg.data)
+        printf("%.3f ", val);
+      printf("\n");
+    }
+    if (qos_pub) qos_pub.publish(qos_msg);
   }
-  if (debug) {
-    for (const double val : qos_msg.data)
-      printf("%.3f ", val);
-    printf("\n");
-  }
-  if (qos_pub) qos_pub.publish(qos_msg);
 
   if (debug) {
     // check constraints
@@ -652,11 +767,13 @@ bool NetworkPlanner::updateNetworkConfig()
 
   double slack;
   std::vector<arma::mat> alpha;
-  if (!SOCP(team_config, alpha, slack, false)) {
+  if (!SOCPsrv(team_config, alpha, slack, true, false)) {
     NP_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
   printf("slack = %f\n", slack);
+  //for (const arma::mat& routes_ij : alpha)
+  //  routes_ij.print("alpha_ij");
 
   // solve SOCP for x_star
 
@@ -666,7 +783,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
   double slack_star;
   std::vector<arma::mat> alpha_star;
-  if (!SOCP(x_star, alpha_star, slack_star, false)) {
+  if (!SOCPsrv(x_star, alpha_star, slack_star, false, false)) {
     NP_ERROR("no valid solution to SOCP found for x_star");
     return false;
   }

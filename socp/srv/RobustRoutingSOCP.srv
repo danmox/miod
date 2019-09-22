@@ -1,0 +1,8 @@
+# service to solve SOCP in CVX in python
+
+geometry_msgs/Point[] config # the location of task & network agents in a global frame
+socp/QoS[] qos               # the communication requirements
+---
+float64[] routes             # if feasible: the routing variables; if infeasible: empty
+float64 slack                # the slack variable of the resulting solution, if found
+string status                # the status returned by cvxpy

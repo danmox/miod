@@ -4,14 +4,18 @@ project(socp)
 add_compile_options(-std=c++11)
 
 set(PKG_DEPENDS
-
-  )
+  std_msgs
+  geometry_msgs
+  rospy
+)
 set(BUILD_DEPENDS
   ${PKG_DEPENDS}
-  )
+  message_generation
+)
 set(RUN_DEPENDS
   ${PKG_DEPENDS}
-  )
+  message_runtime
+)
 
 #######################################
 ## Find dependencies
@@ -29,6 +33,19 @@ else()
   SET(CBLAS_LIBRARIES "-lcblas")
 endif()
 
+add_message_files(FILES
+  QoS.msg
+)
+
+add_service_files(FILES
+  RobustRoutingSOCP.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+)
 
 include_directories(
   include

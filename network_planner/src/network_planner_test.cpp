@@ -20,11 +20,34 @@ class NPTest : public NetworkPlanner
 
 int NPTest::socpDebug()
 {
+  double patrol_rad = 20.0;
+  double comm_rad = 8.0;
+  int task_agent_count = 3;
+  int comm_agent_count = 6;
+
   // set agent states
+
   team_config.clear();
-  team_config.push_back(arma::vec3("0.0 0.0 0.05"));
-  team_config.push_back(arma::vec3("15.0 0.0 0.05"));
-  team_config.push_back(arma::vec3("5.0 5.0 1.81"));
+
+  for (int i = 0; i < task_agent_count; ++i) {
+    arma::vec3 pt;
+    pt(0) = patrol_rad*cos(2.0*M_PI/task_agent_count*i);
+    pt(1) = patrol_rad*sin(2.0*M_PI/task_agent_count*i);
+    pt(2) = 0.0;
+    team_config.push_back(pt);
+  }
+
+  team_config.push_back(arma::zeros<arma::vec>(3));
+  for (int i = 0; i < comm_agent_count-1; ++i) {
+    arma::vec3 pt;
+    pt(0) = comm_rad*cos(2.0*M_PI/(comm_agent_count-1)*i);
+    pt(1) = comm_rad*sin(2.0*M_PI/(comm_agent_count-1)*i);
+    pt(2) = 0.0;
+    team_config.push_back(pt);
+  }
+
+  for (int i = 0; i < team_config.size(); ++i)
+    printf("agent %2d: (%6.2f, %6.2f, %6.2f)\n", i+1, team_config[i](0), team_config[i](1), team_config[i](2));
 
   total_agents = team_config.size();
 
@@ -32,22 +55,43 @@ int NPTest::socpDebug()
   channel_sim = channel_simulator::ChannelSimulator(-53.0, 2.52, -70.0, 0.2, 6.0);
 
   // qos requirements
+  double margin = 0.10;
+  double confidence = 0.7;
   network_planner::Flow flow1;
-  flow1.srcs.insert(2);
-  flow1.dests.insert(1);
-  flow1.min_margin = 0.2;
-  flow1.confidence = 0.90;
+  flow1.srcs.insert(1);
+  flow1.dests.insert(2);
+  flow1.dests.insert(3);
+  flow1.min_margin = margin;
+  flow1.confidence = confidence;
+  network_planner::Flow flow2;
+  flow2.srcs.insert(2);
+  flow2.dests.insert(1);
+  flow2.dests.insert(3);
+  flow2.min_margin = margin;
+  flow2.confidence = confidence;
+  network_planner::Flow flow3;
+  flow3.srcs.insert(3);
+  flow3.dests.insert(1);
+  flow3.dests.insert(2);
+  flow3.min_margin = margin;
+  flow3.confidence = confidence;
   network_planner::CommReqs qos;
   qos.push_back(flow1);
+  qos.push_back(flow2);
+  qos.push_back(flow3);
   setCommReqs(qos);
 
   // solve SOCP
-  bool debug = true;
+  bool debug = false;
   double slack;
   std::vector<arma::mat> alpha_ij_k;
-  if (!SOCP(team_config, alpha_ij_k, slack, debug)) {
-    ROS_ERROR("SOCP failed");
-    return -1;
+  for (int i = 0; i < 5; ++i) {
+    ros::Time t0 = ros::Time::now();
+    if (!SOCP(team_config, alpha_ij_k, slack, false, debug)) {
+      ROS_ERROR("SOCP failed");
+      return -1;
+    }
+    printf("elapsed time: %.3f", (ros::Time::now()-t0).toSec());
   }
 
   // show routes
@@ -107,7 +151,7 @@ int NPTest::socpTest()
   bool debug = true;
   double slack;
   std::vector<arma::mat> alpha_ij_k;
-  if (!SOCP(team_config, alpha_ij_k, slack, debug)) {
+  if (!SOCP(team_config, alpha_ij_k, slack, false, debug)) {
     ROS_ERROR("SOCP failed");
     return -1;
   }

@@ -42,7 +42,6 @@ int main(int argc, char** argv)
   flow1.confidence = confidence;
   comm_reqs.push_back(flow1);
 
-  /*
   network_planner::Flow flow2;
   flow2.srcs.insert(2);
   flow2.dests.insert(1);
@@ -58,7 +57,6 @@ int main(int argc, char** argv)
   flow3.min_margin = margin;
   flow3.confidence = confidence;
   comm_reqs.push_back(flow3);
-  */
 
   np.setCommReqs(comm_reqs);
 
