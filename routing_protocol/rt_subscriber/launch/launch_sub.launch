@@ -1,0 +1,5 @@
+<launch>
+    <!-- My Package launch file -->
+    <node pkg="rt_subscriber" type="rt_update_sub.py" name="rt_update_sub" output="screen">
+    </node>
+</launch>

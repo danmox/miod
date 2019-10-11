@@ -1,0 +1,5 @@
+<launch>
+    <!-- My Package launch file -->
+    <node pkg="rt_subscriber" type="rt_update" name="rt_update" output="screen">
+    </node>
+</launch>
