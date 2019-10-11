@@ -22,9 +22,9 @@ def scp(server, path, password, timeout=30):
     ssh_cmd = "scp %s:%s" % (server, path) +" ./results/"
     print(ssh_cmd)
     child = pexpect.spawn(ssh_cmd, timeout=timeout)
-    child.expect(['password: '])
-    child.sendline(password)
-    child.expect(pexpect.EOF)
+    #child.expect(['password: '])
+    #child.sendline(password)
+    #child.expect(pexpect.EOF)
     child.logfile = fout
     child.close()
     fout.close()
@@ -34,9 +34,9 @@ def scp(server, path, password, timeout=30):
     print(stdout)
     fin.close()
 
-    if child.exitstatus!=0:
-        print(stdout)
-        raise Exception(stdout)
+    #if child.exitstatus!=0:
+    #    print(stdout)
+    #    raise Exception(stdout)
 
     return stdout
 
@@ -58,7 +58,7 @@ def moving_average(a, n=20) :
 
 
 save_archive = True
-load_from_archive=True
+load_from_archive=False
 archive_name = 'results/RRarchive2019-10-09 17:09.npz'
 
 data = {}
@@ -71,14 +71,14 @@ if load_from_archive:
 else:
     file_name = 'results/RR'
     local = '10.42.0.13'
-    hosts = ['10.42.0.7', '10.42.0.8']
+    hosts = ['10.42.0.3']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
         files[i] = file_name+"_"+str(i)+".npz"
         aero_id = i.split(".")[-1]
         server = "aero{}@{}".format(aero_id,i)
-        path = "~/routing/{}".format(files[i])
+        path = "~/ws_intel/src/intel_aero/routing_protocol/results/{}".format(files[i])
         scp(server,path,passwd)
 
     files[local] = file_name+"_"+local+".npz"

@@ -1,6 +1,0 @@
-
-sudo apt-get install python3-pip, arp-scan
-
-pip3 install getch netifaces numpy pyric
-
-pip install --user rospy, genpy
