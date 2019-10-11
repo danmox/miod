@@ -18,13 +18,6 @@
 namespace network_planner {
 
 
-#define NP_DEBUG(fmt, ...) ROS_DEBUG("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-#define NP_INFO(fmt, ...) ROS_INFO("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-#define NP_WARN(fmt, ...) ROS_WARN("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-#define NP_ERROR(fmt, ...) ROS_ERROR("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-#define NP_FATAL(fmt, ...) ROS_FATAL("[NetworkPlanner] " fmt, ##__VA_ARGS__)
-
-
 inline double PsiInv(double eps) {
   return sqrt(2.0) * boost::math::erf_inv(2 * eps - 1);
 }
@@ -45,7 +38,7 @@ template<typename T>
 void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 {
   if (!nh.getParam(param_name, param)) {
-    NP_FATAL("failed to get ROS param \"%s\"", param_name.c_str());
+    ROS_FATAL("failed to get ROS param \"%s\"", param_name.c_str());
     exit(EXIT_FAILURE);
   }
 }
@@ -67,6 +60,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(pnh, "max_velocity", max_velocity);
   getParamStrict(pnh, "collision_distance", collision_distance);
   getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
+  getParamStrict(pnh, "ip_address_prefix", ip_prefix);
 
   // initialize agent count dependent variables
   total_agents = task_count + comm_count;
@@ -109,7 +103,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     std::string sn = ss.str();
     std::shared_ptr<NavClient> ac_ptr(new NavClient(sn.c_str(), true));
     nav_clients.push_back(ac_ptr);
-    NP_INFO("connecting to action server %s", sn.c_str());
+    ROS_INFO("connecting to action server %s", sn.c_str());
   }
 
   // publish visualization of gradient based planner
@@ -137,7 +131,7 @@ void NetworkPlanner::odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx)
 
 void NetworkPlanner::mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
-  NP_INFO("received costmap");
+  ROS_INFO("received costmap");
   costmap = Costmap(msg);
   received_costmap = true;
 }
@@ -152,20 +146,20 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
   for (const auto& flow : comm_reqs)
     num_dests += flow.dests.size();
 
-  NP_INFO("received new communication requirements:");
+  ROS_INFO("received new communication requirements:");
   for (int k = 0; k < reqs.size(); ++k) {
-    NP_INFO("  flow %d:", k+1);
+    ROS_INFO("  flow %d:", k+1);
     std::stringstream src_ss, dest_ss;
     for (const int src : reqs[k].srcs)
       src_ss << " " << src;
     std::string src_str = src_ss.str();
-    NP_INFO("    sources:%s", src_str.c_str());
+    ROS_INFO("    sources:%s", src_str.c_str());
     for (const int dest : reqs[k].dests)
       dest_ss << " " << dest;
     std::string dest_str = dest_ss.str();
-    NP_INFO("    destinations:%s", dest_str.c_str());
-    NP_INFO("    margin = %.2f", reqs[k].min_margin);
-    NP_INFO("    confidence = %.2f", reqs[k].confidence);
+    ROS_INFO("    destinations:%s", dest_str.c_str());
+    ROS_INFO("    margin = %.2f", reqs[k].min_margin);
+    ROS_INFO("    confidence = %.2f", reqs[k].confidence);
   }
 
   // TODO ignore more variables
@@ -184,7 +178,7 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
       /*
       // destination nodes don't rebroadcast
       if (comm_reqs[k].dests.count(i+1) > 0) { // ids in flow.dests are 1 indexed
-        NP_DEBUG("ignoring alpha_%d*_%d", i+1, k+1);
+        ROS_DEBUG("ignoring alpha_%d*_%d", i+1, k+1);
         continue;
       }
       */
@@ -195,7 +189,7 @@ void NetworkPlanner::setCommReqs(const CommReqs& reqs)
           idx_to_ijk[ind] = subs;
           ijk_to_idx[subs] = ind++;
         } else {
-          NP_DEBUG("ignoring alpha_%d%d_%d", i+1, j+1, k+1);
+          ROS_DEBUG("ignoring alpha_%d%d_%d", i+1, j+1, k+1);
         }
       }
     }
@@ -328,17 +322,17 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
   }
 
   if (!socp_srv.call(srv)) {
-    NP_WARN("socp service call failed");
+    ROS_WARN("socp service call failed");
     return false;
   }
 
   if (srv.response.status.compare("optimal") != 0) {
-    NP_ERROR("socp service returned with status: %s", srv.response.status.c_str());
+    ROS_ERROR("socp service returned with status: %s", srv.response.status.c_str());
     return false;
   }
 
   if (srv.response.routes.size() != total_agents * total_agents * num_flows) {
-    NP_ERROR("socp service solution inconsistant");
+    ROS_ERROR("socp service solution inconsistant");
     return false;
   }
 
@@ -528,7 +522,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
   d_vecs[idx].zeros(1);
   d_vecs[idx](0) = 2.0;
 
-  NP_DEBUG("number of constraints %d", num_constraints);
+  ROS_DEBUG("number of constraints %d", num_constraints);
 
   //
   // solve SOCP
@@ -549,7 +543,7 @@ bool NetworkPlanner::SOCP(const point_vec& config,
                       rel_tol, false);
 
   if (ret != 0) {
-    NP_WARN("SolveSOCP failed with return value: %d", ret);
+    ROS_WARN("SolveSOCP failed with return value: %d", ret);
     return false;
   }
 
@@ -741,21 +735,21 @@ bool NetworkPlanner::updateNetworkConfig()
   // 3) a task specification has been received
   // 4) a costmap has been received so that candidate configs can be vetted
   if (!all(received_odom, true)) {
-    NP_WARN("unable to plan: odometry not available for all agents");
+    ROS_WARN("unable to plan: odometry not available for all agents");
     return false;
   }
   /*
   if (!channel_sim.mapSet()) {
-    NP_WARN("unable to plan: channel simulator has not received a map yet");
+    ROS_WARN("unable to plan: channel simulator has not received a map yet");
     return false;
   }
   */
   if (comm_reqs.empty()) {
-    NP_WARN("unable to plan: no task specification set");
+    ROS_WARN("unable to plan: no task specification set");
     return false;
   }
   if (!received_costmap) {
-    NP_WARN("unable to plan: no costmap received yet");
+    ROS_WARN("unable to plan: no costmap received yet");
     return false;
   }
 
@@ -768,7 +762,7 @@ bool NetworkPlanner::updateNetworkConfig()
   double slack;
   std::vector<arma::mat> alpha;
   if (!SOCPsrv(team_config, alpha, slack, true, false)) {
-    NP_ERROR("no valid solution to SOCP found for team_config");
+    ROS_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
   printf("slack = %f\n", slack);
@@ -784,7 +778,7 @@ bool NetworkPlanner::updateNetworkConfig()
   double slack_star;
   std::vector<arma::mat> alpha_star;
   if (!SOCPsrv(x_star, alpha_star, slack_star, false, false)) {
-    NP_ERROR("no valid solution to SOCP found for x_star");
+    ROS_ERROR("no valid solution to SOCP found for x_star");
     return false;
   }
   printf("slack_star = %f\n", slack_star);
@@ -841,7 +835,7 @@ bool NetworkPlanner::updateNetworkConfig()
   printf("vax_star = %.3f\n", vax_star);
 
   if (new_max_count == 0)
-    NP_WARN("at local optimum");
+    ROS_WARN("at local optimum");
 
   // optimal direction
   point_vec dist = team_config;
@@ -893,34 +887,39 @@ bool NetworkPlanner::updateNetworkConfig()
   //
 
   routing_msgs::NetworkUpdate net_cmd;
-  for (int i = 0; i < total_agents; ++i) {
+  for (int k = 0; k < num_flows; ++k) {
 
-    // probabilistic routing table entry for node i (all outgoing routes)
     routing_msgs::PRTableEntry rt_entry;
-    rt_entry.node[0] = i;
+    rt_entry.src  = ip_prefix + std::to_string(*comm_reqs[k].srcs.begin());
+    // TODO this needs to be fixed!! For actually routing there can only be 1
+    // source and destination but for solving the SOCP it is advantageous for us
+    // to combine flows wherever possible
+    rt_entry.dest = ip_prefix + std::to_string(*comm_reqs[k].dests.begin());
 
-    // check for outgoing traffic to all other nodes
-    for (int j = 0; j < total_agents; ++j) {
+    for (int i = 0; i < total_agents; ++i) {
 
-      // no self transmissions
-      if (i == j)
-        continue;
+      // probabilistic routing table entry for node i (all outgoing routes)
+      rt_entry.node = ip_prefix + std::to_string(i);
 
-      // combine alpha_ij for all flows k
-      double alpha_ij = 0;
-      for (int k = 0; k < num_flows; ++k)
-        alpha_ij += alpha[k](i,j);
+      // check for outgoing traffic to all other nodes
+      rt_entry.gateways.clear();
+      for (int j = 0; j < total_agents; ++j) {
 
-      // only include routing table entry for significant usage
-      if (alpha_ij > 0.01) { // ignore small routing vars
-        routing_msgs::ProbGateway gway;
-        gway.IP[0] = j;
-        gway.prob = alpha_ij;
-        rt_entry.gateways.push_back(gway);
+        // no self transmissions
+        if (i == j)
+          continue;
+
+        // only include routing table entry for significant usage
+        if (alpha[k](i,j) > 0.01) { // ignore small routing vars
+          routing_msgs::ProbGateway gway;
+          gway.IP = ip_prefix + std::to_string(j);
+          gway.prob = alpha[k](i,j);
+          rt_entry.gateways.push_back(gway);
+        }
       }
-    }
 
-    net_cmd.routes.push_back(rt_entry);
+      net_cmd.routes.push_back(rt_entry);
+    }
   }
   if (net_pub) net_pub.publish(net_cmd);
 
@@ -1003,14 +1002,14 @@ void NetworkPlanner::runPlanningLoop()
 
 void NetworkPlanner::initSystem()
 {
-  NP_INFO("waiting for action servers to start");
+  ROS_INFO("waiting for action servers to start");
   for (auto& client : nav_clients)
     client->waitForServer();
-  NP_INFO("action servers started");
+  ROS_INFO("action servers started");
 
-  NP_INFO("waiting for odom");
+  ROS_INFO("waiting for odom");
   if (!all(received_odom, true)) ros::Rate(1).sleep();
-  NP_INFO("odom received");
+  ROS_INFO("odom received");
 
   ros::Rate loop_rate(1);
   for (int i = 5; i > 0; --i) {
@@ -1019,7 +1018,7 @@ void NetworkPlanner::initSystem()
     loop_rate.sleep();
   }
 
-  NP_INFO("sending takeoff goals");
+  ROS_INFO("sending takeoff goals");
   for (int i = 0; i < comm_count; ++i) {
     geometry_msgs::Pose goal;
     goal.orientation.w = 1.0;
@@ -1037,11 +1036,11 @@ void NetworkPlanner::initSystem()
     nav_clients[i]->sendGoal(goal_msg);
   }
 
-  NP_INFO("waiting for agents to complete takeoff");
+  ROS_INFO("waiting for agents to complete takeoff");
   for (const auto& client : nav_clients)
     client->waitForResult();
 
-  NP_INFO("system ready");
+  ROS_INFO("system ready");
 }
 
 

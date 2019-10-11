@@ -46,6 +46,7 @@ class NetworkPlanner
     double max_velocity;        // limit for largest step from gradient
     double collision_distance;  // minimum distance between agents
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
+    std::string ip_prefix;      // the first 3 numbers of an agent IP address that are fixed across the network
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> odom_subs;
