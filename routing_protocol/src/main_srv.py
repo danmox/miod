@@ -32,7 +32,7 @@ class Params:
     MAC = None
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
     PORT_PING = 54546
-    WIFI_IF = "wlx9cefd5fc63ef" #'wlx9cefd5fc63ef' 'wlp1s0'
+    WIFI_IF = "wlp1s0" #'wlx9cefd5fc63ef' 'wlp1s0'
     period = 1  # routing table update frequency in s
     rt_update_period = 0.5 # probabilistic routing table update period, s
     cs=None #initialize socket with None
@@ -458,11 +458,16 @@ def main():
     parser = argparse.ArgumentParser(description='Server part of the RR message distribution protocol')
     parser.add_argument("--dest_ip", help="Destination ip for the throughput test",
                         type=str, default=None)
+    parser.add_argument("--interface", help="Wireless interface name",
+                        type=str, default=None)
 
     args = parser.parse_args()
 
     Params.TP_IP=args.dest_ip
     Params.final_stats["tp_ip"] = args.dest_ip
+
+    if args.interface != None:
+        Params.WIFI_IF = args.interface
 
     cs = socket(AF_INET, SOCK_DGRAM)
     Params.HOST = ni.ifaddresses(Params.WIFI_IF)[ni.AF_INET][0]['addr']

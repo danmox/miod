@@ -27,7 +27,7 @@ import numpy as np
 #print(cur_wireless)
 
 class Params:
-    SERVER = '10.42.0.13'  # Standard loopback interface address (localhost)
+    SERVER = '10.42.0.3'  # Standard loopback interface address (localhost)
     BROADCAST = '10.42.0.255'
     SUBNET='10.42.0.0/24'
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
@@ -324,6 +324,8 @@ def main():
                         type=str, default=None)
     parser.add_argument("--srv", help="Server ip",
                         type=str, default=None)
+    parser.add_argument("--interface", help="Wireless interface name",
+                        type=str, default=None)
 
     args = parser.parse_args()
 
@@ -331,6 +333,8 @@ def main():
     Params.final_stats["tp_ip"] = args.dest_ip
     if args.srv != None:
         Params.SERVER = args.srv
+    if args.interface != None:
+        Params.WIFI_IF = args.interface
 
     cs = socket(AF_INET, SOCK_DGRAM)
     Params.HOST = ni.ifaddresses(Params.WIFI_IF)[ni.AF_INET][0]['addr']
