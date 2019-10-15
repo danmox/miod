@@ -19,12 +19,12 @@ def scp(server, path, password, timeout=30):
     fname = tempfile.mktemp()
     fout = open(fname, 'w')
 
-    ssh_cmd = "scp %s:%s" % (server, path) +" ./results/"
+    ssh_cmd = "scp %s:%s" % (server, path)  +" ./results/"
     print(ssh_cmd)
     child = pexpect.spawn(ssh_cmd, timeout=timeout)
-    #child.expect(['password: '])
-    #child.sendline(password)
-    #child.expect(pexpect.EOF)
+    child.expect(['password: '])
+    child.sendline(password)
+    child.expect(pexpect.EOF)
     child.logfile = fout
     child.close()
     fout.close()
@@ -34,9 +34,9 @@ def scp(server, path, password, timeout=30):
     print(stdout)
     fin.close()
 
-    #if child.exitstatus!=0:
-    #    print(stdout)
-    #    raise Exception(stdout)
+    if child.exitstatus!=0:
+        print(stdout)
+        raise Exception(stdout)
 
     return stdout
 
@@ -59,7 +59,7 @@ def moving_average(a, n=20) :
 
 save_archive = True
 load_from_archive=False
-archive_name = 'results/RRarchive2019-10-09 17:09.npz'
+archive_name = 'results/RRarchive2019-10-14 18:06.npz'
 
 data = {}
 
@@ -71,17 +71,19 @@ if load_from_archive:
 else:
     file_name = 'results/RR'
     local = '10.42.0.13'
-    hosts = ['10.42.0.3']
+
+    hosts = ['10.42.0.7']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
         files[i] = file_name+"_"+str(i)+".npz"
         aero_id = i.split(".")[-1]
         server = "aero{}@{}".format(aero_id,i)
-        path = "~/ws_intel/src/intel_aero/routing_protocol/results/{}".format(files[i])
+        path = "~/ws_intel/src/intel_aero/routing_protocol/src/{}".format(files[i])
         scp(server,path,passwd)
 
-    files[local] = file_name+"_"+local+".npz"
+    if local:
+        files[local] = file_name+"_"+local+".npz"
 
     for i in files:
         f = np.load(files[i], allow_pickle=True)
@@ -101,24 +103,27 @@ for i in data:
     dat = data[i]
     print(dat.item())
     start_time = dat.item()["start_time"]
-    tr = dat.item()["tr"]
     m_av_len = 20
-    tr = np.transpose(tr)
-    y_ax = [sum(k) for k in tr[2]]
-    tr_plot_ma = moving_average(y_ax, m_av_len)
-    tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1)
-             #label=('TX - {}, RX - {}'.format(i[0], i[1])))
-    tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)])
-             #label=('Mov. av., TX - {}, RX - {}'.format(i[0], i[1])))
+    tr = dat.item()["tr"]
+    if len(tr)>0:
+        tp_ip = dat.item()['tp_ip']
+        tr = np.transpose(tr)
+        y_ax = [sum(k) for k in tr[2]]
+        tr_plot_ma = moving_average(y_ax, m_av_len)
+        tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
+                 label=('TX - {}, RX - {}'.format(i, tp_ip)))
+        tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)],
+             label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
 
     tp = dat.item()["tp"]
-    m_av_len = 20
-    tp = np.transpose(tp)
-    tp_plot_ma = moving_average(tp[1], m_av_len)
-    tp_plot.plot(tp[0], tp[1], color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1)
-             #label=('TX - {}, RX - {}'.format(i[0], i[1])))
-    tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)])
-             #label=('Mov. av., TX - {}, RX - {}'.format(i[0], i[1])))
+    if len(tp)>0:
+        tp_ip = dat.item()['tp_ip']
+        tp = np.transpose(tp)
+        tp_plot_ma = moving_average(tp[1], m_av_len)
+        tp_plot.plot(tp[0], tp[1], color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
+             label=('TX - {}, RX - {}'.format(i, tp_ip)))
+        tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)],
+             label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
 
     j+=1
 

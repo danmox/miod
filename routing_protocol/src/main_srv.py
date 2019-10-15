@@ -11,8 +11,7 @@ from time import sleep, time
 import pexpect
 from matplotlib import pyplot as plt
 import networkx as nx
-from networkx.drawing.nx_agraph import to_agraph
-import datetime
+
 
 import netifaces as ni
 import numpy as np
@@ -22,11 +21,10 @@ from socket import *
 import pyric.pyw as pyw  # iw functionality
 import argparse
 ##defining vairables
-from traceroute.core import Tracer
 
 
 class Params:
-    SERVER = '10.42.0.15'  # Standard loopback interface address (localhost)
+    SERVER = None  # Standard loopback interface address (localhost)
     BROADCAST = '10.42.0.255'
     SUBNET='10.42.0.0/24'
     RESPONSIVENESS_TIMEOUT = 2
@@ -34,7 +32,7 @@ class Params:
     MAC = None
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
     PORT_PING = 54546
-    WIFI_IF = 'wlx9cefd5fc63ef'
+    WIFI_IF = "wlx9cefd5fc63ef" #'wlx9cefd5fc63ef' 'wlp1s0'
     period = 1  # routing table update frequency in s
     rt_update_period = 0.5 # probabilistic routing table update period, s
     cs=None #initialize socket with None
@@ -49,7 +47,7 @@ class Params:
     snr_stats = {}
     tp_stats = {}
     traceroute_stats = {}
-    dynamic_statistics_parsing = True
+    dynamic_statistics_parsing = False
     statistics_collection = True
     dynamic_statistics_upd = 2 #dynamic statistics update timer
     tp_update_period = 1 # throughput query interval
@@ -81,7 +79,7 @@ def moving_average(a, n=20) :
 
 def global_rt_update_thread():
     #cmdline = ["roslaunch" , 'test_routing', 'launch_sub.launch']
-    cmdline = "roslaunch rt_subscriber launch_sub.launch"
+    cmdline = "roslaunch routing_protocol launch_sub.launch"
     cur_wireless = pexpect.spawn(cmdline, timeout=None)#, logfile=sys.stdout.buffer)
     #cur_wireless = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
     while Params.sim_run is True:
@@ -144,9 +142,11 @@ def local_rt_update_thread():
                             subprocess.run(
                                 ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i+1], "dev", Params.WIFI_IF, "table",str(Params.rt_tables_ids.index(src)+1)],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            print("changing route: from {} to {} is now via {}".format(str(src),dest,new_rt[src][0][i+1]))
 
                 else:
                     subprocess.run(["sudo", "ip", "route", "add", dest,"via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table", str(Params.rt_tables_ids.index(src)+1)] ,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print("changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][1]))
 
         sleep(Params.rt_update_period)
 
@@ -464,9 +464,9 @@ def main():
     Params.TP_IP=args.dest_ip
     Params.final_stats["tp_ip"] = args.dest_ip
 
-
     cs = socket(AF_INET, SOCK_DGRAM)
     Params.HOST = ni.ifaddresses(Params.WIFI_IF)[ni.AF_INET][0]['addr']
+    Params.SERVER = Params.HOST
     w0 = pyw.getcard(Params.WIFI_IF)
     Params.MAC = pyw.macget(w0)
 
