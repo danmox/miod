@@ -32,6 +32,7 @@ struct Flow
 typedef std::vector<arma::vec3> point_vec;
 typedef grid_mapping::Grid<int8_t> Costmap;
 typedef std::vector<Flow> CommReqs;
+typedef std::vector<std::string> string_vec;
 
 
 class NetworkPlanner
@@ -46,7 +47,7 @@ class NetworkPlanner
     double max_velocity;        // limit for largest step from gradient
     double collision_distance;  // minimum distance between agents
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
-    std::string ip_prefix;      // the first 3 numbers of an agent IP address that are fixed across the network
+    string_vec agent_ips;       // list of the ip addresse of each agent
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> odom_subs;
@@ -105,10 +106,12 @@ class NetworkPlanner
     NetworkPlanner(ros::NodeHandle& nh, ros::NodeHandle& pnh);
 
     bool updateNetworkConfig();
+    bool updateRouting();
     void odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx);
     void mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg);
     void setCommReqs(const CommReqs& reqs);
     void runPlanningLoop();
+    void runRoutingLoop();
     void initSystem();
 };
 

@@ -52,24 +52,41 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   // fetch parameters from ROS parameter server:
-  getParamStrict(nh, "/task_agent_count", task_count);
-  getParamStrict(nh, "/network_agent_count", comm_count);
+  std::string odom_topic;
   getParamStrict(nh, "/desired_altitude", desired_altitude);
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
   getParamStrict(pnh, "max_velocity", max_velocity);
   getParamStrict(pnh, "collision_distance", collision_distance);
   getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
-  getParamStrict(pnh, "ip_address_prefix", ip_prefix);
+  getParamStrict(pnh, "odom_topic", odom_topic);
+
+  // fetch task agent ip addresses
+  XmlRpc::XmlRpcValue task_ip_list;
+  getParamStrict(nh, "/task_agent_ips", task_ip_list);
+  ROS_ASSERT(task_ip_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < task_ip_list.size(); ++i) {
+    ROS_ASSERT(task_ip_list[i].getType() == XmlRpc::XmlRpcValue::TypeString);
+    agent_ips.push_back(static_cast<std::string>(task_ip_list[i]));
+  }
+  task_count = task_ip_list.size();
+
+  // fetch comm agent ip addresses
+  XmlRpc::XmlRpcValue comm_ip_list;
+  getParamStrict(nh, "/comm_agent_ips", comm_ip_list);
+  ROS_ASSERT(comm_ip_list.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < comm_ip_list.size(); ++i) {
+    ROS_ASSERT(comm_ip_list[i].getType() == XmlRpc::XmlRpcValue::TypeString);
+    agent_ips.push_back(static_cast<std::string>(comm_ip_list[i]));
+  }
+  comm_count = comm_ip_list.size();
 
   // initialize agent count dependent variables
   total_agents = task_count + comm_count;
   team_config = point_vec(total_agents);
   received_odom = std::vector<bool>(total_agents, false);
 
-  // TODO don't hard code this; pass parameter vectors
-  // the first n agents are task agents and the remaining m agents are network
-  // agents
+  // task / comm agent index conversions
   for (int i = 0; i < task_count; ++i)
     task_idcs.push_back(i);
   for (int i = task_count; i < total_agents; ++i)
@@ -82,7 +99,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   namespace stdph = std::placeholders;
   for (int i = 1; i <= total_agents; ++i) {
     std::stringstream ss;
-    ss << "/aero" << i << "/odom";
+    ss << "/aero" << i << odom_topic.c_str();
     std::string name = ss.str();
     auto fcn = std::bind(&NetworkPlanner::odomCB, this, stdph::_1, i-1);
     ros::Subscriber sub = nh.subscribe<nav_msgs::Odometry>(name, 10, fcn);
@@ -890,16 +907,16 @@ bool NetworkPlanner::updateNetworkConfig()
   for (int k = 0; k < num_flows; ++k) {
 
     routing_msgs::PRTableEntry rt_entry;
-    rt_entry.src  = ip_prefix + std::to_string(*comm_reqs[k].srcs.begin());
+    rt_entry.src  = agent_ips[(*comm_reqs[k].srcs.begin())-1]; // agents ids are 1 indexed
     // TODO this needs to be fixed!! For actually routing there can only be 1
     // source and destination but for solving the SOCP it is advantageous for us
     // to combine flows wherever possible
-    rt_entry.dest = ip_prefix + std::to_string(*comm_reqs[k].dests.begin());
+    rt_entry.dest = agent_ips[(*comm_reqs[k].dests.begin())-1]; // agents ids are 1 indexed
 
     for (int i = 0; i < total_agents; ++i) {
 
       // probabilistic routing table entry for node i (all outgoing routes)
-      rt_entry.node = ip_prefix + std::to_string(i);
+      rt_entry.node = agent_ips[i];
 
       // check for outgoing traffic to all other nodes
       rt_entry.gateways.clear();
@@ -912,7 +929,7 @@ bool NetworkPlanner::updateNetworkConfig()
         // only include routing table entry for significant usage
         if (alpha[k](i,j) > 0.01) { // ignore small routing vars
           routing_msgs::ProbGateway gway;
-          gway.IP = ip_prefix + std::to_string(j);
+          gway.IP = agent_ips[j];
           gway.prob = alpha[k](i,j);
           rt_entry.gateways.push_back(gway);
         }
@@ -990,6 +1007,114 @@ void NetworkPlanner::runPlanningLoop()
     printf("\n\niteration %d\n\n", iter_count);
 
     updateNetworkConfig();
+
+    printf("update_duration = %.3f\n", (ros::Time::now()-last_call).toSec());
+    last_call = ros::Time::now();
+
+    ++iter_count;
+    loop_rate.sleep();
+  }
+}
+
+
+bool NetworkPlanner::updateRouting()
+{
+  // ensure the following conditions are met before planning:
+  // 1) odom messages have been received for each agent
+  // 2) the channel_sim has received a map (i.e. is ready to predict)
+  // 3) a task specification has been received
+  // 4) a costmap has been received so that candidate configs can be vetted
+  if (!all(received_odom, true)) {
+    ROS_WARN("unable to plan: odometry not available for all agents");
+    return false;
+  }
+  /*
+  if (!channel_sim.mapSet()) {
+    ROS_WARN("unable to plan: channel simulator has not received a map yet");
+    return false;
+  }
+  */
+  if (comm_reqs.empty()) {
+    ROS_WARN("unable to plan: no task specification set");
+    return false;
+  }
+
+  //
+  // find optimal routing variables
+  //
+
+  // solve SOCP for team_config
+
+  double slack;
+  std::vector<arma::mat> alpha;
+  if (!SOCPsrv(team_config, alpha, slack, true, false)) {
+    ROS_ERROR("no valid solution to SOCP found for team_config");
+    return false;
+  }
+  printf("slack = %f\n", slack);
+
+  // print out routing solution
+  for (int k = 0; k < num_flows; ++k) {
+    std::stringstream ss;
+    ss << "flow " << k+1 << " routes:";
+    alpha[k].print(ss.str());
+  }
+
+  //
+  // send network update command
+  //
+
+  routing_msgs::NetworkUpdate net_cmd;
+  for (int k = 0; k < num_flows; ++k) {
+
+    routing_msgs::PRTableEntry rt_entry;
+    rt_entry.src  = agent_ips[(*comm_reqs[k].srcs.begin())-1]; // agent ips are 1 indexed
+    // TODO this needs to be fixed!! For actually routing there can only be 1
+    // source and destination but for solving the SOCP it is advantageous for us
+    // to combine flows wherever possible
+    rt_entry.dest = agent_ips[(*comm_reqs[k].dests.begin())-1]; // agent ips are 1 indexed
+
+    for (int i = 0; i < total_agents; ++i) {
+
+      // probabilistic routing table entry for node i (all outgoing routes)
+      rt_entry.node = agent_ips[i];
+
+      // check for outgoing traffic to all other nodes
+      rt_entry.gateways.clear();
+      for (int j = 0; j < total_agents; ++j) {
+
+        // no self transmissions
+        if (i == j)
+          continue;
+
+        // only include routing table entry for significant usage
+        if (alpha[k](i,j) > 0.01) { // ignore small routing vars
+          routing_msgs::ProbGateway gway;
+          gway.IP = agent_ips[j];
+          gway.prob = alpha[k](i,j);
+          rt_entry.gateways.push_back(gway);
+        }
+      }
+
+      net_cmd.routes.push_back(rt_entry);
+    }
+  }
+  if (net_pub) net_pub.publish(net_cmd);
+
+  return true;
+}
+
+
+void NetworkPlanner::runRoutingLoop()
+{
+  static int iter_count = 1;
+
+  ros::Time last_call = ros::Time::now();
+  ros::Rate loop_rate(minimum_update_rate);
+  while (ros::ok()) {
+    printf("\n\niteration %d\n\n", iter_count);
+
+    updateRouting();
 
     printf("update_duration = %.3f\n", (ros::Time::now()-last_call).toSec());
     last_call = ros::Time::now();
