@@ -50,9 +50,9 @@
       <!--<param name="gcs_url" value=""/>
       <param name="target_system_id" value="$(arg target_system_id)" />
       <param name="target_component_id" value="1" />
-      <param name="fcu_protocol" value="v2.0"/>
-      <rosparam command="load" file="$(find mavros)/launch/px4_pluginlists.yaml" />
-      <rosparam command="load" file="$(find intel_aero_gazebo)/SITL/px4_common.yaml" />-->
+      <param name="fcu_protocol" value="v2.0"/>-->
+      <rosparam command="load" file="$(find intel_aero_experiments)/cfg/px4_pluginlists.yaml" />
+      <rosparam command="load" file="$(find intel_aero_experiments)/cfg/px4_common.yaml" />
       <param name="local_position/frame_id"          value="$(arg map_frame)"/>
       <param name="local_position/tf/frame_id"       value="$(arg map_frame)"/>
       <param name="local_position/tf/child_frame_id" value="$(arg base_frame)"/>

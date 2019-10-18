@@ -1,0 +1,69 @@
+<launch>
+
+  <group ns="aero1" >
+
+    <!-- GPS relative localization -->
+    <node name="gps_transformation_node"
+          pkg="robot_localization"
+          type="navsat_transform_node"
+          output="screen">
+      <param name="magnetic_declination_radians"            value="0.2089"/>
+      <param name="yaw_offset"                              value="1.396"/> <!-- TODO verify this -->
+      <param name="broadcast_utm_transform"                 value="true"/>
+      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
+      <param name="publish_filtered_gps"                    value="false"/>
+      <param name="use_odometry_yaw"                        value="false"/>
+      <param name="wait_for_datum"                          value="true"/>
+      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
+      <remap from="imu/data"          to="mavros/imu/data"/>
+      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
+      <remap from="gps/fix"           to="mavros/global_position/global"/>
+    </node>
+
+  </group>
+
+  <!-- 
+  <group ns="aero2" >
+
+    <node name="gps_transformation_node"
+          pkg="robot_localization"
+          type="navsat_transform_node">
+      <param name="magnetic_declination_radians"            value="0.2089"/>
+      <param name="yaw_offset"                              value="1.396"/>
+      <param name="broadcast_utm_transform"                 value="true"/>
+      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
+      <param name="publish_filtered_gps"                    value="false"/>
+      <param name="use_odometry_yaw"                        value="false"/>
+      <param name="wait_for_datum"                          value="true"/>
+      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
+      <remap from="imu/data"          to="mavros/imu/data"/>
+      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
+      <remap from="gps/fix"           to="mavros/global_position/global"/>
+    </node>
+
+  </group>
+
+
+  <group ns="aero3" >
+
+    <node name="gps_transformation_node"
+          pkg="robot_localization"
+          type="navsat_transform_node">
+      <param name="magnetic_declination_radians"            value="0.2089"/>
+      <param name="yaw_offset"                              value="1.0472"/>
+      <param name="broadcast_utm_transform"                 value="true"/>
+      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
+      <param name="publish_filtered_gps"                    value="false"/>
+      <param name="use_odometry_yaw"                        value="false"/>
+      <param name="wait_for_datum"                          value="true"/>
+      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
+      <remap from="imu/data"          to="mavros/imu/data"/>
+      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
+      <remap from="gps/fix"           to="mavros/global_position/global"/>
+    </node>
+
+  </group>
+  -->
+
+
+</launch>
