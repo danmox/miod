@@ -1,7 +1,7 @@
 <launch>
 
   <!-- px4 or no px4 -->
-  <arg name="spawn_only"    default="true"/>
+  <arg name="sitl"          default="true"/>
 
   <!-- simulation args -->
   <arg name="gazebo_gui"    default="false" />
@@ -35,8 +35,8 @@
     <param name="frame_id" value="$(arg world_frame)"/>
   </node>
 
-  <arg name="intel_aero_launch_file" if="$(arg spawn_only)"     value="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch"/>
-  <arg name="intel_aero_launch_file" unless="$(arg spawn_only)" value="$(find intel_aero_gazebo)/launch/intel_aero.launch"/>
+  <arg name="intel_aero_launch_file" unless="$(arg sitl)" value="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch"/>
+  <arg name="intel_aero_launch_file" if="$(arg sitl)"     value="$(find intel_aero_gazebo)/launch/intel_aero_px4.launch"/>
 
   <!-- aero 1 -->
   <group>
@@ -46,10 +46,10 @@
       <arg name="x"                  value="5.0" />
       <arg name="y"                  value="-5.0" />
       <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14561"                        unless="$(arg static_map)"/>
-      <arg name="mavlink_tcp_port"   value="4561"                         unless="$(arg static_map)"/>
-      <arg name="fcu_url"            value="udp://:14541@localhost:14581" unless="$(arg static_map)"/>
-      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"        unless="$(arg static_map)"/>
+      <arg name="mavlink_udp_port"   value="14561"/>
+      <arg name="mavlink_tcp_port"   value="4561"/>
+      <arg name="fcu_url"            value="udp://:14541@localhost:14581"/>
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"/>
       <arg name="position_tol"       value="0.2"/>
       <arg name="heading_tol"        value="0.2"/>
       <arg name="static_map"         value="$(arg static_map)"/>
