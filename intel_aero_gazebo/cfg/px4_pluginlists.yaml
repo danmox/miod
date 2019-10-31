@@ -37,6 +37,7 @@ plugin_blacklist:
 - mount_control            # Send Mission command to control a camera or a antenna mount
 - home_position            # Publish home position
 - local_position           # Publish FCU local position
+- param                    # Access to FCU parameters
 
 
 # overrides blacklist
@@ -45,9 +46,8 @@ plugin_whitelist:
 - sys_status               # Publish system status
 - sys_time                 # Synchronise clocks with FCU
 - command                  # Send commands to FCU
-- imu                      # Publish IMU data
 - global_position          # Publish FCU fused global position and raw GPS fix
-- param                    # Access to FCU parameters
+- imu                      # Publish IMU data
 - setpoint_position        # Send to FCU external position setpoint
 - setpoint_velocity        # Send to FCU external velocity setpoint
 # mavros_extras

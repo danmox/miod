@@ -67,7 +67,7 @@ global_position:
 local_position:
   #frame_id: "map" # set in launch file
   tf:
-    send: true
+    send: false
     # frame_id: "aero2/map" # set in launch file
     # child_frame_id: "aero2/base_link" # set in launch file
     send_fcu: false

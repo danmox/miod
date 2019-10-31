@@ -46,10 +46,10 @@
       <arg name="x"                  value="5.0" />
       <arg name="y"                  value="-5.0" />
       <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14561"/>
-      <arg name="mavlink_tcp_port"   value="4561"/>
-      <arg name="fcu_url"            value="udp://:14541@localhost:14581"/>
-      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"/>
+      <arg name="mavlink_udp_port"   value="14561"                        if="$(arg sitl)"/>
+      <arg name="mavlink_tcp_port"   value="4561"                         if="$(arg sitl)"/>
+      <arg name="fcu_url"            value="udp://:14541@localhost:14581" if="$(arg sitl)"/>
+      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"        if="$(arg sitl)"/>
       <arg name="position_tol"       value="0.2"/>
       <arg name="heading_tol"        value="0.2"/>
       <arg name="static_map"         value="$(arg static_map)"/>
