@@ -1,7 +1,17 @@
 <launch>
 
+  <!--
+      ARGS
+  -->
+
   <arg name="id"                 default="1" />
   <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
+
+  <!-- global reference datum args -->
+  <arg name="datum_lat"  default="39.941279"/>
+  <arg name="datum_lon"  default="-75.198851"/>
+  <arg name="datum_yaw"  default="0.0"/>
+  <arg name="datum_alt"  default="27.0"/>
 
   <!-- topics / frames args -->
   <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
@@ -23,19 +33,12 @@
   <arg name="costmap_frame" if="$(arg static_map)"     value="$(arg world_frame)"/>
   <arg name="costmap_frame" unless="$(arg static_map)" value="$(arg map_frame)"/>
 
-  <!-- spawn model args -->
-  <arg name="x" default="0" />
-  <arg name="y" default="0" />
-  <arg name="z" default="0" />
-  <arg name="R" default="0" />
-  <arg name="P" default="0" />
-  <arg name="Y" default="0" />
-  <arg name="pos_args" value="-x $(arg x) -y $(arg y) -z $(arg z)
-                              -R $(arg R) -P $(arg P) -Y $(arg Y)" />
+  <!-- MAVROS args -->
+  <arg name="fcu_url" default="tcp://127.0.0.1:5760"/>
 
-  <!-- SITL args -->
-  <arg name="fcu_url"               default="tcp://127.0.0.1:5760" />
-  <arg name="target_system_id"      default="$(arg id)"/>
+  <!--
+      NODES
+  -->
 
   <group ns="$(arg robot_ns)" >
 
@@ -46,18 +49,31 @@
           clear_params="true"
           output="screen"
           respawn="false">
-      <param name="fcu_url" value="$(arg fcu_url)" />
-      <!--<param name="gcs_url" value=""/>
-      <param name="target_system_id" value="$(arg target_system_id)" />
-      <param name="target_component_id" value="1" />
-      <param name="fcu_protocol" value="v2.0"/>-->
       <rosparam command="load" file="$(find intel_aero_experiments)/cfg/px4_pluginlists.yaml" />
       <rosparam command="load" file="$(find intel_aero_experiments)/cfg/px4_common.yaml" />
+      <param name="fcu_url"                          value="$(arg fcu_url)" />
       <param name="local_position/frame_id"          value="$(arg map_frame)"/>
       <param name="local_position/tf/frame_id"       value="$(arg map_frame)"/>
       <param name="local_position/tf/child_frame_id" value="$(arg base_frame)"/>
       <param name="global_position/child_frame_id"   value="$(arg base_frame)"/>
       <param name="imu/frame_id"                     value="$(arg base_frame)"/>
+    </node>
+
+    <!-- computes transformation between robot and datum and publishes the
+         result as a pose message and transform in the tf tree -->
+    <node pkg="intel_aero_navigation"
+          type="gps_tf_node"
+          name="gps_tf_node"
+          output="screen">
+      <param name="base_frame" value="$(arg base_frame"/>
+      <param name="yaw_offset" value="0.0"/>
+      <param name="debug"      value="false"/>
+      <param name="datum_lat"  value="$(arg datum_lat)"/>
+      <param name="datum_lon"  value="$(arg datum_lon)"/>
+      <param name="datum_yaw"  value="$(arg datum_yaw)"/>
+      <param name="datum_alt"  value="$(arg datum_alt)"/>
+      <remap from="gps" to="mavros/global_position/global"/>
+      <remap from="imu" to="mavros/imu/data"/>
     </node>
 
     <!-- mapping using octomap

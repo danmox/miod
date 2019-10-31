@@ -15,6 +15,8 @@ find_package(catkin REQUIRED
   gazebo_msgs
   nodelet
   mavros_msgs
+  message_filters
+  robot_localization
   tf2
   tf2_ros
   tf2_geometry_msgs
@@ -47,6 +49,8 @@ catkin_package(
     gazebo_msgs
     nodelet
     mavros_msgs
+    message_filters
+    robot_localization
     tf2
     tf2_ros
     tf2_geometry_msgs
@@ -85,3 +89,6 @@ target_link_libraries(gazebo_vel_nav_node waypoint_navigation ${catkin_LIBRARIES
 
 add_executable(action_test_vel src/action_test_vel.cpp)
 target_link_libraries(action_test_vel waypoint_navigation ${catkin_LIBRARIES})
+
+add_executable(gps_tf_node src/gps_tf_node.cpp)
+target_link_libraries(gps_tf_node ${catkin_LIBRARIES})
