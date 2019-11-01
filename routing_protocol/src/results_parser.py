@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import time
 import datetime
+from os.path import expanduser
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -11,7 +12,7 @@ import numpy as np
 import re
 import pexpect
 
-def scp(server, path, password, timeout=30):
+def rsync(server, path, password, local_results_folder, timeout=30):
     """SSH'es to a host using the supplied credentials and executes a command.
     Throws an exception if the command doesn't return 0.
     bgrun: run command in the background"""
@@ -19,10 +20,12 @@ def scp(server, path, password, timeout=30):
     fname = tempfile.mktemp()
     fout = open(fname, 'w')
 
-    ssh_cmd = "scp %s:%s" % (server, path)  +" ./results/"
-    print(ssh_cmd)
-    child = pexpect.spawn(ssh_cmd, timeout=timeout)
-    child.expect(['password: '])
+
+    #ssh_cmd = "scp %s:%s" % (server, path)  +" ./results/"
+    rsync = "rsync -avzh %s:%s" % (server, path)  + " " + local_results_folder
+    print(rsync)
+    child = pexpect.spawn(rsync, timeout=timeout)
+    child.expect(['password: ', pexpect.EOF])
     child.sendline(password)
     child.expect(pexpect.EOF)
     child.logfile = fout
@@ -35,7 +38,7 @@ def scp(server, path, password, timeout=30):
     fin.close()
 
     if child.exitstatus!=0:
-        print(stdout)
+        print(child.before)
         raise Exception(stdout)
 
     return stdout
@@ -59,7 +62,10 @@ def moving_average(a, n=20) :
 
 save_archive = True
 load_from_archive=False
+load_local = False
 archive_name = 'results/RRarchive2019-10-14 18:06.npz'
+home = expanduser("~")
+local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
 
 data = {}
 
@@ -80,7 +86,8 @@ else:
         aero_id = i.split(".")[-1]
         server = "aero{}@{}".format(aero_id,i)
         path = "~/ws_intel/src/intel_aero/routing_protocol/src/{}".format(files[i])
-        scp(server,path,passwd)
+        if load_from_archive is not True:
+            rsync(server,path,passwd,local_results_folder)
 
     if local:
         files[local] = file_name+"_"+local+".npz"
@@ -94,6 +101,7 @@ else:
         archive = file_name+"archive"+now.strftime("%Y-%m-%d %H:%M")
         np.savez(archive,data)
 
+print("Loading files complete, parsing...")
 fig, tp_plot = plt.subplots()
 fig2, tr_plot = plt.subplots()
 

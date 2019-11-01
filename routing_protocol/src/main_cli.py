@@ -16,6 +16,7 @@ import numpy
 
 import socket
 from socket import *
+from os.path import expanduser
 
 import pexpect
 import pyric.pyw as pyw  # iw functionality
@@ -27,7 +28,7 @@ import numpy as np
 #print(cur_wireless)
 
 class Params:
-    SERVER = '10.42.0.3'  # Standard loopback interface address (localhost)
+    SERVER = '10.42.0.13'  # Standard loopback interface address (localhost)
     BROADCAST = '10.42.0.255'
     SUBNET='10.42.0.0/24'
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
@@ -55,7 +56,8 @@ class Params:
     tp_stats = []
     traceroute_stats = []
 
-    results_file = 'results/RR'
+    home = expanduser("~")
+    results_folder = home+'/ws_intel/src/intel_aero/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
     final_stats["ws"] = []
@@ -252,7 +254,11 @@ def parse_server_msg(msg):
 def status_receive_update_thread():
     seq_num={}
     while Params.sim_run is True:
-        data_init, cur_src = Params.cs.recvfrom(4096)
+        ready = select.select([Params.cs], [], [], 2)
+        if ready[0]:
+            data_init, cur_src = Params.cs.recvfrom(4096)
+        else:
+            continue
         #print(source)
         #all messages should have a shape of [sender, seq_num, data]
         data = data_init.decode()
@@ -292,7 +298,11 @@ def send_ping_thread():
 
 def receive_ping_thread():
     while Params.sim_run is True:
-        data_init, cur_src = Params.cs_ping.recvfrom(4096)
+        ready = select.select([Params.cs_ping], [], [], 2)
+        if ready[0]:
+            data_init, cur_src = Params.cs_ping.recvfrom(4096)
+        else:
+            continue
         data = data_init.decode()
         data = json.loads(data)
         if cur_src[0]!=Params.HOST:
@@ -327,7 +337,7 @@ def main():
     parser.add_argument("--interface", help="Wireless interface name",
                         type=str, default=None)
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     Params.TP_IP=args.dest_ip
     Params.final_stats["tp_ip"] = args.dest_ip
@@ -369,7 +379,7 @@ def main():
     try:
         for t in threads:
             t.start()
-        while Params.sim_run:
+        while Params.sim_run is True:
             r, __, __ = select.select([sys.stdin, ], [], [], Params.RESPONSIVENESS_TIMEOUT)
             if r:
                 raise KeyboardInterrupt
@@ -377,15 +387,26 @@ def main():
                 continue
         raise KeyboardInterrupt
     except KeyboardInterrupt:
-        print("Threads successfully closed")
         Params.sim_run = False
         for t in threads:
             t.join()
         Params.cs.close()
+        print("Threads successfully closed")
     finally:
-        if Params.statistics_collection:
-            results_file_new = Params.results_file+"_"+str(Params.HOST)
-            np.savez(results_file_new, Params.final_stats)
         remove_network()
+        if Params.statistics_collection:
+
+            if os.path.exists(Params.results_folder) is True:
+                print("saving results to {}".format(Params.results_folder))
+                results_file_new = Params.results_folder + "RR_" + str(Params.HOST)
+            else:
+                print("Folder {} does not exist. Trying to save results locally".format(Params.results_folder))
+                dir = "./results/"
+                if os.path.exists(dir) is not True:
+                    os.mkdir(dir)
+                results_file_new = './results/'+ "RR_" + str(Params.HOST)
+
+            np.savez(results_file_new, Params.final_stats)
+            print("results saved in file {}".format(results_file_new))
 
 main()

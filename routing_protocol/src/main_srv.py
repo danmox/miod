@@ -7,9 +7,12 @@ import sys
 import threading
 from copy import deepcopy
 from time import sleep, time
+import os
+from os.path import expanduser
 
 import pexpect
 from matplotlib import pyplot as plt
+import matplotlib
 import networkx as nx
 
 
@@ -27,12 +30,12 @@ class Params:
     SERVER = None  # Standard loopback interface address (localhost)
     BROADCAST = '10.42.0.255'
     SUBNET='10.42.0.0/24'
-    RESPONSIVENESS_TIMEOUT = 2
+    RESPONSIVENESS_TIMEOUT = 1
     HOST = None
     MAC = None
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
     PORT_PING = 54546
-    WIFI_IF = "wlp1s0" #'wlx9cefd5fc63ef' 'wlp1s0'
+    WIFI_IF = "wlx9cefd5fc63ef" #'wlx9cefd5fc63ef' 'wlp1s0'
     period = 1  # routing table update frequency in s
     rt_update_period = 0.5 # probabilistic routing table update period, s
     cs=None #initialize socket with None
@@ -53,7 +56,8 @@ class Params:
     tp_update_period = 1 # throughput query interval
     TP_IP = None
 
-    results_file = 'results/RR'
+    home = expanduser("~")
+    results_folder = home + '/ws_intel/src/intel_aero/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
     final_stats["ws"] = []
@@ -85,7 +89,11 @@ def global_rt_update_thread():
     while Params.sim_run is True:
         if Params.update_source == "ROS":
             #for line in iter(cur_wireless.stdout.readline, b''):
-                line = cur_wireless.readline()
+                ready = select.select([cur_wireless], [], [], 2)
+                if ready[0]:
+                    line = cur_wireless.readline()
+                else:
+                    continue
                 if line:
                     line_readable = line.decode()
                     line_readable = str(line_readable).strip("'<>() ").replace('\'', '\"')
@@ -163,7 +171,11 @@ def status_send_update_thread():
 
 def receive_ping_thread():
     while Params.sim_run is True:
-        data_init, cur_src = Params.cs_ping.recvfrom(4096)
+        ready = select.select([Params.cs_ping], [], [], 2)
+        if ready[0]:
+            data_init, cur_src = Params.cs_ping.recvfrom(4096)
+        else:
+            continue
         data = data_init.decode()
         data = json.loads(data)
         #print(["received ping msg from:", cur_src])
@@ -259,6 +271,7 @@ def measurement_thread_traceroute():
                     if Params.statistics_collection:
                         Params.final_stats["tr"].append([time(),ips2,delays])
             sleep(Params.rt_update_period)
+
 
 
 def dynamic_statistics_parsing_thread():
@@ -423,7 +436,11 @@ def parse_traceroute(msg,src):
 def status_receive_update_thread():
     seq_num={}
     while Params.sim_run is True:
-        data_init, cur_src = Params.cs.recvfrom(4096)
+        ready = select.select([Params.cs], [], [], 2)
+        if ready[0]:
+            data_init, cur_src = Params.cs.recvfrom(4096)
+        else:
+            continue
         data = data_init.decode()
         data = json.loads(data)
         source = data[0]
@@ -461,7 +478,7 @@ def main():
     parser.add_argument("--interface", help="Wireless interface name",
                         type=str, default=None)
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     Params.TP_IP=args.dest_ip
     Params.final_stats["tp_ip"] = args.dest_ip
@@ -507,7 +524,7 @@ def main():
     try:
         for t in threads:
             t.start()
-        while Params.sim_run:
+        while Params.sim_run is True:
             r, __, __ = select.select([sys.stdin, ], [], [], Params.RESPONSIVENESS_TIMEOUT)
             if r:
                 raise KeyboardInterrupt
@@ -515,16 +532,26 @@ def main():
                 continue
         raise KeyboardInterrupt
     except KeyboardInterrupt:
-        print("Threads successfully closed")
         Params.sim_run = False
         for t in threads:
             t.join()
+        print("Threads successfully closed")
         Params.cs.close()
     finally:
         remove_network()
         if Params.statistics_collection:
-            results_file_new = Params.results_file+"_"+str(Params.HOST)
+            if os.path.exists(Params.results_folder) is True:
+                print("saving results to {}".format(Params.results_folder))
+                results_file_new = Params.results_folder + "RR_" + str(Params.HOST)
+            else:
+                print("Folder {} does not exist. Trying to save results locally".format(Params.results_folder))
+                dir = "./results/"
+                if os.path.exists(dir) is not True:
+                    os.mkdir(dir)
+                results_file_new = './results/' + "RR_" + str(Params.HOST)
+
             np.savez(results_file_new, Params.final_stats)
+            print("results saved in file {}".format(results_file_new))
 
 
 
