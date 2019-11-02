@@ -9,9 +9,11 @@
   <arg name="heading_tol"            default="3.5"/>  <!-- agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="10"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
+  <arg name="source"                 default="2"/>
+  <arg name="dest"                   default="1"/>
 
-  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.2"]</rosparam>
-  <rosparam param="/comm_agent_ips">["10.42.0.3"]</rosparam>
+  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.3"]</rosparam>
+  <rosparam param="/comm_agent_ips">["10.42.0.2"]</rosparam>
   <param name="/desired_altitude" value="0.0"/>
 
   <!-- channel rate model params -->
@@ -32,7 +34,9 @@
     <param name="confidence"          value="$(arg confidence)"/>
     <param name="collision_distance"  value="0.2"/>
     <param name="minimum_update_rate" value="0.5"/>
-    <param name="odom_topic"          value="/mavros/local_position/odom"/>
+    <param name="odom_topic"          value="/pose"/>
+    <param name="source"              value="$(arg source)"/>
+    <param name="dest"                value="$(arg dest)"/>
   </node>
 
   <node pkg="socp"

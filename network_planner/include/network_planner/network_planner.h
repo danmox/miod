@@ -5,8 +5,7 @@
 #include <ros/ros.h>
 #include <channel_simulator/channel_simulator.h>
 #include <grid_mapping/grid.hpp>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <routing_msgs/NetworkUpdate.h>
 #include <socp/RobustRoutingSOCP.h>
 #include <intel_aero_navigation/WaypointNavigationAction.h>
@@ -107,7 +106,7 @@ class NetworkPlanner
 
     bool updateNetworkConfig();
     bool updateRouting();
-    void odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx);
+    void poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg, int idx);
     void mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg);
     void setCommReqs(const CommReqs& reqs);
     void runPlanningLoop();

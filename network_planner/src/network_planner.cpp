@@ -101,8 +101,8 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
     std::stringstream ss;
     ss << "/aero" << i << odom_topic.c_str();
     std::string name = ss.str();
-    auto fcn = std::bind(&NetworkPlanner::odomCB, this, stdph::_1, i-1);
-    ros::Subscriber sub = nh.subscribe<nav_msgs::Odometry>(name, 10, fcn);
+    auto fcn = std::bind(&NetworkPlanner::poseCB, this, stdph::_1, i-1);
+    ros::Subscriber sub = nh.subscribe<geometry_msgs::PoseStamped>(name, 10, fcn);
     odom_subs.push_back(sub);
   }
 
@@ -137,11 +137,11 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 }
 
 
-void NetworkPlanner::odomCB(const nav_msgs::Odometry::ConstPtr& msg, int idx)
+void NetworkPlanner::poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg, int idx)
 {
-  team_config[idx](0) = msg->pose.pose.position.x;
-  team_config[idx](1) = msg->pose.pose.position.y;
-  team_config[idx](2) = msg->pose.pose.position.z;
+  team_config[idx](0) = msg->pose.position.x;
+  team_config[idx](1) = msg->pose.position.y;
+  team_config[idx](2) = msg->pose.position.z;
   received_odom[idx] = true;
 }
 

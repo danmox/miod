@@ -24,8 +24,11 @@ int main(int argc, char** argv)
   ros::NodeHandle nh, pnh("~");
 
   double margin, confidence;
+  int source, dest;
   getParamWarn(pnh, "margin", margin, 0.1);
   getParamWarn(pnh, "confidence", confidence, 0.8);
+  getParamWarn(pnh, "source", source, 1);
+  getParamWarn(pnh, "dest", dest, 2);
 
   ros::AsyncSpinner spinner(4);
   spinner.start();
@@ -35,8 +38,9 @@ int main(int argc, char** argv)
   // 1 flow with 1 destination
   network_planner::CommReqs comm_reqs;
   network_planner::Flow flow1;
-  flow1.srcs.insert(1);
-  flow1.dests.insert(2);
+  // TODO make these params
+  flow1.srcs.insert(source);
+  flow1.dests.insert(dest);
   flow1.min_margin = margin;
   flow1.confidence = confidence;
   comm_reqs.push_back(flow1);
