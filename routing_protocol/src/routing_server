@@ -1,0 +1,4 @@
+#!/bin/bash
+
+SCRIPT=$(rospack find routing_protocol)/src/main_srv.py
+python3 $SCRIPT $@

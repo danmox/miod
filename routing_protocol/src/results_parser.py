@@ -74,11 +74,12 @@ if load_from_archive:
     data_full = f['arr_0']
     for i in data_full.item():
         data[i] = data_full.item()[i]
+
 else:
     file_name = 'results/RR'
-    local = '10.42.0.13'
+    local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.7']
+    hosts = ['10.42.0.2', '10.42.0.3']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
