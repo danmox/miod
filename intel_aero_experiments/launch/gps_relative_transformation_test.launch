@@ -1,69 +1,47 @@
 <launch>
 
-  <group ns="aero1" >
+  <arg name="debug"      default="false"/>
+  <arg name="datum_lat"  default="39.941279"/>
+  <arg name="datum_lon"  default="-75.198851"/>
+  <arg name="datum_yaw"  default="0.0"/>
+  <arg name="datum_alt"  default="27.0"/>
 
-    <!-- GPS relative localization -->
-    <node name="gps_transformation_node"
-          pkg="robot_localization"
-          type="navsat_transform_node"
-          output="screen">
-      <param name="magnetic_declination_radians"            value="0.2089"/>
-      <param name="yaw_offset"                              value="1.396"/> <!-- TODO verify this -->
-      <param name="broadcast_utm_transform"                 value="true"/>
-      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
-      <param name="publish_filtered_gps"                    value="false"/>
-      <param name="use_odometry_yaw"                        value="false"/>
-      <param name="wait_for_datum"                          value="true"/>
-      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
-      <remap from="imu/data"          to="mavros/imu/data"/>
-      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
-      <remap from="gps/fix"           to="mavros/global_position/global"/>
-    </node>
-
-  </group>
-
-  <!-- 
   <group ns="aero2" >
 
-    <node name="gps_transformation_node"
-          pkg="robot_localization"
-          type="navsat_transform_node">
-      <param name="magnetic_declination_radians"            value="0.2089"/>
-      <param name="yaw_offset"                              value="1.396"/>
-      <param name="broadcast_utm_transform"                 value="true"/>
-      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
-      <param name="publish_filtered_gps"                    value="false"/>
-      <param name="use_odometry_yaw"                        value="false"/>
-      <param name="wait_for_datum"                          value="true"/>
-      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
-      <remap from="imu/data"          to="mavros/imu/data"/>
-      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
-      <remap from="gps/fix"           to="mavros/global_position/global"/>
+    <node pkg="intel_aero_navigation"
+          type="gps_tf_node"
+          name="gps_tf_node1"
+          output="screen">
+      <param name="base_frame"  value="aero1/base_link_raw"/>
+      <param name="world_frame" value="world"/>
+      <param name="yaw_offset"  value="0.0"/>
+      <param name="debug"       value="false"/>
+      <param name="datum_lat"   value="39.941279"/>
+      <param name="datum_lon"   value="-75.198851"/>
+      <param name="datum_yaw"   value="0.0"/>
+      <remap from="gps" to="mavros/global_position/raw/fix"/>
+      <remap from="imu" to="mavros/imu/data"/>
     </node>
 
   </group>
 
+  <group ns="aero2" >
 
-  <group ns="aero3" >
-
-    <node name="gps_transformation_node"
-          pkg="robot_localization"
-          type="navsat_transform_node">
-      <param name="magnetic_declination_radians"            value="0.2089"/>
-      <param name="yaw_offset"                              value="1.0472"/>
-      <param name="broadcast_utm_transform"                 value="true"/>
-      <param name="broadcast_utm_transform_as_parent_frame" value="true"/>
-      <param name="publish_filtered_gps"                    value="false"/>
-      <param name="use_odometry_yaw"                        value="false"/>
-      <param name="wait_for_datum"                          value="true"/>
-      <rosparam param="datum">[39.941168, -75.198870, 0.0]</rosparam>
-      <remap from="imu/data"          to="mavros/imu/data"/>
-      <remap from="odometry/filtered" to="mavros/local_position/odom"/>
-      <remap from="gps/fix"           to="mavros/global_position/global"/>
+    <node pkg="intel_aero_navigation"
+          type="gps_tf_node"
+          name="gps_tf_node2"
+          output="screen">
+      <param name="base_frame"  value="aero1/base_link_global"/>
+      <param name="world_frame" value="world"/>
+      <param name="yaw_offset"  value="0.0"/>
+      <param name="debug"       value="false"/>
+      <param name="datum_lat"   value="39.941279"/>
+      <param name="datum_lon"   value="-75.198851"/>
+      <param name="datum_yaw"   value="0.0"/>
+      <remap from="gps" to="mavros/global_position/global"/>
+      <remap from="imu" to="mavros/imu/data"/>
     </node>
 
   </group>
-  -->
-
 
 </launch>

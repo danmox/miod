@@ -36,6 +36,16 @@
   <!-- MAVROS args -->
   <arg name="fcu_url" default="tcp://127.0.0.1:5760"/>
 
+  <!-- routing args -->
+  <arg name="server"         default="false"/>
+  <arg name="interface"      default="wlp1s0"/>
+  <arg name="srv"            default="10.42.0.1"/>
+  <arg name="routing_script" default="routing_client" unless="$(arg server)"/>
+  <arg name="routing_script" default="routing_server" if="$(arg server)"/>
+  <arg name="dest_arg"       default=""/>
+  <arg name="routing_args"   default="$(arg dest_arg) --srv $(arg srv) --interface $(arg interface)" unless="$(arg server)"/>
+  <arg name="routing_args"   default="$(arg dest_arg) --interface $(arg interface)" if="$(arg server)"/>
+
   <!--
       NODES
   -->
@@ -65,16 +75,24 @@
           type="gps_tf_node"
           name="gps_tf_node"
           output="screen">
-      <param name="base_frame" value="$(arg base_frame"/>
-      <param name="yaw_offset" value="0.0"/>
-      <param name="debug"      value="false"/>
-      <param name="datum_lat"  value="$(arg datum_lat)"/>
-      <param name="datum_lon"  value="$(arg datum_lon)"/>
-      <param name="datum_yaw"  value="$(arg datum_yaw)"/>
-      <param name="datum_alt"  value="$(arg datum_alt)"/>
+      <param name="base_frame"  value="$(arg base_frame)_global"/>
+      <param name="world_frame" value="$(arg world_frame)"/>
+      <param name="yaw_offset"  value="0.0"/>
+      <param name="debug"       value="false"/>
+      <param name="datum_lat"   value="$(arg datum_lat)"/>
+      <param name="datum_lon"   value="$(arg datum_lon)"/>
+      <param name="datum_yaw"   value="$(arg datum_yaw)"/>
+      <param name="datum_alt"   value="$(arg datum_alt)"/>
       <remap from="gps" to="mavros/global_position/global"/>
       <remap from="imu" to="mavros/imu/data"/>
     </node>
+
+    <!-- routing client -->
+    <node pkg="routing_protocol"
+          type="$(arg routing_script)"
+          name="$(arg routing_script)_node"
+          args="$(arg routing_args)"
+          output="screen"/>
 
     <!-- mapping using octomap
     <node unless="$(arg static_map)"
