@@ -20,13 +20,13 @@ int main(int argc, char** argv)
 
   std::string sn;
   if (!pnh.getParam("server_name", sn)) {
-    ROS_FATAL("[action_test] failed to get param server name");
+    ROS_FATAL("failed to get param server name");
     exit(EXIT_FAILURE);
   }
   NavClient nav_client(sn.c_str(), true);
-  ROS_INFO("[action_test] waiting for %s action server to start", sn.c_str());
+  ROS_INFO("waiting for %s action server to start", sn.c_str());
   nav_client.waitForServer();
-  ROS_INFO("[action_test] %s action server ready", sn.c_str());
+  ROS_INFO("%s action server ready", sn.c_str());
 
   std::vector<geometry_msgs::Pose> flight_wp;
   geometry_msgs::Pose goal;
@@ -50,14 +50,15 @@ int main(int argc, char** argv)
   goal_msg.waypoints = flight_wp;
   goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
 
-  ROS_INFO("[action_test] waypoints are:");
+  ROS_INFO("waypoints are:");
   for (const auto& pose : goal_msg.waypoints)
-    ROS_INFO("[action_test] {%.2f, %.2f, %.2f}", pose.position.x, pose.position.y, pose.position.z);
+    ROS_INFO("{%.2f, %.2f, %.2f}", pose.position.x, pose.position.y, pose.position.z);
 
-  ROS_INFO("[action_test] sending goal");
+  ROS_INFO("sending goal");
   nav_client.sendGoal(goal_msg);
-  ROS_INFO("[action_test] waiting for result");
+  ROS_INFO("waiting for result");
   nav_client.waitForResult();
+  ROS_INFO("finished");
 
   return 0;
 }

@@ -19,18 +19,11 @@
 namespace intel_aero_navigation {
 
 
-#define NB_INFO(fmt, ...) ROS_INFO("[NavBase] " fmt, ##__VA_ARGS__)
-#define NB_WARN(fmt, ...) ROS_WARN("[NavBase] " fmt, ##__VA_ARGS__)
-#define NB_DEBUG(fmt, ...) ROS_DEBUG("[NavBase] " fmt, ##__VA_ARGS__)
-#define NB_FATAL(fmt, ...) ROS_FATAL("[NavBase] " fmt, ##__VA_ARGS__)
-#define NB_ERROR(fmt, ...) ROS_ERROR("[NavBase] " fmt, ##__VA_ARGS__)
-
-
 template<typename T>
 void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 {
   if (!nh.getParam(param_name, param)) {
-    NB_FATAL("failed to get ROS param \"%s\"", param_name.c_str());
+    ROS_FATAL("failed to get ROS param \"%s\"", param_name.c_str());
     exit(EXIT_FAILURE);
   }
 }
@@ -75,10 +68,10 @@ void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   // same frame as the costmap (i.e. no transformations need to take place)
   if (!costmap_ptr) {
     costmap_ptr = new Costmap(msg);
-    NB_INFO("received first costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
+    ROS_INFO("received first costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
   } else {
     costmap_ptr->insertMap(msg);
-    NB_DEBUG("inserted costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
+    ROS_DEBUG("inserted costmap with resolution %.f and dimensions %d x %d", costmap_ptr->resolution, costmap_ptr->w, costmap_ptr->h);
   }
 
   // nothing more to do if any of the following are satisfied:
@@ -99,7 +92,7 @@ void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   if (!obstacleFree(costmap_ptr->rayCast(first_point, waypoints.front()))) {
     grid_mapping::Point p2(waypoints.front());
     ROS_INFO_STREAM("[NavBase] collision detected between " << first_point << " and " << p2);
-    NB_INFO("replanning");
+    ROS_INFO("replanning");
     planPath();
   }
 
@@ -111,29 +104,26 @@ void NavBase::goalCB()
 {
   // abort any existing goals
   if (nav_server.isActive()) {
-    NB_INFO("goal aborted");
+    ROS_INFO("goal aborted");
     nav_server.setAborted();
   }
 
   auto action_goal = nav_server.acceptNewGoal();
-  NB_INFO("accepted new goal");
+  ROS_INFO("accepted new goal");
 
   // cannot plan without the current position of the quad
   if (!robot_pose) {
-    NB_ERROR("no odom! aborting goal");
+    ROS_ERROR("no odom! aborting goal");
     nav_server.setAborted();
     return;
   }
 
-  // cannot plan without a costmap
-  if (!costmap_ptr) {
-    NB_ERROR("no costmap! aborting goal");
-    nav_server.setAborted();
-    return;
-  }
+  // warn if planning without a costmap
+  if (!costmap_ptr)
+    ROS_WARN("planning without a costmap");
 
   if (nav_server.isPreemptRequested()) {
-    NB_INFO("goal preempted");
+    ROS_INFO("goal preempted");
     nav_server.setPreempted();
     return;
   }
@@ -151,8 +141,8 @@ void NavBase::goalCB()
     try {
       tf2_buffer.transform(wp, odom_frame);
     } catch (tf2::TransformException &e) {
-      NB_ERROR("could not transform waypoint from source frame \"%s\" to odom_frame \"%s\":", wp.header.frame_id.c_str(), odom_frame.c_str());
-      NB_ERROR("%s", e.what());
+      ROS_ERROR("could not transform waypoint from source frame \"%s\" to odom_frame \"%s\":", wp.header.frame_id.c_str(), odom_frame.c_str());
+      ROS_ERROR("%s", e.what());
       nav_server.setAborted();
       return;
     }
@@ -162,9 +152,17 @@ void NavBase::goalCB()
 
   planPath();
 
-  NB_DEBUG("waypoints are:");
+  // visualize path in rviz
+  nav_msgs::Path path_msg;
+  path_msg.header.frame_id = odom_frame;
+  path_msg.header.stamp = ros::Time::now();
+  path_msg.poses.push_back(*robot_pose);
+  path_msg.poses.insert(path_msg.poses.end(), waypoints.begin(), waypoints.end());
+  path_pub.publish(path_msg);
+
+  ROS_DEBUG("waypoints are:");
   for (const auto& wp : waypoints)
-    NB_DEBUG("{%.2f, %.2f, %.2f}", wp.pose.position.x, wp.pose.position.y, wp.pose.position.z);
+    ROS_DEBUG("{%.2f, %.2f, %.2f}", wp.pose.position.x, wp.pose.position.y, wp.pose.position.z);
 }
 
 
@@ -173,9 +171,12 @@ void NavBase::goalCB()
 //
 // assumptions:
 // 1) robot_pose is valid
-// 1) the costmap has been initialized
 void NavBase::planPath()
 {
+  // if there isn't a costmap then nothing needs to be done
+  if (!costmap_ptr)
+    return;
+
   // prepare waypoints:
   // 1) for planning the waypoints must be transformed to the costmap frame
   // 2) waypoints must be inside of the costmap
@@ -192,15 +193,15 @@ void NavBase::planPath()
     try {
       tf2_buffer.transform(*wp_it, costmap_ptr->frame_id);
     } catch (tf2::TransformException &e) {
-      NB_ERROR("could not transform waypoint from source frame \"%s\" to the costmap frame \"%s\":", wp_it->header.frame_id.c_str(), costmap_ptr->frame_id.c_str());
-      NB_ERROR("%s", e.what());
+      ROS_ERROR("could not transform waypoint from source frame \"%s\" to the costmap frame \"%s\":", wp_it->header.frame_id.c_str(), costmap_ptr->frame_id.c_str());
+      ROS_ERROR("%s", e.what());
       abort_goal = true;
       break;
     }
 
     // ensure waypoint is inside of costmap
     if (!costmap_ptr->inBounds(*wp_it)) {
-      NB_INFO("waypoint out of bounds of costmap: expanding costmap");
+      ROS_INFO("waypoint out of bounds of costmap: expanding costmap");
       grid_mapping::Point origin, corner;
       origin.x = std::min(wp_it->pose.position.x, costmap_ptr->origin.x);
       origin.y = std::min(wp_it->pose.position.y, costmap_ptr->origin.y);
@@ -211,14 +212,14 @@ void NavBase::planPath()
 
     // check if waypoints are visitable
     if (costmap_ptr->data[costmap_ptr->positionToIndex(*wp_it)] > 0 && wp_it != costmap_wps.begin()) {
-      NB_ERROR("waypoint {%.1f,%.1f} is in occupied space", wp_it->pose.position.x, wp_it->pose.position.y);
+      ROS_ERROR("waypoint {%.1f,%.1f} is in occupied space", wp_it->pose.position.x, wp_it->pose.position.y);
       abort_goal = true;
       break;
     }
   }
 
   if (abort_goal) {
-    NB_ERROR("aborting current goal");
+    ROS_ERROR("aborting current goal");
     nav_server.setAborted();
     return;
   }
@@ -251,25 +252,18 @@ void NavBase::planPath()
     try {
       tf2_buffer.transform(cwp, odom_frame);
     } catch (tf2::TransformException &e) {
-      NB_ERROR("could not transform costmap waypoint from frame \"%s\" to odom_frame \"%s\":", cwp.header.frame_id.c_str(), odom_frame.c_str());
-      NB_ERROR("%s", e.what());
-      NB_ERROR("aborting current goal");
+      ROS_ERROR("could not transform costmap waypoint from frame \"%s\" to odom_frame \"%s\":", cwp.header.frame_id.c_str(), odom_frame.c_str());
+      ROS_ERROR("%s", e.what());
+      ROS_ERROR("aborting current goal");
       nav_server.setAborted();
       return;
     }
   }
   waypoints = costmap_wps;
-
-  // visualize path in rviz
-  nav_msgs::Path path_msg;
-  path_msg.header.frame_id = odom_frame;
-  path_msg.header.stamp = ros::Time::now();
-  path_msg.poses.push_back(*robot_pose);
-  path_msg.poses.insert(path_msg.poses.end(), waypoints.begin(), waypoints.end());
-  path_pub.publish(path_msg);
 }
 
 
+// assumes costmap is initialized
 bool NavBase::obstacleFree(const std::vector<int>& cells) const
 {
   return std::none_of(cells.begin(), cells.end(), [this](int i){return costmap_ptr->data[i] > 0;});
@@ -279,10 +273,10 @@ bool NavBase::obstacleFree(const std::vector<int>& cells) const
 void NavBase::preemptCB()
 {
   if (nav_server.isActive()) {
-    NB_INFO("goal aborted");
+    ROS_INFO("goal aborted");
     nav_server.setAborted();
   } else {
-    NB_INFO("goal preempted");
+    ROS_INFO("goal preempted");
     nav_server.setPreempted();
   }
 
@@ -328,21 +322,21 @@ void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
 
   if (abs(yaw_error) > heading_tol && pos_error > position_tol) {
     // turn in place before moving
-    NB_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    ROS_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
     curr_wp = *robot_pose;
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (pos_error > position_tol) {
     // maintain heading and move towards waypoint
-    NB_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    ROS_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (waypoints.size() > 1) {
     // intermediate waypoint reached: advance to next
-    NB_DEBUG("reached waypoint: {%.2f, %.2f, %.2f}", curr_wp.pose.position.x, curr_wp.pose.position.y, curr_wp.pose.position.z);
+    ROS_DEBUG("reached waypoint: {%.2f, %.2f, %.2f}", curr_wp.pose.position.x, curr_wp.pose.position.y, curr_wp.pose.position.z);
     waypoints.pop_front();
-    NB_DEBUG("next waypoint: {%.2f, %.2f, %.2f}", waypoints.front().pose.position.x, waypoints.front().pose.position.y, waypoints.front().pose.position.z);
+    ROS_DEBUG("next waypoint: {%.2f, %.2f, %.2f}", waypoints.front().pose.position.x, waypoints.front().pose.position.y, waypoints.front().pose.position.z);
   } else if (nav_server.isActive()) {
     // last waypoint reached: set succeeded and execute end action
-    NB_DEBUG("setting goal to succeeded");
+    ROS_DEBUG("setting goal to succeeded");
     nav_server.setSucceeded(); // nav_server.isActive() == false now
     executeEndAction(end_action);
   }
@@ -362,7 +356,7 @@ double euclideanCost(int width, int start, int goal)
 }
 
 
-// assumes start and goal are inbounds of costmap
+// assumes start and goal are inbounds of costmap and costmap has been initialized
 std::vector<int> NavBase::AStar(grid_mapping::Point start_pt,
                                 grid_mapping::Point goal_pt) const
 {
