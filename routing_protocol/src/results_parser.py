@@ -4,8 +4,10 @@ import subprocess
 import tempfile
 import time
 import datetime
+from math import ceil
 from os.path import expanduser
 
+import networkx as nx
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -63,7 +65,7 @@ def moving_average(a, n=20) :
 save_archive = True
 load_from_archive=False
 load_local = False
-archive_name = 'results/RRarchive2019-10-14 18:06.npz'
+archive_name = 'results/RRarchive2019-11-04 14:00.npz'
 home = expanduser("~")
 local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
 
@@ -79,7 +81,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.2', '10.42.0.3']
+    hosts = ['10.42.0.1', '10.42.0.2', '10.42.0.3']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
@@ -105,12 +107,25 @@ else:
 print("Loading files complete, parsing...")
 fig, tp_plot = plt.subplots()
 fig2, tr_plot = plt.subplots()
+fig3, rt_plot = plt.subplots()
+rt_plot.title.set_text('Network layout')
+rt_plot.set_xlabel("x")
+rt_plot.set_ylabel("y")
+rt_plot.set_xticks([-5, 5])
+rt_plot.set_xticks([-5, 5])
+rt_plot.legend()
+
 
 colors = ['b', 'g', 'r', 'c', 'y']
 j=0
+
+rt_total = {}
+rt_time_total = {}
+max_time_rt  = 0
 for i in data:
     dat = data[i]
-    print(dat.item())
+    #print(dat.item())
+    print(dat.item()["ws"])
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]
@@ -136,6 +151,13 @@ for i in data:
 
     j+=1
 
+    rt = dat.item()["rt"]
+    if len(rt)>0:
+        time_rt = np.array(rt).transpose()[0,:]
+        rt_time_total[i] = np.array(time_rt,dtype=float) - start_time
+        max_time_rt = max(max_time_rt, max(rt_time_total[i]))
+        rt_total[i] = np.array(rt)[:,1:]
+
 tr_plot.title.set_text('Delay')
 tr_plot.set_xlabel("time, s")
 tr_plot.set_ylabel("Delay, ms")
@@ -146,5 +168,41 @@ tp_plot.set_xlabel("time, s")
 tp_plot.set_ylabel("Throughput, Mbps")
 tp_plot.legend()
 
+#
+
+# plt.ion()
+#
+# for i in range(0,ceil(max_time_rt)):
+#     network_map = nx.MultiGraph()
+#     fixed_positions = {}
+#     fixed_nodes = []
+#     pos = [0, 0]
+#     for j in rt_total:
+#         cur_time = rt_time_total[j]
+#         cur_idx_list = np.where(cur_time<i)[0]
+#         if len(cur_idx_list)>0:
+#             cur_idx = cur_idx_list[-1]
+#             if j not in network_map.nodes:
+#                 network_map.add_node(j)
+#                 fixed_positions[j] = [pos[0], pos[1]]
+#                 fixed_nodes.append(j)
+#                 pos[0] += 1
+#             m = rt_total[j][cur_idx][-1]
+#             print(m)
+#             if m not in network_map.nodes:
+#                 network_map.add_node(m)
+#                 fixed_positions[m] = [pos[0], pos[1]]
+#                 fixed_nodes.append(m)
+#                 pos[1] += 2
+#             if (j,m) not in network_map.edges and m!=j:
+#                 network_map.add_edge(j, m)
+#             rt_plot.clear()
+#             print(network_map)
+#             print(fixed_positions)
+#             print(fixed_nodes)
+#             positions = nx.spring_layout(network_map, pos=fixed_positions, fixed=fixed_nodes)
+#             nx.draw_networkx(network_map, positions, with_labels=True)
+#             fig3.canvas.draw()
+#             time.sleep(0.1)
 
 plt.show()

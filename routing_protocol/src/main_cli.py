@@ -63,6 +63,7 @@ class Params:
     final_stats["ws"] = []
     final_stats["tp"] = []
     final_stats["tr"] = []
+    final_stats["rt"] = []
     final_stats["tp_ip"] = None
 
 
@@ -227,19 +228,21 @@ def rt_update_thread():
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if len(new_rt[src][0]) > 2:
                 cur_prob = 0
-                coin = random.uniform(0, 1)
+                coin = random.uniform(0, sum(new_rt[src][1]))
                 for i in range(0, len(new_rt[src][1])):
                     cur_prob += new_rt[src][1][i]
                     if coin <= cur_prob:
+                        if Params.statistics_collection:
+                            Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][i + 1]])
                         subprocess.run(
                             ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i + 1], "dev", Params.WIFI_IF,
                              "table", str(Params.rt_tables_ids.index(src) + 1)],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         print(
                             "changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][i + 1]))
-
-
-            else:
+            elif len(new_rt[src][0])==2:
+                if Params.statistics_collection:
+                    Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][1]])
                 subprocess.run(
                     ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table",
                      str(Params.rt_tables_ids.index(src) + 1)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -4,7 +4,7 @@
         type="rt_update_sub.py"
         name="rt_update_sub"
         output="screen">
-    <remap from="rt_upd" to="network_update"/>
+    <remap from="rt_upd" to="/network_update"/>
   </node>
 
 </launch>
