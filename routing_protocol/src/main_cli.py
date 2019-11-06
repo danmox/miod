@@ -64,6 +64,7 @@ class Params:
     final_stats["tp"] = []
     final_stats["tr"] = []
     final_stats["rt"] = []
+    final_stats["pos"] = []
     final_stats["tp_ip"] = None
 
 
@@ -211,6 +212,32 @@ def status_send_update_thread():
             seq_number+=1
         sleep(Params.period)
 
+
+def pos_update_thread():
+    #cmdline = ["roslaunch" , 'test_routing', 'launch_sub.launch']
+    cmdline = "roslaunch routing_protocol launch_pos_sub.launch"
+    cur_pos = pexpect.spawn(cmdline, timeout=None)#, logfile=sys.stdout.buffer)
+    #cur_wireless = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+    while Params.sim_run is True:
+        ready = select.select([cur_pos], [], [], 2)
+        if ready[0]:
+            line = cur_pos.readline()
+        else:
+            continue
+        if line:
+            line_readable = line.decode()
+            line_readable = str(line_readable).strip("'<>() ").replace('\'', '\"')
+            #print(line_readable)
+            try:
+                json.loads(line_readable)
+            except json.decoder.JSONDecodeError:
+                #print("skipping line ---------------------------------------------------------")
+                continue
+            data = json.loads(line_readable) #lat lon alt
+            time_stamp = time()
+            data.insert(0,time_stamp)
+            Params.final_stats["pos"].append(data)
+    cur_pos.terminate()
 
 def rt_update_thread():
     while Params.sim_run is True:
@@ -378,7 +405,7 @@ def main():
         threads.append(threading.Thread(target=measurement_thread_traceroute))
         threads.append(threading.Thread(target=send_ping_thread))
         threads.append(threading.Thread(target=receive_ping_thread))
-
+        threads.append(threading.Thread(target=pos_update_thread))
     try:
         for t in threads:
             t.start()

@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   routing_msgs
+  sensor_msgs
 )
 
 catkin_package(
@@ -12,6 +13,7 @@ catkin_package(
     roscpp
     std_msgs
     routing_msgs
+    sensor_msgs
 )
 
 include_directories(

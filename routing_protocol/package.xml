@@ -11,5 +11,7 @@
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>routing_msgs</depend>
+  <depend>sensor_msgs</depend>
+
 
 </package>

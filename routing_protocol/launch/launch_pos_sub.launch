@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="routing_protocol"
+        type="pos_update_sub.py"
+        name="pos_update_sub"
+        output="screen">
+  </node>
+
+</launch>
