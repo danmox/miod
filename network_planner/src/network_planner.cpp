@@ -52,14 +52,14 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   // fetch parameters from ROS parameter server:
-  std::string odom_topic;
+  std::string pose_topic;
   getParamStrict(nh, "/desired_altitude", desired_altitude);
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
   getParamStrict(pnh, "max_velocity", max_velocity);
   getParamStrict(pnh, "collision_distance", collision_distance);
   getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
-  getParamStrict(pnh, "odom_topic", odom_topic);
+  getParamStrict(pnh, "pose_topic", pose_topic);
 
   // fetch task agent ip addresses
   XmlRpc::XmlRpcValue task_ip_list;
@@ -99,7 +99,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   namespace stdph = std::placeholders;
   for (int i = 1; i <= total_agents; ++i) {
     std::stringstream ss;
-    ss << "/aero" << i << odom_topic.c_str();
+    ss << "/aero" << i << pose_topic.c_str();
     std::string name = ss.str();
     auto fcn = std::bind(&NetworkPlanner::poseCB, this, stdph::_1, i-1);
     ros::Subscriber sub = nh.subscribe<geometry_msgs::PoseStamped>(name, 10, fcn);
@@ -903,6 +903,8 @@ bool NetworkPlanner::updateNetworkConfig()
   // send network update command
   //
 
+  // TODO 1) ensure sum of probabilities is 1.0
+  // TODO 2) ensure the source is not a gateway
   routing_msgs::NetworkUpdate net_cmd;
   for (int k = 0; k < num_flows; ++k) {
 

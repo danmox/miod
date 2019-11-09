@@ -18,8 +18,8 @@
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
 
   <!-- patrol demo params -->
-  <param name="/task_agent_count"    value="3"/> <!-- must match number of agents spawned! -->
-  <param name="/network_agent_count" value="6"/> <!-- must match number of agents spawned! -->
+  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.2", "10.42.0.3"]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ips">["10.42.0.4", "10.42.0.5", "10.42.0.6", "10.42.0.7", "10.42.0.8", "10.42.0.9"]</rosparam> <!-- needed for network agent count -->
   <param name="/patrol_radius"       value="$(arg patrol_radius)"/>
   <param name="/desired_altitude"    value="2.0"/>
 
@@ -55,7 +55,8 @@
     <param name="world_frame" value="world"/>
   </node>
 
-  <!-- network planner node -->
+  <!-- network planner nodes -->
+
   <node pkg="network_planner"
         type="network_planner_patrol_node"
         name="network_planner_patrol_node"
@@ -67,6 +68,7 @@
     <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
+    <param name="pose_topic"            value="/pose"/>
     <remap from="costmap"               to="/projected_map"/>
   </node>
 

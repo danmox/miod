@@ -42,12 +42,12 @@ int main(int argc, char** argv)
   tf2_ros::Buffer tf2_buff;
   tf2_ros::TransformListener tf2_listener(tf2_buff);
 
-  int task_agent_count, network_agent_count;
+  XmlRpc::XmlRpcValue task_ip_list, comm_ip_list;
   std::string world_frame;
-  getParamStrict(nh, "/task_agent_count", task_agent_count);
-  getParamStrict(nh, "/network_agent_count", network_agent_count);
+  getParamStrict(nh, "/comm_agent_ips", task_ip_list);
+  getParamStrict(nh, "/task_agent_ips", comm_ip_list);
   getParamStrict(pnh, "world_frame", world_frame);
-  int number_of_agents = task_agent_count + network_agent_count;
+  int number_of_agents = task_ip_list.size() + comm_ip_list.size();
 
   ros::Rate rate(10);
   ROS_INFO("[routing_visualization_node] starting loop");

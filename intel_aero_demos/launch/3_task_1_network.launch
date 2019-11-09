@@ -11,15 +11,15 @@
   <arg name="sample_count"           default="5000"/>
   <arg name="sample_variance"        default="2.0"/>
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.7"/>  <!-- (0.5 1) -->
+  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
-  <arg name="heading_tol"            default="3.5"/>  <!-- agents don't turn before moving -->
+  <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="10"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
 
   <!-- patrol demo params -->
-  <param name="/task_agent_count"    value="3"/> <!-- must match number of agents spawned! -->
-  <param name="/network_agent_count" value="1"/> <!-- must match number of agents spawned! -->
+  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.2", "10.42.0.3"]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ips">["10.42.0.4"]</rosparam> <!-- needed for network agent count -->
   <param name="/patrol_radius"       value="$(arg patrol_radius)"/>
   <param name="/desired_altitude"    value="2.0"/>
 
@@ -68,6 +68,7 @@
     <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
+    <param name="pose_topic"            value="/pose"/>
     <remap from="costmap"               to="/projected_map"/>
   </node>
 
