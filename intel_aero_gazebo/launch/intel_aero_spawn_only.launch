@@ -97,7 +97,7 @@
           args="0 0 0 0 0 0 $(arg world_frame) $(arg map_frame)"
           unless="$(arg static_map)"/>
 
-    <!-- costmap generation -->
+    <!-- costmap generation
     <node pkg="costmap_2d"
           name="costmap_2d"
           type="costmap_2d_node">
@@ -115,7 +115,7 @@
         map_type: costmap
       </rosparam>
     </node>
-
+ -->
     <node unless="$(arg gdb)"
           pkg="nodelet"
           type="nodelet"
