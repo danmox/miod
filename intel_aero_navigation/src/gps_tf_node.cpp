@@ -3,6 +3,7 @@
 
 #include <robot_localization/navsat_conversions.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Transform.h>
 #include <message_filters/subscriber.h>
@@ -36,9 +37,11 @@ class GPSTF
     typedef message_filters::Synchronizer<Policy> ApproxSync;
     std::shared_ptr<ApproxSync> approx_sync;
 
-    std::string base_frame, world_frame; // tf tree will be: world_frame -> base_link
+    // tf tree will be: world_frame -> odom_frame -> base_frame
+    std::string base_frame, odom_frame, world_frame;
 
-    tf2::Transform utm_datum_tf;
+    double datum_lat, datum_lon, datum_yaw;
+    tf2::Transform datum_utm_tf;
     std::string datum_utm_zone;
 
     void syncCB(const sensor_msgs::NavSatFix::ConstPtr& gps_msg,
@@ -76,78 +79,90 @@ GPSTF::GPSTF(const ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   gps_sub.reset(new message_filters::Subscriber<sensor_msgs::NavSatFix>(nh, "gps", 1));
   imu_sub.reset(new message_filters::Subscriber<sensor_msgs::Imu>(nh, "imu", 1));
   approx_sync.reset(new ApproxSync(Policy(10), *gps_sub, *imu_sub));
-  approx_sync->registerCallback(std::bind(&GPSTF::syncCB,
-                                          this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
+  approx_sync->registerCallback(std::bind(&GPSTF::syncCB, this, std::placeholders::_1, std::placeholders::_2));
 
   // vital ROS params
 
-  double datum_lat, datum_lon, datum_yaw;
   getParamStrict(pnh, "base_frame", base_frame);
+  getParamStrict(pnh, "odom_frame", odom_frame);
   getParamStrict(pnh, "world_frame", world_frame);
   getParamStrict(pnh, "datum_lat", datum_lat);
   getParamStrict(pnh, "datum_lon", datum_lon);
   getParamStrict(pnh, "datum_yaw", datum_yaw);
 
-  // compute datum transformation: utm -> datum
+  // compute transformation: datum (world_frame) -> utm
 
   double utm_x, utm_y;
   LLtoUTM(datum_lat, datum_lon, utm_y, utm_x, datum_utm_zone);
   ROS_DEBUG("datum UTM zone: %s", datum_utm_zone.c_str());
 
-  utm_datum_tf.setOrigin(tf2::Vector3(utm_x, utm_y, 0.0));
-  utm_datum_tf.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1), datum_yaw));
+  datum_utm_tf.setOrigin(tf2::Vector3(utm_x, utm_y, 0.0));
+  datum_utm_tf.setRotation(tf2::Quaternion(tf2::Vector3(0,0,1), datum_yaw));
 }
 
 
 void GPSTF::syncCB(const sensor_msgs::NavSatFix::ConstPtr& gps_msg,
                    const sensor_msgs::Imu::ConstPtr& imu_msg)
 {
+  static tf2_ros::Buffer tf2_buffer;
+  static tf2_ros::TransformListener tf2_listener(tf2_buffer);
   static tf2_ros::TransformBroadcaster tf_broadcaster;
-  static sensor_msgs::NavSatFix initial_gps_fix = *gps_msg;
+
+  // fetch transformation: base_frame -> odom_frame published by mavros
+
+  geometry_msgs::TransformStamped base_odom_tf_msg;
+  try {
+    base_odom_tf_msg = tf2_buffer.lookupTransform(odom_frame, base_frame, ros::Time(0));
+  } catch (tf2::TransformException &ex) {
+    ROS_WARN_THROTTLE(1.0, "unable to fetch transform: base (%s) -> odom (%s): %s", odom_frame.c_str(), base_frame.c_str(), ex.what());
+    return;
+  }
+
+  tf2::Transform base_odom_tf;
+  tf2::fromMsg(base_odom_tf_msg.transform, base_odom_tf);
+
+  // compute transformation: base_frame -> utm
 
   double utm_x, utm_y;
   std::string gps_utm_zone;
   LLtoUTM(gps_msg->latitude, gps_msg->longitude, utm_y, utm_x, gps_utm_zone);
+
   ROS_DEBUG("gps UTM zone: %s", gps_utm_zone.c_str());
-  ROS_ASSERT(datum_utm_zone.compare(gps_utm_zone) == 0);
+  if (datum_utm_zone.compare(gps_utm_zone) != 0) {
+    ROS_WARN_THROTTLE(1.0, "Won't publish transform: UTM zones not the same! GPS: {lat: %f, lon: %f, zone: %s}, datum: {lat: %f, lon: %f, zone: %s}", gps_msg->latitude, gps_msg->longitude, gps_utm_zone.c_str(), datum_lat, datum_lon, datum_utm_zone.c_str());
+    return;
+  }
 
-  // translation of utm -> base_link transformation
-  tf2::Transform utm_base_link_tf;
-  double relative_altitude = gps_msg->altitude - initial_gps_fix.altitude; // gps altitude in NED frame
-  utm_base_link_tf.setOrigin(tf2::Vector3(utm_x, utm_y, relative_altitude));
+  tf2::Quaternion base_utm_quat;
+  tf2::fromMsg(imu_msg->orientation, base_utm_quat);
 
-  // rotation of utm -> base_link transformation
-  tf2::Quaternion tf2_quat;
-  tf2::fromMsg(imu_msg->orientation, tf2_quat);
-  utm_base_link_tf.setRotation(tf2_quat);
+  tf2::Transform base_utm_tf;
+  base_utm_tf.setOrigin(tf2::Vector3(utm_x, utm_y, base_odom_tf_msg.transform.translation.z));
+  base_utm_tf.setRotation(base_utm_quat);
 
-  // utm_datum_tf is: utm -> datum (from the datum parameter)
-  // utm_base_link_tf is:  utm -> base_link  (from the gps + imu message)
-  // thus, datum -> base_link is: datum -> utm -> base_link
+  // compute transformation: odom_frame -> world_frame
 
-  tf2::Transform datum_base_link_tf;
-  datum_base_link_tf = utm_datum_tf.inverse() * utm_base_link_tf;
-
-  // take the latter of the two timestamps as the TF/odom timestamp
-  ros::Time time_stamp = gps_msg->header.stamp > imu_msg->header.stamp ? gps_msg->header.stamp : imu_msg->header.stamp;
+  tf2::Transform base_datum_tf = datum_utm_tf.inverse() * base_utm_tf;
+  tf2::Transform odom_datum_tf = base_datum_tf * base_odom_tf.inverse();
 
   // publish results to TF tree and as odom message
 
-  geometry_msgs::TransformStamped datum_base_link_tfs;
-  datum_base_link_tfs.header.stamp = time_stamp;
-  datum_base_link_tfs.header.frame_id = world_frame;
-  datum_base_link_tfs.child_frame_id = base_frame;
-  datum_base_link_tfs.transform = tf2::toMsg(datum_base_link_tf);
-  tf_broadcaster.sendTransform(datum_base_link_tfs);
+  ros::Time time_stamp = gps_msg->header.stamp > imu_msg->header.stamp ? gps_msg->header.stamp : imu_msg->header.stamp;
 
-  // also publish results as odom message
+  geometry_msgs::TransformStamped odom_datum_tf_msg;
+  odom_datum_tf_msg.header.stamp = time_stamp;
+  odom_datum_tf_msg.header.frame_id = world_frame;
+  odom_datum_tf_msg.child_frame_id = odom_frame;
+  odom_datum_tf_msg.transform = tf2::toMsg(odom_datum_tf);
+
+  tf_broadcaster.sendTransform(odom_datum_tf_msg);
+
+  // publish pose of robot in the shared world_frame
 
   geometry_msgs::PoseStamped pose;
   pose.header.frame_id = world_frame;
   pose.header.stamp = time_stamp;
-  tf2::toMsg(datum_base_link_tf, pose.pose);
+  tf2::toMsg(base_datum_tf, pose.pose);
   // TODO covariance?
   pose_pub.publish(pose);
 }

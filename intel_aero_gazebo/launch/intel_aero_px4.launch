@@ -7,7 +7,7 @@
   <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
   <arg name="static_map_topic"   default="projected_map"/>
   <arg name="world_frame"        default="world"/>
-  <arg name="map_frame"          default="$(arg robot_ns)/map"/>
+  <arg name="odom_frame"         default="$(arg robot_ns)/odom"/>
   <arg name="base_frame"         default="$(arg robot_ns)/base_link"/>
 
   <!-- waypoint navigation args -->
@@ -21,7 +21,12 @@
   <arg name="costmap_rate"  if="$(arg static_map)"     value="0.1"/>
   <arg name="costmap_rate"  unless="$(arg static_map)" value="2.0"/>
   <arg name="costmap_frame" if="$(arg static_map)"     value="$(arg world_frame)"/>
-  <arg name="costmap_frame" unless="$(arg static_map)" value="$(arg map_frame)"/>
+  <arg name="costmap_frame" unless="$(arg static_map)" value="$(arg odom_frame)"/>
+
+  <!-- global reference datum args -->
+  <arg name="datum_lat"  default="39.9413339"/>
+  <arg name="datum_lon"  default="-75.1986924"/>
+  <arg name="datum_yaw"  default="0.0"/>
 
   <!-- spawn model args -->
   <arg name="x" default="0" />
@@ -32,59 +37,51 @@
   <arg name="Y" default="0" />
 
   <!-- SITL args -->
-  <arg name="mavlink_udp_port"      default="14560" />
-  <arg name="mavlink_tcp_port"      default="4560" />
-  <arg name="fcu_url"               default="udp://:14541@localhost:14581" />
-  <arg name="interactive"           default="true" />
-  <arg name="target_system_id"      default="$(arg id)"/>
+  <arg name="mavlink_udp_port" value="1456$(arg id)"/>
+  <arg name="mavlink_tcp_port" value="456$(arg id)"/>
+  <arg name="fcu_url"          value="udp://:1454$(arg id)@localhost:1458$(arg id)"/>
+  <arg name="interactive"      value="false"/>
+  <arg name="target_system_id" value="$(eval 1 + arg('id'))"/>
 
   <group ns="$(arg robot_ns)" >
 
     <!-- load intel aero urdf to param -->
-    <param name="robot_description"
-           command="$(find xacro)/xacro -i
-                    $(find intel_aero_description)/urdf/intel_aero.xacro
-                    namespace:=$(arg robot_ns)
+    <param name="rotors_description"
+           command="$(find xacro)/xacro $(find px4)/Tools/sitl_gazebo/models/rotors_description/urdf/iris_base.xacro
+                    rotors_description_dir:=$(find px4)/Tools/sitl_gazebo/models/rotors_description
                     mavlink_udp_port:=$(arg mavlink_udp_port)
                     mavlink_tcp_port:=$(arg mavlink_tcp_port)
-                    enable_lockstep:=false
-                    enalbe_realsense:=false" />
+                    --inorder"/>
 
-    <!-- spawn Intel Aero -->
+    <!-- spawn Intel Aero model in gazebo -->
     <node name="spawn_model"
+          output="screen"
           pkg="gazebo_ros"
           type="spawn_model"
-          output="screen"
-          args="-urdf -param robot_description -model $(arg robot_ns)
-                -x $(arg x) -y $(arg y) -z $(arg z)
-                -R $(arg R) -P $(arg P) -Y $(arg Y)" />
-
-    <!-- static transform to offset robot spawn position -->
-    <node pkg="tf2_ros"
-          type="static_transform_publisher"
-          name="offset_broadcaster"
-          args="$(arg x) $(arg y) $(arg z) $(arg Y) $(arg P) $(arg R)
-                $(arg world_frame) $(arg map_frame)"/>
-
-    <!-- publish joint states to tf -->
-    <node name="robot_state_publisher"
-          pkg="robot_state_publisher"
-          type="robot_state_publisher" />
-    <node name="joint_state_publisher"
-          pkg="joint_state_publisher"
-          type="joint_state_publisher" />
+          args="-urdf -param rotors_description -model $(arg robot_ns)
+                -package_to_model -x $(arg x) -y $(arg y) -z $(arg z)
+                -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
 
     <!-- PX4 SITL -->
     <env name="PX4_SIM_MODEL" value="iris" />
     <env name="PX4_ESTIMATOR" value="ekf2" />
-    <arg unless="$(arg interactive)"  name="px4_cmd_arg" value=""/>
-    <arg if="$(arg interactive)"      name="px4_cmd_arg" value="-d"/>
+    <arg unless="$(arg interactive)"  name="px4_cmd_arg" value="-d"/>
+    <arg if="$(arg interactive)"      name="px4_cmd_arg" value=""/>
+    <!--
     <node name="sitl_$(arg robot_ns)"
           pkg="px4"
           type="px4"
           output="screen"
           args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS
                 -i $(arg id) $(arg px4_cmd_arg)" />
+                -->
+
+    <node name="sitl_$(arg id)"
+          pkg="px4"
+          type="px4"
+          output="screen"
+          args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS
+                -i $(arg id) -w sitl_iris_$(arg id) $(arg px4_cmd_arg)"/>
 
     <!-- MAVROS -->
     <node pkg="mavros"
@@ -97,29 +94,50 @@
       <param name="target_system_id" value="$(arg target_system_id)" />
       <param name="target_component_id" value="1" />
       <param name="fcu_protocol" value="v2.0"/>
-      <rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_pluginlists.yaml" />
-      <rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_common.yaml" />
-      <param name="local_position/frame_id"          value="$(arg map_frame)"/>
-      <param name="local_position/tf/frame_id"       value="$(arg map_frame)"/>
-      <param name="local_position/tf/child_frame_id" value="$(arg base_frame)"/>
-      <param name="global_position/child_frame_id"   value="$(arg base_frame)"/>
+      <rosparam command="load" file="$(find mavros)/launch/px4_pluginlists.yaml" />
+      <rosparam command="load" file="$(find mavros)/launch/px4_config.yaml" />
+      <!--<rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_pluginlists.yaml" />
+      <rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_common.yaml" />-->
+      <param name="local_position/frame_id"          value="$(arg odom_frame)"/>
+      <param name="local_position/tf/send"           value="true"/>
+      <param name="local_position/tf/frame_id"       value="$(arg odom_frame)"/>
+      <param name="local_position/tf/child_frame_id" value="$(arg base_frame)" />
       <param name="imu/frame_id"                     value="$(arg base_frame)"/>
     </node>
 
-    <!-- mapping using octomap -->
+    <!-- transformation between robot and datum published as a pose message and
+         populated in the TF tree -->
+    <node pkg="intel_aero_navigation"
+          type="gps_tf_node"
+          name="gps_tf_node"
+          output="screen">
+      <param name="base_frame"  value="$(arg base_frame)"/>
+      <param name="odom_frame"  value="$(arg odom_frame)" />
+      <param name="world_frame" value="$(arg world_frame)"/>
+      <param name="yaw_offset"  value="0.0"/>
+      <param name="debug"       value="false"/>
+      <param name="datum_lat"   value="$(arg datum_lat)"/>
+      <param name="datum_lon"   value="$(arg datum_lon)"/>
+      <param name="datum_yaw"   value="$(arg datum_yaw)"/>
+      <remap from="gps" to="mavros/global_position/global"/>
+      <remap from="imu" to="mavros/imu/data"/>
+      <remap from="home" to="mavros/home_position/home" />
+    </node>
+
+    <!-- mapping using octomap
     <node unless="$(arg static_map)"
           name="octomap_server"
           pkg="octomap_server"
           type="octomap_server_node"
           required="true">
       <remap from="cloud_in" to="camera/depth/points" />
-      <param name="frame_id" value="$(arg map_frame)" />
+      <param name="frame_id" value="$(arg odom_frame)" />
       <param name="base_frame_id" value="$(arg base_frame)" />
       <param name="resolution" value="$(arg octomap_resolution)" />
       <param name="pointcloud_min_z" value="1.0" />
     </node>
-
-    <!-- costmap generation -->
+ -->
+    <!-- costmap generation
     <node pkg="costmap_2d"
           name="costmap_2d"
           type="costmap_2d_node">
@@ -137,7 +155,7 @@
         map_type: costmap
       </rosparam>
     </node>
-
+ -->
     <!--
     <node pkg="nodelet"
           type="nodelet"
@@ -147,7 +165,7 @@
       <remap from="costmap" to="costmap_2d/costmap/costmap" />
       <remap from="odom" to="mavros/local_position/odom" />
 
-      <param name="local_frame"   value="$(arg map_frame)"/>
+      <param name="local_frame"   value="$(arg odom_frame)"/>
       <param name="costmap_frame" value="$(arg costmap_frame)"/>
       <param name="world_frame"   value="$(arg world_frame)"/>
       <param name="position_tol"  value="$(arg position_tol)" />
@@ -161,7 +179,7 @@
       <remap from="costmap" to="costmap_2d/costmap/costmap" />
       <remap from="odom" to="mavros/local_position/odom" />
 
-      <param name="local_frame"   value="$(arg map_frame)"/>
+      <param name="local_frame"   value="$(arg odom_frame)"/>
       <param name="costmap_frame" value="$(arg costmap_frame)"/>
       <param name="world_frame"   value="$(arg world_frame)"/>
       <param name="position_tol"  value="$(arg position_tol)" />

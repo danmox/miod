@@ -6,9 +6,10 @@
   <!-- simulation args -->
   <arg name="gazebo_gui"    default="false" />
   <arg name="rviz"          default="true" />
+  <arg name="verbose"       default="false"/>
 
   <!-- robot args -->
-  <arg name="static_map"         default="true"/>
+  <arg name="static_map"         default="false"/>
   <arg name="static_map_file"    if="$(arg static_map)"     default="$(find intel_aero_gazebo)/maps/terrain_no_ground.bt"/>
   <arg name="static_map_topic"   if="$(arg static_map)"     value="/projected_map"/>
   <arg name="static_map_topic"   unless="$(arg static_map)" value="projected_map"/>
@@ -20,9 +21,10 @@
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
     <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
-    <arg name="world"            value="$(find intel_aero_gazebo)/worlds/terrain.world"/>
+    <arg name="world"            value="$(find mavlink_sitl_gazebo)/worlds/empty.world"/>
     <arg name="rviz"             value="$(arg rviz)"/>
     <arg name="rviz_config_file" value="$(find intel_aero_gazebo)/rviz/example.rviz"/>
+    <arg name="verbose"          value="$(arg verbose)"/>
   </include>
 
   <!-- if enabled, load saved octomap -->
@@ -43,13 +45,9 @@
     <arg name="id" value="1"/>
     <include file="$(arg intel_aero_launch_file)" >
       <arg name="id"                 value="$(arg id)" />
-      <arg name="x"                  value="5.0" />
-      <arg name="y"                  value="-5.0" />
+      <arg name="x"                  value="0.0" />
+      <arg name="y"                  value="0.0" />
       <arg name="z"                  value="0" />
-      <arg name="mavlink_udp_port"   value="14561"                        if="$(arg sitl)"/>
-      <arg name="mavlink_tcp_port"   value="4561"                         if="$(arg sitl)"/>
-      <arg name="fcu_url"            value="udp://:14541@localhost:14581" if="$(arg sitl)"/>
-      <arg name="target_system_id"   value="$(eval 1 + arg('id'))"        if="$(arg sitl)"/>
       <arg name="position_tol"       value="0.2"/>
       <arg name="heading_tol"        value="0.2"/>
       <arg name="static_map"         value="$(arg static_map)"/>

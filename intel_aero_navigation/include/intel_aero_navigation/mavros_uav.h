@@ -3,6 +3,8 @@
 
 
 #include <ros/ros.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <mavros_msgs/CommandBool.h>
@@ -10,10 +12,12 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/HomePosition.h>
+#include <mavros_msgs/GlobalPositionTarget.h>
 
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <string.h>
 
 
 namespace intel_aero_navigation {
@@ -26,7 +30,11 @@ class MavrosUAV
     ros::Subscriber state_sub;
     ros::ServiceClient arming_srv, mode_srv, land_srv;
 
-    ros::Publisher local_pos_pub, local_vel_pub;
+    tf2_ros::Buffer tf2_buffer;
+    tf2_ros::TransformListener tf2_listener;
+    std::string local_frame;
+
+    ros::Publisher local_pos_pub, local_vel_pub, global_pos_pub;
     std::mutex pub_mutex;
 
     std::thread landing_thread, takeoff_thread;
@@ -44,6 +52,7 @@ class MavrosUAV
 
     void sendLocalPositionCommand(const geometry_msgs::PoseStamped&);
     void sendLocalVelocityCommand(const geometry_msgs::Twist&);
+    void sendGlobalPositionCommand(const geometry_msgs::PoseStamped&);
     void takeoff();
     void land();
 

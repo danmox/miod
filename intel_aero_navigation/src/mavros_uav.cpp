@@ -1,4 +1,7 @@
 #include <intel_aero_navigation/mavros_uav.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <robot_localization/navsat_conversions.h>
 
 
 namespace intel_aero_navigation {
@@ -12,15 +15,22 @@ namespace intel_aero_navigation {
 MavrosUAV::MavrosUAV(ros::NodeHandle nh_, ros::NodeHandle pnh_) :
   nh(nh_),
   pnh(pnh_),
+  tf2_listener(tf2_buffer),
   takeoff_command_issued(false),
   land_command_issued(false)
 {
   state_sub = nh.subscribe<mavros_msgs::State>("mavros/state", 10, &MavrosUAV::stateCB, this);
   local_vel_pub = nh.advertise<geometry_msgs::Twist>("mavros/setpoint_velocity/cmd_vel_unstamped", 10);
   local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
+  global_pos_pub = nh.advertise<mavros_msgs::GlobalPositionTarget>("mavros/setpoint_raw/global", 10);
   arming_srv = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
   mode_srv = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
   land_srv = nh.serviceClient<mavros_msgs::CommandTOL>("mavros/cmd/land");
+
+  if (!nh.getParam("local_frame", local_frame)) {
+    MU_WARN("using default UAV local_frame: %s", "aero1/odom");
+    local_frame = "aero1/odom";
+  }
 }
 
 
@@ -189,8 +199,10 @@ void MavrosUAV::sendLocalVelocityCommand(const geometry_msgs::Twist& cmd)
   if (pub_mutex.try_lock()) {
 
     // limit publishing to 1000Hz to prevent overloading the connection
-    if ((ros::Time::now() - last_pub).toSec() > 1e-3) // 1ms
+    if ((ros::Time::now() - last_pub).toSec() > 1e-3) { // 1ms
       local_vel_pub.publish(cmd);
+      last_pub = ros::Time::now();
+    }
 
     pub_mutex.unlock();
   } else {
@@ -203,17 +215,91 @@ void MavrosUAV::sendLocalPositionCommand(const geometry_msgs::PoseStamped& cmd)
 {
   static ros::Time last_pub(0); // time since the last message was published
 
+  // transform the position command if it is not in the local frame
+
+  // fetch latest transformation cmd.header.frame_id -> local_frame
+  geometry_msgs::TransformStamped tfs;
+  try {
+    tfs = tf2_buffer.lookupTransform(local_frame, cmd.header.frame_id, ros::Time(0));
+  } catch (tf2::TransformException &ex) {
+    MU_WARN("unable to publish local position command: %s",ex.what());
+    return;
+  }
+
+  // apply transform to pose message
+  geometry_msgs::PoseStamped local_pose;
+  tf2::doTransform(cmd, local_pose, tfs);
+
   // publish is thread safe but we don't want possibly conflicting messages being
   // sent to the quad while it is trying to take off
   if (pub_mutex.try_lock()) {
 
     // limit publishing to 1000Hz to prevent overloading the connection
-    if ((ros::Time::now() - last_pub).toSec() > 1e-3) // 1ms
-      local_pos_pub.publish(cmd);
+    if ((ros::Time::now() - last_pub).toSec() > 1e-3) { // 1ms
+      local_pos_pub.publish(local_pose);
+      last_pub = ros::Time::now();
+    }
 
     pub_mutex.unlock();
   } else {
     MU_DEBUG("can't publish local position command: publisher busy");
+  }
+}
+
+
+using RobotLocalization::NavsatConversions::UTMtoLL;
+
+
+void MavrosUAV::sendGlobalPositionCommand(const geometry_msgs::PoseStamped& cmd)
+{
+  static ros::Time last_pub(0); // time since the last message was published
+
+  // fetch latest transform
+  geometry_msgs::TransformStamped tfs;
+  try {
+    tfs = tf2_buffer.lookupTransform("utm", cmd.header.frame_id, ros::Time(0));
+  } catch (tf2::TransformException &ex) {
+    MU_WARN("unable to publish global position command: %s",ex.what());
+    return;
+  }
+
+  // apply transform to pose message
+  geometry_msgs::PoseStamped utm_pose;
+  tf2::doTransform(cmd, utm_pose, tfs);
+
+  // convert utm to LL
+  double lat, lon;
+  std::string utm_zone;
+  UTMtoLL(utm_pose.pose.position.y, utm_pose.pose.position.x, utm_zone, lat, lon);
+
+  // populate command message
+  mavros_msgs::GlobalPositionTarget gpt;
+  gpt.coordinate_frame = mavros_msgs::GlobalPositionTarget::FRAME_GLOBAL_REL_ALT; // altitude measured relative to home position
+  gpt.type_mask = mavros_msgs::GlobalPositionTarget::IGNORE_VX
+    | mavros_msgs::GlobalPositionTarget::IGNORE_VY
+    | mavros_msgs::GlobalPositionTarget::IGNORE_VZ
+    | mavros_msgs::GlobalPositionTarget::IGNORE_AFX
+    | mavros_msgs::GlobalPositionTarget::IGNORE_AFY
+    | mavros_msgs::GlobalPositionTarget::IGNORE_AFZ
+    | mavros_msgs::GlobalPositionTarget::IGNORE_YAW
+    | mavros_msgs::GlobalPositionTarget::IGNORE_YAW_RATE;
+  gpt.latitude = lat;
+  gpt.longitude = lon;
+  gpt.altitude = cmd.pose.position.z; // meters above home
+
+  // publish is thread safe but we don't want possibly conflicting messages being
+  // sent to the quad while it is trying to take off
+  if (pub_mutex.try_lock()) {
+
+    // limit publishing to 1000Hz to prevent overloading the connection
+    if ((ros::Time::now() - last_pub).toSec() > 1e-3) { // 1ms
+      global_pos_pub.publish(gpt);
+      last_pub = ros::Time::now();
+    }
+
+    pub_mutex.unlock();
+  } else {
+    MU_DEBUG("can't publish global position command: publisher busy");
   }
 }
 
