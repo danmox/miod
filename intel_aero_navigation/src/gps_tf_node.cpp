@@ -114,7 +114,7 @@ void GPSTF::syncCB(const sensor_msgs::NavSatFix::ConstPtr& gps_msg,
   try {
     base_odom_tf_msg = tf2_buffer.lookupTransform(odom_frame, base_frame, ros::Time(0));
   } catch (tf2::TransformException &ex) {
-    ROS_WARN_THROTTLE(1.0, "unable to fetch transform: base (%s) -> odom (%s): %s", odom_frame.c_str(), base_frame.c_str(), ex.what());
+    ROS_WARN_THROTTLE(1.0, "unable to fetch transform: base (%s) -> odom (%s): %s", base_frame.c_str(), odom_frame.c_str(), ex.what());
     return;
   }
 

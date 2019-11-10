@@ -6,7 +6,6 @@ plugin_blacklist:
 - 3dr_radio                # Publish 3DR Radio modem status
 - setpoint_accel           # Send to FCU external acceleration/force setpoint
 - setpoint_attitude        # Send to FCU external attitude setpoint
-- setpoint_raw             # Access to raw POSITION_TARGET_LOCAL_NED messages
 - vfr_hud                  # Publish VFR HUD data and WIND estimations
 - ftp                      # Access to files on FCU via MAVLink-FTP
 - actuator_control         # Send direct controls values to the actuators
@@ -14,6 +13,8 @@ plugin_blacklist:
 - altitude                 # Publish altitude values
 - hil                      # Publish and subscribe HIL controls, state, GPS and sensor values
 - wind_estimation          # Publish wind estimates
+- setpoint_raw             # Access to raw POSITION_TARGET_LOCAL_NED messages
+- home_position            # Publish home position
 # mavros_extras
 - adsb                     # Publish/subscribe to the location and information of an ADS-B vehicle
 - cam_imu_sync             # Publish camera trigger data for synchronisation of IMU and camera frames
@@ -35,9 +36,6 @@ plugin_blacklist:
 - vision_pose_estimate     # Send vision pose estimate to FCU
 - vision_speed_estimate    # Send vision speed estimate to FCU
 - mount_control            # Send Mission command to control a camera or a antenna mount
-- home_position            # Publish home position
-- local_position           # Publish FCU local position
-- param                    # Access to FCU parameters
 
 
 # overrides blacklist
@@ -47,7 +45,9 @@ plugin_whitelist:
 - sys_time                 # Synchronise clocks with FCU
 - command                  # Send commands to FCU
 - global_position          # Publish FCU fused global position and raw GPS fix
+- local_position           # Publish FCU local position
 - imu                      # Publish IMU data
 - setpoint_position        # Send to FCU external position setpoint
 - setpoint_velocity        # Send to FCU external velocity setpoint
+- param                    # Access to FCU parameters
 # mavros_extras
