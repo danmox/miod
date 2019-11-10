@@ -11,7 +11,8 @@ import networkx as nx
 from haversine import haversine
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
-from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import Axes3D, proj3d
 import numpy as np
 import re
 import pexpect
@@ -118,13 +119,20 @@ rt_plot = Axes3D(fig3)
 
 
 colors = ['b', 'g', 'r', 'c', 'y']
+colors_fixed = {}
 j=0
 
 rt_total = {}
+rt_path_total = {}
+rt_path_time = {}
 pos_total = {}
 rt_time_total = {}
 pos_time_total = {}
 max_time_rt  = 0
+max_pos_x = [None, None]
+max_pos_y = [None, None]
+max_pos_z = [None, None]
+
 for i in data:
     dat = data[i]
     #print(dat.item())
@@ -132,9 +140,12 @@ for i in data:
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]
+
     if len(tr)>0:
         tp_ip = dat.item()['tp_ip']
         tr = np.transpose(tr)
+        rt_path_total[i] = tr[1]
+        rt_path_time[i] = tr[0]-start_time
         y_ax = [sum(k) for k in tr[2]]
         tr_plot_ma = moving_average(y_ax, m_av_len)
         tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
@@ -151,7 +162,7 @@ for i in data:
              label=('TX - {}, RX - {}'.format(i, tp_ip)))
         tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)],
              label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-
+    colors_fixed[i] = colors[j % len(colors)]
     j+=1
 
     rt = dat.item()["rt"]
@@ -166,6 +177,34 @@ for i in data:
         time_pos = np.array(pos).transpose()[0,:]
         pos_time_total[i] = np.array(time_pos,dtype=float) - start_time
         pos_total[i] = np.array(pos)[:,1:]
+        if max_pos_x[0]!=None:
+            max_pos_x[0] = min(max_pos_x[0], min(pos_total[i][:,0]))
+        else:
+            max_pos_x[0] = min(pos_total[i][:,0])
+        if max_pos_x[1]!=None:
+            max_pos_x[1] = max(max_pos_x[1], max(pos_total[i][:,0]))
+        else:
+            max_pos_x[1] = max(pos_total[i][:,0])
+
+        if max_pos_y[0]!=None:
+            max_pos_y[0] = min(max_pos_y[0], min(pos_total[i][:,1]))
+        else:
+            max_pos_y[0] = min(pos_total[i][:,1])
+        if max_pos_y[1]!=None:
+            max_pos_y[1] = max(max_pos_y[1], max(pos_total[i][:,1]))
+        else:
+            max_pos_y[1] = max(pos_total[i][:,1])
+
+        if max_pos_z[0]!=None:
+            max_pos_z[0] = min(max_pos_z[0], min(pos_total[i][:,2]))
+        else:
+            max_pos_z[0] = min(pos_total[i][:,2])
+        if max_pos_z[1]!=None:
+            max_pos_z[1] = max(max_pos_z[1], max(pos_total[i][:,2]))
+        else:
+            max_pos_z[1] = max(pos_total[i][:,2])
+
+
 
 
 
@@ -180,14 +219,34 @@ tp_plot.set_xlabel("time, s")
 tp_plot.set_ylabel("Throughput, Mbps")
 tp_plot.legend()
 
+class Arrow3D(FancyArrowPatch):
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
+
+    def draw(self, renderer):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+        self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
+        FancyArrowPatch.draw(self, renderer)
+
 def dist_calc(pos1, pos2):
     d2d = haversine(pos1[0:2], pos2[0:2], unit='m')
     d3d = np.sqrt(abs(pos1[2] - pos2[2]) ** 2 +d2d**2)
     d3d = round(d3d,2)
     return d3d
+
 def update_graph(i):
     fixed_edges = []
+    path_edges  = {}
     pos = {}
+    for j in rt_path_total:
+        cur_time_path = rt_path_time[j]
+        cur_idx_path  = np.where(cur_time_path<i)[0]
+        if len(cur_idx_path)>0:
+            #print(cur_idx_path)
+            #print(rt_path_total[j][cur_idx_path])
+            path_edges[j] = rt_path_total[j][cur_idx_path[-1]]
     for j in rt_total:
         cur_time = rt_time_total[j]
         cur_pos_time = pos_time_total[j]
@@ -216,8 +275,10 @@ def update_graph(i):
     rt_plot.title.set_text('Network layout')
     rt_plot.set_xlabel("x")
     rt_plot.set_ylabel("y")
-    #rt_plot.set_xticks([-3, 3])
-    #rt_plot.set_xticks([-3, 3])
+    rt_plot.set_xlim(max_pos_x)
+    rt_plot.set_ylim(max_pos_y)
+    rt_plot.set_zlim(max_pos_z)
+
     #rt_plot.legend()
     if len(fig3.texts)>0:
         fig3.texts.clear()
@@ -228,15 +289,31 @@ def update_graph(i):
         #positions = nx.spring_layout(network_map, pos=fixed_positions, fixed=fixed_nodes)
         #nx.draw_networkx(network_map, positions, with_labels=True)
         for m in pos:
-            rt_plot.scatter(pos[m][0],pos[m][1],pos[m][2])
+            rt_plot.scatter(pos[m][0],pos[m][1],pos[m][2], color = colors_fixed[m])
             rt_plot.text(pos[m][0],pos[m][1],pos[m][2], '%s' % (str(m)), size=10, zorder=1, color='k')
         for j in fixed_edges:
             x = [pos[j[0]][0], pos[j[1]][0]]
             y = [pos[j[0]][1], pos[j[1]][1]]
             z = [pos[j[0]][2], pos[j[1]][2]]
             rt_plot.plot(x, y, z, c='black')
+            a = Arrow3D(x, y,
+                        z, mutation_scale=5,
+                        lw=1, arrowstyle="-|>", color="k")
+            rt_plot.add_artist(a)
             label = str(dist_calc(pos[j[0]], pos[j[1]]))+"m"
             rt_plot.text(np.mean(x), np.mean(y), np.mean(z), label,size=10, zorder=1, color='k')
+        for k,j in path_edges.items():
+            for m in range(0,len(j)-1):
+                x = [pos[j[m]][0], pos[j[m+1]][0]]
+                y = [pos[j[m]][1], pos[j[m+1]][1]]
+                z = [pos[j[m]][2], pos[j[m+1]][2]]
+                rt_plot.plot(x, y, z, c=colors_fixed[k])
+                a = Arrow3D(x, y,
+                            z, mutation_scale=10,
+                            lw=2, arrowstyle="-|>", color="red")
+                rt_plot.add_artist(a)
+
+
 
 
 

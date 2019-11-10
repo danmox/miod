@@ -50,6 +50,7 @@ class Params:
     snr_stats = {}
     tp_stats = {}
     traceroute_stats = {}
+    routing = True
     dynamic_statistics_parsing = False
     statistics_collection = True
     dynamic_statistics_upd = 2 #dynamic statistics update timer
@@ -540,7 +541,6 @@ def main():
 
     threads = [threading.Thread(target=status_send_update_thread),
                threading.Thread(target=local_rt_update_thread),
-               threading.Thread(target=global_rt_update_thread),
                threading.Thread(target=status_receive_update_thread),
     ]
     if Params.statistics_collection is True:
@@ -549,6 +549,9 @@ def main():
         threads.append(threading.Thread(target=receive_ping_thread))
         threads.append(threading.Thread(target=measurement_thread_traceroute))
         threads.append(threading.Thread(target=pos_update_thread))
+
+    if Params.routing is True:
+        threads.append(threading.Thread(target=global_rt_update_thread))
 
     if Params.dynamic_statistics_parsing is True:
         threads.append(threading.Thread(target=dynamic_statistics_parsing_thread))
