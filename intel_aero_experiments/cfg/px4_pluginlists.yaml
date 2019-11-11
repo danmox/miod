@@ -36,7 +36,6 @@ plugin_blacklist:
 - vision_speed_estimate    # Send vision speed estimate to FCU
 - mount_control            # Send Mission command to control a camera or a antenna mount
 - home_position            # Publish home position
-- local_position           # Publish FCU local position
 
 
 # overrides blacklist
@@ -47,6 +46,7 @@ plugin_whitelist:
 - command                  # Send commands to FCU
 - imu                      # Publish IMU data
 - global_position          # Publish FCU fused global position and raw GPS fix
+- local_position           # Publish FCU local position
 - param                    # Access to FCU parameters
 - setpoint_position        # Send to FCU external position setpoint
 - setpoint_velocity        # Send to FCU external velocity setpoint

@@ -27,7 +27,7 @@ MavrosUAV::MavrosUAV(ros::NodeHandle nh_, ros::NodeHandle pnh_) :
   mode_srv = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
   land_srv = nh.serviceClient<mavros_msgs::CommandTOL>("mavros/cmd/land");
 
-  if (!nh.getParam("local_frame", local_frame)) {
+  if (!pnh.getParam("local_frame", local_frame)) {
     MU_WARN("using default UAV local_frame: %s", "aero1/odom");
     local_frame = "aero1/odom";
   }
