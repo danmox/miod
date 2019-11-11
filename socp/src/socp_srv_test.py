@@ -144,8 +144,69 @@ def test3(margin=0.1,confidence=0.7):
     plt.show()
 
 
+### Test 4
+# TODO results inconsistant with SOCP!!!
+def test4(margin=0.05,confidence=0.7):
+
+    rrss.cm = rrss.channel_model(fetch_params=False, print_values=True, L0=-48.0)
+
+    msg = RobustRoutingSOCPRequest()
+    pt = Point()
+    pt.x = 20.0
+    pt.y = 0.0
+    pt.z = 0.05
+    msg.config += [copy.deepcopy(pt)]
+    pt.x = -10.0
+    pt.y = 17.32
+    msg.config += [copy.deepcopy(pt)]
+    pt.y = -17.32
+    msg.config += [copy.deepcopy(pt)]
+    pt.x = 5.0
+    pt.y = 5.0
+    pt.z = 1.83
+    msg.config += [copy.deepcopy(pt)]
+    N = len(msg.config)
+
+    for pt in msg.config:
+        print("(%6.2f, %6.2f, %6.2f)" % (pt.x, pt.y, pt.z))
+
+    qos = QoS()
+    qos.margin = margin
+    qos.confidence = confidence
+    qos.src = 1
+    qos.dest = [2, 3]
+    msg.qos += [copy.deepcopy(qos)]
+    qos.src = 2
+    qos.dest = [1, 3]
+    msg.qos += [copy.deepcopy(qos)]
+    qos.src = 3
+    qos.dest = [1, 2]
+    msg.qos += [copy.deepcopy(qos)]
+    K = len(msg.qos)
+
+    for i in range(0,K):
+        print("flow %d:" % (i+1))
+        print("  sources: %d" % msg.qos[i].src)
+        print("  destinations: %s" % ', '.join(map(str, msg.qos[i].dest)))
+        print("  margin = %.2f" % margin)
+        print("  confidence = %.2f" % confidence)
+
+    res = rrss.solveSOCP(msg)
+    if res.status != 'optimal':
+        print("solveSOCP returned with status: %s" % res.status)
+        return
+
+    routes = np.reshape(res.routes, (N,N,K), 'F')
+    print("slack = %.4f" % res.slack)
+    for i in range(K):
+        print('alpha_ij_%d' % (i+1))
+        routes_tmp = routes[:,:,i]
+        routes_tmp[np.absolute(routes_tmp) < 1e-6] = 0.0
+        print(np.array_str(routes_tmp, precision=3, suppress_small=True))
+
+
 if __name__ == "__main__":
     if len(sys.argv) is not 3:
-        test3()
+        test4()
     else:
-        test3(float(sys.argv[1]), float(sys.argv[2]))
+        test4(float(sys.argv[1]), float(sys.argv[2]))

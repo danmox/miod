@@ -17,13 +17,13 @@ def dBm2mW(dBm):
     return 10.0**(np.asarray(dBm)/10.0)
 
 class channel_model():
-    def __init__(self, fetch_params=None, print_values=None):
+    def __init__(self, fetch_params=None, print_values=None, N0=-70.0, n=2.52, L0=-53.0, a=0.2, b=6.0):
         if fetch_params is None or fetch_params is False:
-            self.N0 = -70              # noise at receiver (dBm)
-            self.n = 2.52              # decay rate
-            self.L0 = -53              # transmit power (dBm)
-            self.a = 0.2               # sigmoid parameter 1
-            self.b = 6.0               # sigmoid parameter 2
+            self.L0 = L0               # transmit power (dBm)
+            self.n = n                 # decay rate
+            self.N0 = N0               # noise at receiver (dBm)
+            self.a = a                 # sigmoid parameter 1
+            self.b = b                 # sigmoid parameter 2
         else:
             self.N0 = rospy.get_param("/N0")
             self.n = rospy.get_param("/n")
@@ -33,11 +33,11 @@ class channel_model():
         self.PL0 = dBm2mW(self.L0) # transmit power (mW)
         self.PN0 = dBm2mW(self.N0) # noise at receiver (mW)
         if print_values is not None and print_values is True:
-            print('self.N0 = %.3f' % self.N0)
-            print('self.n  = %.3f' % self.n)
-            print('self.L0 = %.3f' % self.L0)
-            print('self.a  = %.3f' % self.a)
-            print('self.b  = %.3f' % self.b)
+            print('L0 = %.3f' % self.L0)
+            print('n  = %.3f' % self.n)
+            print('N0 = %.3f' % self.N0)
+            print('a  = %.3f' % self.a)
+            print('b  = %.3f' % self.b)
 
     def predict(self,d):
         dist_mask = ~np.eye(d.shape[0], dtype=bool)

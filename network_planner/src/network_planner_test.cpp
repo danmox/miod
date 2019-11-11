@@ -15,6 +15,7 @@ class NPTest : public NetworkPlanner
     int socpTest();
     int socpDebug();
     int networkConfigTest();
+    int socpSrvTest();
 };
 
 
@@ -52,10 +53,10 @@ int NPTest::socpDebug()
   total_agents = team_config.size();
 
   // explicitly set channel model
-  channel_sim = channel_simulator::ChannelSimulator(-53.0, 2.52, -70.0, 0.2, 6.0);
+  channel_sim = channel_simulator::ChannelSimulator(-48.0, 2.52, -70.0, 0.2, 6.0);
 
   // qos requirements
-  double margin = 0.10;
+  double margin = 0.05;
   double confidence = 0.7;
   network_planner::Flow flow1;
   flow1.srcs.insert(1);
@@ -220,14 +221,84 @@ int NPTest::networkConfigTest()
 }
 
 
+int NPTest::socpSrvTest()
+{
+  int task_agent_count = 3;
+  int comm_agent_count = 1;
+
+  // set agent states
+
+  team_config.clear();
+
+  team_config.push_back(arma::vec3({ 20.0,  -0.00, 0.05}));
+  team_config.push_back(arma::vec3({-10.0,  17.32, 0.05}));
+  team_config.push_back(arma::vec3({-10.0, -17.32, 0.05}));
+  team_config.push_back(arma::vec3({  5.0,   5.00, 1.83}));
+
+  for (int i = 0; i < team_config.size(); ++i)
+    printf("agent %2d: (%6.2f, %6.2f, %6.2f)\n", i+1, team_config[i](0), team_config[i](1), team_config[i](2));
+
+  total_agents = team_config.size();
+
+  // explicitly set channel model
+  channel_sim = channel_simulator::ChannelSimulator(-48.0, 2.52, -70.0, 0.2, 6.0);
+
+  // qos requirements
+  double margin = 0.05;
+  double confidence = 0.7;
+  network_planner::Flow flow1;
+  flow1.srcs.insert(1);
+  flow1.dests.insert(2);
+  flow1.dests.insert(3);
+  flow1.min_margin = margin;
+  flow1.confidence = confidence;
+  network_planner::Flow flow2;
+  flow2.srcs.insert(2);
+  flow2.dests.insert(1);
+  flow2.dests.insert(3);
+  flow2.min_margin = margin;
+  flow2.confidence = confidence;
+  network_planner::Flow flow3;
+  flow3.srcs.insert(3);
+  flow3.dests.insert(1);
+  flow3.dests.insert(2);
+  flow3.min_margin = margin;
+  flow3.confidence = confidence;
+  network_planner::CommReqs qos;
+  qos.push_back(flow1);
+  qos.push_back(flow2);
+  qos.push_back(flow3);
+  setCommReqs(qos);
+
+  // solve SOCP
+  bool debug = false;
+  double slack;
+  std::vector<arma::mat> alpha_ij_k;
+  if (!SOCP(team_config, alpha_ij_k, slack, false, debug)) {
+    ROS_ERROR("SOCP failed");
+    return -1;
+  }
+
+  // show routes
+  for (int k = 0; k < qos.size(); ++k) {
+    printf("alpha_ij_%d\n", k+1);
+    alpha_ij_k[k].elem(find(alpha_ij_k[k] < 0.01)).zeros();
+    alpha_ij_k[k].print();
+  }
+  printf("slack = %.3f\n", slack);
+
+  return 0;
+}
+
+
 } // namespace network_planner
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "network_planner_test_node");
 
-  if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
-    ros::console::notifyLoggerLevelsChanged();
+  //if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
+  //  ros::console::notifyLoggerLevelsChanged();
 
   if (argc > 1) {
     network_planner::NPTest npt;
@@ -241,6 +312,9 @@ int main(int argc, char** argv)
       case 2:
         printf("running networkConfigTest()\n");
         return npt.networkConfigTest();
+      case 3:
+        printf("running socpSrvTest()\n");
+        return npt.socpSrvTest();
     }
   } else {
     printf("provide an argument\n");

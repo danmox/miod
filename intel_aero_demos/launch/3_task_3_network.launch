@@ -18,8 +18,8 @@
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
 
   <!-- patrol demo params -->
-  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.2", "10.42.0.3"]</rosparam> <!-- needed for task agent count -->
-  <rosparam param="/comm_agent_ips">["10.42.0.4", "10.42.0.5", "10.42.0.6"]</rosparam> <!-- needed for network agent count -->
+  <rosparam param="/task_agent_ids">[1, 2, 3]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ids">[4, 5, 6]</rosparam> <!-- needed for network agent count -->
   <param name="/patrol_radius"       value="$(arg patrol_radius)"/>
   <param name="/desired_altitude"    value="2.0"/>
 
@@ -53,6 +53,7 @@
         name="routing_visualization_node"
         output="screen">
     <param name="world_frame" value="world"/>
+    <param name="pose_topic"  value="pose"/>
   </node>
 
   <!-- network planner nodes -->
@@ -68,8 +69,9 @@
     <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
-    <param name="pose_topic"            value="/pose"/>
-    <remap from="costmap"               to="/projected_map"/>
+    <param name="pose_topic"            value="pose"/>
+    <param name="nav_nodelet"           value="gazebo_vel_nav_nodelet"/>
+    <param name="world_frame"           value="world"/>
   </node>
 
   <node pkg="socp"

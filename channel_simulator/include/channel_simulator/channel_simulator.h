@@ -42,6 +42,12 @@ class ChannelModel {
       L0(L0_), n(n_), N0(N0_), a(a_), b(b_)
     {
       PN0 = dBm2mW(N0);
+      printf("channel model parameters:\n");
+      printf("L0 = %.1f\n", L0);
+      printf("n  = %.2f\n", n);
+      printf("N0 = %.1f\n", N0);
+      printf("a  = %.2f\n", a);
+      printf("b  = %.2f\n", b);
     }
 
     template<typename T>

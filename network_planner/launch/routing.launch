@@ -1,8 +1,5 @@
 <launch>
 
-  <arg name="rviz"        default="true" />
-  <arg name="network_viz" default="true"/>
-
   <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
   <arg name="confidence"             default="0.7"/>  <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
@@ -12,8 +9,8 @@
   <arg name="source"                 default="2"/>
   <arg name="dest"                   default="1"/>
 
-  <rosparam param="/task_agent_ips">["10.42.0.1", "10.42.0.3"]</rosparam>
-  <rosparam param="/comm_agent_ips">["10.42.0.2"]</rosparam>
+  <rosparam param="/task_agent_ids">[1, 2]</rosparam>
+  <rosparam param="/comm_agent_ids">[3]</rosparam>
   <param name="/desired_altitude" value="0.0"/>
 
   <!-- channel rate model params -->

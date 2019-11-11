@@ -11,12 +11,29 @@
 #include <string.h>
 #include <sstream>
 #include <vector>
+#include <map>
 
 
 routing_msgs::NetworkUpdate::Ptr net_cmd;
 void networkUpdateCB(const routing_msgs::NetworkUpdate::Ptr& msg)
 {
   net_cmd = msg;
+}
+
+
+std::map<int, geometry_msgs::Point> node_position;
+std::map<int, bool> received_pose;
+void poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg, int id)
+{
+  node_position[id] = msg->pose.position;
+  received_pose[id] = true;
+}
+
+
+template<typename T>
+bool all(const T& cont, bool val)
+{
+  return std::find(cont.begin(), cont.end(), !val) == cont.end();
 }
 
 
@@ -38,16 +55,50 @@ int main(int argc, char** argv)
   ros::Publisher viz_pub = nh.advertise<visualization_msgs::Marker>("network_visualization", 10);
   ros::Subscriber net_sub = nh.subscribe("network_update", 2, networkUpdateCB);
 
-  // TODO change to odom subscribers?
-  tf2_ros::Buffer tf2_buff;
-  tf2_ros::TransformListener tf2_listener(tf2_buff);
-
-  XmlRpc::XmlRpcValue task_ip_list, comm_ip_list;
-  std::string world_frame;
-  getParamStrict(nh, "/comm_agent_ips", task_ip_list);
-  getParamStrict(nh, "/task_agent_ips", comm_ip_list);
+  XmlRpc::XmlRpcValue task_agent_ids, comm_agent_ids;
+  std::string world_frame, pose_topic;
+  getParamStrict(nh, "/comm_agent_ids", task_agent_ids);
+  getParamStrict(nh, "/task_agent_ids", comm_agent_ids);
   getParamStrict(pnh, "world_frame", world_frame);
-  int number_of_agents = task_ip_list.size() + comm_ip_list.size();
+  getParamStrict(pnh, "pose_topic", pose_topic);
+  int total_agents = task_agent_ids.size() + comm_agent_ids.size();
+
+  // extract agent ids
+
+  std::vector<int> agent_ids;
+
+  ROS_ASSERT(task_agent_ids.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < task_agent_ids.size(); ++i) {
+    ROS_ASSERT(task_agent_ids[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    agent_ids.push_back(static_cast<int>(task_agent_ids[i]));
+  }
+
+  ROS_ASSERT(comm_agent_ids.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  for (int i = 0; i < comm_agent_ids.size(); ++i) {
+    ROS_ASSERT(comm_agent_ids[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    agent_ids.push_back(static_cast<int>(comm_agent_ids[i]));
+  }
+
+  // agent IP -> agent ID map
+
+  std::map<std::string, int> ip_to_id;
+  for (int i = 0; i < total_agents; ++i) {
+    std::string ip = std::string("10.42.0.") + std::to_string(agent_ids[i]);
+    ip_to_id[ip] = agent_ids[i];
+  }
+
+  // pose subscribers
+
+  namespace stdph = std::placeholders;
+  std::vector<ros::Subscriber> pose_subs;
+  for (int i = 0; i < total_agents; ++i) {
+    std::stringstream ss;
+    ss << "/aero" << agent_ids[i] << "/" << pose_topic.c_str();
+    auto fcn = std::bind(&poseCB, stdph::_1, agent_ids[i]);
+    pose_subs.push_back(nh.subscribe<geometry_msgs::PoseStamped>(ss.str(), 10, fcn));
+  }
+
+  // main loop
 
   ros::Rate rate(10);
   ROS_INFO("[routing_visualization_node] starting loop");
@@ -56,65 +107,47 @@ int main(int argc, char** argv)
     rate.sleep();
     ros::spinOnce();
 
-    if (net_cmd) {
+    bool received_all_poses = true;
+    for (auto& val : received_pose)
+      if (!val.second)
+        received_all_poses = false;
 
-      // fetch agent locations
-      bool publish_viz = true;
-      std::vector<geometry_msgs::Point> node_location(number_of_agents);
-      for (int i = 0; i < number_of_agents; ++i) {
+    if (net_cmd && received_all_poses) {
 
-        std::stringstream ss;
-        ss << "aero" << i+1 << "/base_link";
-        std::string node_frame = ss.str();
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = world_frame;
+      marker.header.stamp = ros::Time::now();
+      marker.ns = "viz";
+      marker.id = 1;
+      marker.lifetime = ros::Duration(1.0);
+      marker.type = visualization_msgs::Marker::LINE_LIST;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.scale.x = 0.5;
+      for (const auto& prt_entry : net_cmd->routes) {
+        for (int j = 0; j < prt_entry.gateways.size(); ++j) {
 
-        geometry_msgs::TransformStamped trans;
-        try {
-          trans = tf2_buff.lookupTransform(world_frame, node_frame, ros::Time(0));
-        } catch (tf2::TransformException &ex) {
-          ROS_WARN("[routing_visualization_node] %s", ex.what());
-          publish_viz = false;
-          break;
-        }
-
-        geometry_msgs::Point point;
-        point.x = trans.transform.translation.x;
-        point.y = trans.transform.translation.y;
-        point.z = trans.transform.translation.z;
-        node_location[i] = point;
-      }
-
-      if (publish_viz) {
-        visualization_msgs::Marker marker;
-        marker.header.frame_id = world_frame;
-        marker.header.stamp = ros::Time::now();
-        marker.ns = "viz";
-        marker.id = 1;
-        marker.lifetime = ros::Duration(1.0);
-        marker.type = visualization_msgs::Marker::LINE_LIST;
-        marker.action = visualization_msgs::Marker::ADD;
-        marker.scale.x = 0.5;
-        for (const auto& prt_entry : net_cmd->routes) {
-          for (int j = 0; j < prt_entry.gateways.size(); ++j) {
-            marker.points.push_back(node_location[prt_entry.node[0]]);
-            marker.points.push_back(node_location[prt_entry.gateways[j].IP[0]]);
-
-            std_msgs::ColorRGBA color;
-            color.g = 1.0;
-            color.a = prt_entry.gateways[j].prob;
-            ROS_DEBUG("[routing_visualization_node] alpha = %.2f", color.a);
-
-            marker.colors.push_back(color);
-            marker.colors.push_back(color);
+          if (ip_to_id.count(prt_entry.node) == 0) {
+            ROS_WARN("invalid node IP: %s", prt_entry.node.c_str());
+            continue;
           }
+
+          marker.points.push_back(node_position[ip_to_id[prt_entry.node]]);
+          marker.points.push_back(node_position[ip_to_id[prt_entry.gateways[j].IP]]);
+
+          std_msgs::ColorRGBA color;
+          color.g = 1.0;
+          color.a = prt_entry.gateways[j].prob;
+          ROS_DEBUG("[routing_visualization_node] alpha = %.2f", color.a);
+
+          marker.colors.push_back(color);
+          marker.colors.push_back(color);
         }
-
-        viz_pub.publish(marker);
-
-      } else {
-        ROS_DEBUG("[routing_visualization_node] could not fetch all poses from tf: not publishing this iteration");
       }
+
+      viz_pub.publish(marker);
+
     } else {
-      ROS_DEBUG("[routing_visualization_node] no routing solution: not publishing this iteration");
+      ROS_DEBUG("[routing_visualization_node] no network update or missing node poses; skipping this iteration");
     }
 
   }

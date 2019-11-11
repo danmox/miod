@@ -46,11 +46,12 @@ class NetworkPlanner
     double max_velocity;        // limit for largest step from gradient
     double collision_distance;  // minimum distance between agents
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
-    string_vec agent_ips;       // list of the ip addresse of each agent
+    std::string world_frame;
+    string_vec agent_ips;       // list of the ip address of each agent
+    std::vector<int> agent_ids; // list of ids of active agents (i.e. aero#)
 
     ros::NodeHandle nh, pnh;
-    std::vector<ros::Subscriber> odom_subs;
-    std::vector<ros::Publisher> vel_pubs;
+    std::vector<ros::Subscriber> pose_subs;
     ros::Subscriber map_sub;
     ros::Publisher viz_pub, net_pub, qos_pub;
     ros::ServiceClient socp_srv;
@@ -77,6 +78,8 @@ class NetworkPlanner
     std::map<int, std::tuple<int,int,int>> idx_to_ijk;
     int alpha_dim, y_dim;
 
+    bool obstacleFree(const point_vec&);
+    bool collisionFree(const point_vec&);
     double computeV(const point_vec& config,
                     const std::vector<arma::mat>& alpha,
                     bool debug);
