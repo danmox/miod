@@ -16,15 +16,18 @@ typedef actionlib::SimpleActionClient<NavAction> NavClient;
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "nav_test");
-  ros::NodeHandle nh;
+  ros::NodeHandle nh, pnh("~");
 
-  std::string sn = "waypoint_navigation_node";
-  NavClient nav_client(nh, sn.c_str(), true);
-  ROS_INFO("waiting for %s action server to start", sn.c_str());
+  std::string action_server;
+  pnh.param<std::string>("action_server", action_server, "px4_waypoint_navigation_nodelet");
+  NavClient nav_client(nh, action_server.c_str(), true);
+  ROS_INFO("waiting for %s action server to start", action_server.c_str());
   nav_client.waitForServer();
-  ROS_INFO("%s action server ready", sn.c_str());
+  ROS_INFO("%s action server ready", action_server.c_str());
 
   intel_aero_navigation::WaypointNavigationGoal goal_msg;
+  goal_msg.header.frame_id = "world";
+  goal_msg.header.stamp = ros::Time::now();
   geometry_msgs::Pose goal;
   goal.orientation.w = 1.0;
   goal.position.x = 10;
@@ -39,7 +42,7 @@ int main(int argc, char** argv)
   goal.position.y = -10;
   goal.position.z = 5;
   goal_msg.waypoints.push_back(goal);
-  goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
+  goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
 
   ROS_INFO("sending goal");
   nav_client.sendGoal(goal_msg);

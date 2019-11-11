@@ -16,10 +16,12 @@ class PX4Nav : public NavBase
 
     virtual bool systemInitialized() {return aero.takeoffCommandIssued();};
     virtual void initializeSystem() {aero.takeoff();};
+
     virtual void sendCommand(const geometry_msgs::PoseStamped& cmd)
     {
       aero.sendLocalPositionCommand(cmd);
     };
+
     virtual void executeEndAction(const int action)
     {
       if (action == intel_aero_navigation::WaypointNavigationGoal::HOVER) {

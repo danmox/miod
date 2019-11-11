@@ -91,9 +91,9 @@ void GazeboVelNav::initializeSystem()
 void GazeboVelNav::sendCommand(const geometry_msgs::PoseStamped& goal)
 {
   double goal_vec[3];
-  goal_vec[0] = goal.pose.position.x - robot_pose->pose.position.x;
-  goal_vec[1] = goal.pose.position.y - robot_pose->pose.position.y;
-  goal_vec[2] = goal.pose.position.z - robot_pose->pose.position.z;
+  goal_vec[0] = goal.pose.position.x - robot_pose.pose.position.x;
+  goal_vec[1] = goal.pose.position.y - robot_pose.pose.position.y;
+  goal_vec[2] = goal.pose.position.z - robot_pose.pose.position.z;
 
   double mag = sqrt(goal_vec[0]*goal_vec[0] +
                     goal_vec[1]*goal_vec[1] +
@@ -101,7 +101,7 @@ void GazeboVelNav::sendCommand(const geometry_msgs::PoseStamped& goal)
 
   // segment heading error
   double desired_heading = tf2::getYaw(goal.pose.orientation);
-  double robot_heading = tf2::getYaw(robot_pose->pose.orientation);
+  double robot_heading = tf2::getYaw(robot_pose.pose.orientation);
   double heading_error = desired_heading - robot_heading;
   if (heading_error > 2.0*M_PI)
     heading_error -= 2.0*M_PI;

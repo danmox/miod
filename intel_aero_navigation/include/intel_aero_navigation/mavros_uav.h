@@ -50,9 +50,8 @@ class MavrosUAV
     MavrosUAV(ros::NodeHandle, ros::NodeHandle);
     ~MavrosUAV();
 
-    void sendLocalPositionCommand(const geometry_msgs::PoseStamped&);
+    void sendLocalPositionCommand(geometry_msgs::PoseStamped);
     void sendLocalVelocityCommand(const geometry_msgs::Twist&);
-    void sendGlobalPositionCommand(const geometry_msgs::PoseStamped&);
     void takeoff();
     void land();
 

@@ -34,13 +34,14 @@ NavBase::NavBase(std::string name, ros::NodeHandle& nh_, ros::NodeHandle& pnh_):
   tf2_listener(tf2_buffer),
   nav_server(nh_, name, false),
   nh(nh_),
-  pnh(pnh_)
+  pnh(pnh_),
+  received_robot_pose(false)
 {
   nav_server.registerGoalCallback(std::bind(&NavBase::goalCB, this));
   nav_server.registerPreemptCallback(std::bind(&NavBase::preemptCB, this));
   nav_server.start();
 
-  getParamStrict(pnh, "odom_frame", odom_frame);
+  getParamStrict(pnh, "local_frame", local_frame);
   getParamStrict(pnh, "position_tol", position_tol);
   getParamStrict(pnh, "heading_tol", heading_tol);
 
@@ -51,7 +52,7 @@ NavBase::NavBase(std::string name, ros::NodeHandle& nh_, ros::NodeHandle& pnh_):
       ros::console::notifyLoggerLevelsChanged();
 
   costmap_sub = nh.subscribe("costmap", 10, &NavBase::costmapCB, this);
-  odom_sub = nh.subscribe("odom", 10, &NavBase::odomCB, this);
+  pose_sub = nh.subscribe("pose", 10, &NavBase::poseCB, this);
   path_pub = nh.advertise<nav_msgs::Path>("path", 10);
 }
 
@@ -78,12 +79,12 @@ void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
   // 1) the server is inactive
   // 2) odom is unavailable (can't check for collisions)
   // 4) the path is empty (don't need to check for collisions)
-  if (!nav_server.isActive() || !robot_pose || waypoints.empty())
+  if (!nav_server.isActive() || !received_robot_pose || waypoints.empty())
     return;
 
   // if the robot is not inside the costmap, find the point along its path when
   // it enters the map
-  grid_mapping::Point first_point(robot_pose->pose.position);
+  grid_mapping::Point first_point(robot_pose.pose.position);
   if (!costmap_ptr->inBounds(first_point))
     first_point = costmap_ptr->bbxIntersection(waypoints.front(), first_point);
 
@@ -112,13 +113,12 @@ void NavBase::goalCB()
   ROS_INFO("accepted new goal");
 
   // cannot plan without the current position of the quad
-  if (!robot_pose) {
-    ROS_ERROR("no odom! aborting goal");
+  if (!received_robot_pose) {
+    ROS_ERROR("no pose! aborting goal");
     nav_server.setAborted();
     return;
   }
 
-  // warn if planning without a costmap
   if (!costmap_ptr)
     ROS_WARN("planning without a costmap");
 
@@ -128,20 +128,20 @@ void NavBase::goalCB()
     return;
   }
 
-  // convert waypoints to odom_frame (while planning must happen in the
+  // convert waypoints to local_frame (while planning must happen in the
   // costmap frame, local position commands sent to the px4 are interpreted as
-  // being in odom_frame so we convert them here to be ready for future
+  // being in local_frame so we convert them here to be ready for future
   // publication)
-  geometry_msgs::PoseStamped wp;
-  wp.header = action_goal->header;
-  wp.header.stamp = ros::Time(0); // gets the latest available transform
   waypoints.clear();
   for (auto& pose : action_goal->waypoints) {
+    geometry_msgs::PoseStamped wp;
+    wp.header = action_goal->header;
+    wp.header.stamp = ros::Time(0); // gets the latest available transform
     wp.pose = pose;
     try {
-      tf2_buffer.transform(wp, odom_frame);
+      wp = tf2_buffer.transform(wp, local_frame);
     } catch (tf2::TransformException &e) {
-      ROS_ERROR("could not transform waypoint from source frame \"%s\" to odom_frame \"%s\":", wp.header.frame_id.c_str(), odom_frame.c_str());
+      ROS_ERROR("could not transform waypoint from source frame \"%s\" to local_frame \"%s\":", wp.header.frame_id.c_str(), local_frame.c_str());
       ROS_ERROR("%s", e.what());
       nav_server.setAborted();
       return;
@@ -154,9 +154,9 @@ void NavBase::goalCB()
 
   // visualize path in rviz
   nav_msgs::Path path_msg;
-  path_msg.header.frame_id = odom_frame;
+  path_msg.header.frame_id = local_frame;
   path_msg.header.stamp = ros::Time::now();
-  path_msg.poses.push_back(*robot_pose);
+  path_msg.poses.push_back(robot_pose);
   path_msg.poses.insert(path_msg.poses.end(), waypoints.begin(), waypoints.end());
   path_pub.publish(path_msg);
 
@@ -184,14 +184,14 @@ void NavBase::planPath()
   // 4) for planning convenience add the robot pose as the first waypoint (to be
   //    removed later)
   std::deque<geometry_msgs::PoseStamped> costmap_wps(waypoints);
-  costmap_wps.push_front(*robot_pose);
+  costmap_wps.push_front(robot_pose);
   costmap_wps[0].header.stamp = ros::Time(0);
   bool abort_goal = false;
   for (auto wp_it = costmap_wps.begin(); wp_it != costmap_wps.end() ; ++wp_it) {
 
-    // transform waypoints from odom_frame to the costmap frame
+    // transform waypoints from local_frame to the costmap frame
     try {
-      tf2_buffer.transform(*wp_it, costmap_ptr->frame_id);
+      *wp_it = tf2_buffer.transform(*wp_it, costmap_ptr->frame_id);
     } catch (tf2::TransformException &e) {
       ROS_ERROR("could not transform waypoint from source frame \"%s\" to the costmap frame \"%s\":", wp_it->header.frame_id.c_str(), costmap_ptr->frame_id.c_str());
       ROS_ERROR("%s", e.what());
@@ -247,12 +247,12 @@ void NavBase::planPath()
   // remove robot pose added for planning convenience
   costmap_wps.pop_front();
 
-  // transform waypoints from the costmap frame back to odom_frame for execution
+  // transform waypoints from the costmap frame back to local_frame for execution
   for (geometry_msgs::PoseStamped& cwp : costmap_wps) {
     try {
-      tf2_buffer.transform(cwp, odom_frame);
+      cwp = tf2_buffer.transform(cwp, local_frame);
     } catch (tf2::TransformException &e) {
-      ROS_ERROR("could not transform costmap waypoint from frame \"%s\" to odom_frame \"%s\":", cwp.header.frame_id.c_str(), odom_frame.c_str());
+      ROS_ERROR("could not transform costmap waypoint from frame \"%s\" to local_frame \"%s\":", cwp.header.frame_id.c_str(), local_frame.c_str());
       ROS_ERROR("%s", e.what());
       ROS_ERROR("aborting current goal");
       nav_server.setAborted();
@@ -286,12 +286,17 @@ void NavBase::preemptCB()
 
 // TODO the heading of the waypoints are ignored
 // actual tracking of the waypoints happens here
-void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
+void NavBase::poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-  geometry_msgs::PoseStamped pose;
-  pose.header = msg->header;
-  pose.pose = msg->pose.pose;
-  robot_pose.reset(new geometry_msgs::PoseStamped(pose));
+  robot_pose = *msg;
+  robot_pose.header.stamp = ros::Time(0); // to fetch the latest transform
+  try {
+    robot_pose = tf2_buffer.transform(robot_pose, local_frame);
+    received_robot_pose = true;
+  } catch (tf2::TransformException &e) {
+    ROS_ERROR("could not transform robot_pose from source frame \"%s\" to local_frame \"%s\": %s", msg->header.frame_id.c_str(), local_frame.c_str(), e.what());
+    return;
+  }
 
   // by design one waypoint should always be left in the deque; an empty
   // waypoints deque means no goal has been received yet
@@ -303,12 +308,12 @@ void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
     initializeSystem();
 
   geometry_msgs::PoseStamped curr_wp = waypoints.front();
-  geometry_msgs::Point robot_pt = robot_pose->pose.position;
+  geometry_msgs::Point robot_pt = robot_pose.pose.position;
 
   // heading error
   double yaw_d = atan2(curr_wp.pose.position.y - robot_pt.y,
                        curr_wp.pose.position.x - robot_pt.x);
-  double yaw = tf2::getYaw(robot_pose->pose.orientation);
+  double yaw = tf2::getYaw(robot_pose.pose.orientation);
   double yaw_error = yaw_d - yaw;
   if (yaw_error > 2.0*M_PI) // TODO should be >=?
     yaw_error -= 2.0*M_PI;
@@ -323,7 +328,7 @@ void NavBase::odomCB(const nav_msgs::Odometry::ConstPtr& msg)
   if (abs(yaw_error) > heading_tol && pos_error > position_tol) {
     // turn in place before moving
     ROS_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
-    curr_wp = *robot_pose;
+    curr_wp = robot_pose;
     curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (pos_error > position_tol) {
     // maintain heading and move towards waypoint

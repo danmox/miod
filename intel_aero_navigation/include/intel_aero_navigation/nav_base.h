@@ -28,16 +28,17 @@ class NavBase
     double position_tol, heading_tol;
 
     ros::NodeHandle nh, pnh;
-    ros::Subscriber costmap_sub, odom_sub;
+    ros::Subscriber costmap_sub, pose_sub;
     ros::Publisher path_pub;
 
     tf2_ros::Buffer tf2_buffer;
     tf2_ros::TransformListener tf2_listener;
-    std::string odom_frame;
+    std::string local_frame;
 
     typedef grid_mapping::Grid<int8_t> Costmap;
     Costmap* costmap_ptr;
-    geometry_msgs::PoseStamped::ConstPtr robot_pose;
+    geometry_msgs::PoseStamped robot_pose;
+    bool received_robot_pose;
 
     // path of waypoints to follow
     std::deque<geometry_msgs::PoseStamped> waypoints;
@@ -62,7 +63,7 @@ class NavBase
     ~NavBase();
 
     void costmapCB(const nav_msgs::OccupancyGrid::ConstPtr&);
-    void odomCB(const nav_msgs::Odometry::ConstPtr&);
+    void poseCB(const geometry_msgs::PoseStamped::ConstPtr&);
     void goalCB();
     void preemptCB();
 };
