@@ -7,6 +7,7 @@
   <arg name="gazebo_gui"    default="false" />
   <arg name="rviz"          default="true" />
   <arg name="verbose"       default="false"/>
+  <arg name="gdb"           default="false"/>
 
   <!-- robot args -->
   <arg name="static_map"         default="false"/>
@@ -52,6 +53,7 @@
       <arg name="heading_tol"        value="0.2"/>
       <arg name="static_map"         value="$(arg static_map)"/>
       <arg name="world_frame"        value="$(arg world_frame)"/>
+      <arg name="gdb"                value="$(arg gdb)"/>
     </include>
   </group>
 

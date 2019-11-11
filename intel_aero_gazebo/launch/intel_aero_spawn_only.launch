@@ -97,25 +97,6 @@
           args="0 0 0 0 0 0 $(arg world_frame) $(arg map_frame)"
           unless="$(arg static_map)"/>
 
-    <!-- costmap generation
-    <node pkg="costmap_2d"
-          name="costmap_2d"
-          type="costmap_2d_node">
-      <param name="costmap/global_frame"      value="$(arg costmap_frame)" />
-      <param name="costmap/robot_base_frame"  value="$(arg base_frame)" />
-      <param name="costmap/map_topic"         value="$(arg static_map_topic)" />
-      <param name="costmap/inflation_radius"  value="$(arg inflation_radius)"/>
-      <param name="costmap/robot_radius"      value="$(arg robot_radius)"/>
-      <param name="costmap/publish_frequency" value="$(arg costmap_rate)"/>
-      <rosparam ns="costmap">
-        transform_tolerance: 0.3
-        update_frequency: 2.0
-        static_map: true
-        always_send_full_costmap: true
-        map_type: costmap
-      </rosparam>
-    </node>
- -->
     <node unless="$(arg gdb)"
           pkg="nodelet"
           type="nodelet"

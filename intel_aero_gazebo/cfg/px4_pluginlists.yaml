@@ -44,10 +44,10 @@ plugin_whitelist:
 - sys_status               # Publish system status
 - sys_time                 # Synchronise clocks with FCU
 - command                  # Send commands to FCU
+- imu                      # Publish IMU data
 - global_position          # Publish FCU fused global position and raw GPS fix
 - local_position           # Publish FCU local position
-- imu                      # Publish IMU data
+- param                    # Access to FCU parameters
 - setpoint_position        # Send to FCU external position setpoint
 - setpoint_velocity        # Send to FCU external velocity setpoint
-- param                    # Access to FCU parameters
 # mavros_extras

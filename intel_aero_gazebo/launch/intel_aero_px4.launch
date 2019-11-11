@@ -13,6 +13,7 @@
   <!-- waypoint navigation args -->
   <arg name="position_tol" 	 default="0.5"/> <!-- meters -->
   <arg name="heading_tol"  	 default="0.5"/> <!-- ~28deg -->
+  <arg name="gdb"            default="false"/> <!-- run navigation node in gdb -->
 
   <!-- mapping / costmap args -->
   <arg name="robot_radius"       default="1.0"/>
@@ -67,15 +68,6 @@
     <env name="PX4_ESTIMATOR" value="ekf2" />
     <arg unless="$(arg interactive)"  name="px4_cmd_arg" value="-d"/>
     <arg if="$(arg interactive)"      name="px4_cmd_arg" value=""/>
-    <!--
-    <node name="sitl_$(arg robot_ns)"
-          pkg="px4"
-          type="px4"
-          output="screen"
-          args="$(find px4)/ROMFS/px4fmu_common -s etc/init.d-posix/rcS
-                -i $(arg id) $(arg px4_cmd_arg)" />
-                -->
-
     <node name="sitl_$(arg id)"
           pkg="px4"
           type="px4"
@@ -94,10 +86,8 @@
       <param name="target_system_id" value="$(arg target_system_id)" />
       <param name="target_component_id" value="1" />
       <param name="fcu_protocol" value="v2.0"/>
-      <rosparam command="load" file="$(find mavros)/launch/px4_pluginlists.yaml" />
       <rosparam command="load" file="$(find mavros)/launch/px4_config.yaml" />
-      <!--<rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_pluginlists.yaml" />
-      <rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_common.yaml" />-->
+      <rosparam command="load" file="$(find intel_aero_gazebo)/cfg/px4_pluginlists.yaml" />
       <param name="local_position/frame_id"          value="$(arg odom_frame)"/>
       <param name="local_position/tf/send"           value="true"/>
       <param name="local_position/tf/frame_id"       value="$(arg odom_frame)"/>
@@ -105,6 +95,14 @@
       <param name="imu/frame_id"                     value="$(arg base_frame)"/>
     </node>
 
+    <!-- load MAVROS parameters
+    <node pkg="mavros"
+          type="mavparam"
+          name="$(arg robot_ns)_px4_param_loader"
+          output="screen"
+          args="-v -n $(arg robot_ns)/mavros
+                load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
+ -->
     <!-- transformation between robot and datum published as a pose message and
          populated in the TF tree -->
     <node pkg="intel_aero_navigation"
@@ -121,71 +119,31 @@
       <param name="datum_yaw"   value="$(arg datum_yaw)"/>
       <remap from="gps" to="mavros/global_position/global"/>
       <remap from="imu" to="mavros/imu/data"/>
-      <remap from="home" to="mavros/home_position/home" />
     </node>
 
-    <!-- mapping using octomap
-    <node unless="$(arg static_map)"
-          name="octomap_server"
-          pkg="octomap_server"
-          type="octomap_server_node"
-          required="true">
-      <remap from="cloud_in" to="camera/depth/points" />
-      <param name="frame_id" value="$(arg odom_frame)" />
-      <param name="base_frame_id" value="$(arg base_frame)" />
-      <param name="resolution" value="$(arg octomap_resolution)" />
-      <param name="pointcloud_min_z" value="1.0" />
-    </node>
- -->
-    <!-- costmap generation
-    <node pkg="costmap_2d"
-          name="costmap_2d"
-          type="costmap_2d_node">
-      <param name="costmap/global_frame"      value="$(arg costmap_frame)" />
-      <param name="costmap/robot_base_frame"  value="$(arg base_frame)" />
-      <param name="costmap/map_topic"         value="$(arg static_map_topic)" />
-      <param name="costmap/inflation_radius"  value="$(arg inflation_radius)"/>
-      <param name="costmap/robot_radius"      value="$(arg robot_radius)"/>
-      <param name="costmap/publish_frequency" value="$(arg costmap_rate)"/>
-      <rosparam ns="costmap">
-        transform_tolerance: 0.3
-        update_frequency: 2.0
-        static_map: true
-        always_send_full_costmap: true
-        map_type: costmap
-      </rosparam>
-    </node>
- -->
-    <!--
+    <!-- navigation nodes -->
+
     <node pkg="nodelet"
           type="nodelet"
-          name="waypoint_navigation_nodelet"
-          args="standalone intel_aero_navigation/WaypointNavigationNodelet"
+          name="px4_waypoint_navigation_nodelet"
+          args="standalone intel_aero_navigation/PX4NavNodelet"
+          unless="$(arg gdb)"
           output="screen">
-      <remap from="costmap" to="costmap_2d/costmap/costmap" />
-      <remap from="odom" to="mavros/local_position/odom" />
-
       <param name="local_frame"   value="$(arg odom_frame)"/>
-      <param name="costmap_frame" value="$(arg costmap_frame)"/>
-      <param name="world_frame"   value="$(arg world_frame)"/>
       <param name="position_tol"  value="$(arg position_tol)" />
       <param name="heading_tol"   value="$(arg heading_tol)" />
     </node>
 
     <node pkg="intel_aero_navigation"
-          type="waypoint_navigation_node"
-          name="waypoint_navigation_node"
+          type="px4_nav_node"
+          name="px4_waypoint_navigation_node"
+          if="$(arg gdb)"
+          launch-prefix="gdb --args"
           output="screen">
-      <remap from="costmap" to="costmap_2d/costmap/costmap" />
-      <remap from="odom" to="mavros/local_position/odom" />
-
       <param name="local_frame"   value="$(arg odom_frame)"/>
-      <param name="costmap_frame" value="$(arg costmap_frame)"/>
-      <param name="world_frame"   value="$(arg world_frame)"/>
       <param name="position_tol"  value="$(arg position_tol)" />
       <param name="heading_tol"   value="$(arg heading_tol)" />
     </node>
-    -->
 
   </group>
 
