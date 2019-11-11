@@ -31,3 +31,6 @@ target_link_libraries(swarm_demo ${catkin_LIBRARIES})
 
 add_executable(heatmap_demo src/heatmap.cpp)
 target_link_libraries(heatmap_demo ${catkin_LIBRARIES})
+
+add_executable(line_demo src/line.cpp)
+target_link_libraries(line_demo ${catkin_LIBRARIES})

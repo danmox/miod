@@ -52,5 +52,8 @@ target_link_libraries(${PROJECT_NAME}_patrol_node ${PROJECT_NAME} ${catkin_LIBRA
 add_executable(${PROJECT_NAME}_routing_node src/network_planner_routing_node.cpp)
 target_link_libraries(${PROJECT_NAME}_routing_node ${PROJECT_NAME} ${catkin_LIBRARIES})
 
+add_executable(${PROJECT_NAME}_line_node src/network_planner_line_node.cpp)
+target_link_libraries(${PROJECT_NAME}_line_node ${PROJECT_NAME} ${catkin_LIBRARIES})
+
 add_executable(network_planner_test src/network_planner_test.cpp)
 target_link_libraries(network_planner_test ${PROJECT_NAME} ${catkin_LIBRARIES} ${ARMADILLO_LIBRARIES})
