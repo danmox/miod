@@ -71,7 +71,7 @@ def moving_average(a, n=20) :
 save_archive = True
 load_from_archive=True
 load_local = False
-archive_name = 'results/RRarchive2019-11-06 14:28.npz'
+archive_name = 'results/RRarchive2019-11-11 16:45.npz'
 home = expanduser("~")
 local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
 
@@ -140,11 +140,11 @@ for i in data:
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]
-
     if len(tr)>0:
         tp_ip = dat.item()['tp_ip']
         tr = np.transpose(tr)
         rt_path_total[i] = tr[1]
+        print(tr[1])
         rt_path_time[i] = tr[0]-start_time
         y_ax = [sum(k) for k in tr[2]]
         tr_plot_ma = moving_average(y_ax, m_av_len)
@@ -167,16 +167,18 @@ for i in data:
 
     rt = dat.item()["rt"]
     pos = dat.item()["pos"]
-
     if len(rt)>0:
         time_rt = np.array(rt).transpose()[0,:]
         rt_time_total[i] = np.array(time_rt,dtype=float) - start_time
         max_time_rt = max(max_time_rt, max(rt_time_total[i]))
         rt_total[i] = np.array(rt)[:,1:]
+        print(i)
+        print(rt_total[i])
     if len(pos)>0:
         time_pos = np.array(pos).transpose()[0,:]
         pos_time_total[i] = np.array(time_pos,dtype=float) - start_time
         pos_total[i] = np.array(pos)[:,1:]
+        pos_total[i][:,2]=pos_total[i][:,2]*(-1)
         if max_pos_x[0]!=None:
             max_pos_x[0] = min(max_pos_x[0], min(pos_total[i][:,0]))
         else:
@@ -204,7 +206,10 @@ for i in data:
         else:
             max_pos_z[1] = max(pos_total[i][:,2])
 
-
+for i in pos_total:
+    pos_total[i][:, 2] = pos_total[i][:,2]-max_pos_z[0]
+max_pos_z[1]-=max_pos_z[0]
+max_pos_z[0] = 0
 
 
 
@@ -213,11 +218,15 @@ tr_plot.title.set_text('Delay')
 tr_plot.set_xlabel("time, s")
 tr_plot.set_ylabel("Delay, ms")
 tr_plot.legend()
+fig2.savefig('./results/delay.png')
+
 
 tp_plot.title.set_text('Throughput')
 tp_plot.set_xlabel("time, s")
 tp_plot.set_ylabel("Throughput, Mbps")
 tp_plot.legend()
+fig.savefig('./results/throughput.png')
+
 
 class Arrow3D(FancyArrowPatch):
     def __init__(self, xs, ys, zs, *args, **kwargs):
@@ -240,6 +249,12 @@ def update_graph(i):
     fixed_edges = []
     path_edges  = {}
     pos = {}
+    for j in pos_total:
+        cur_pos_time = pos_time_total[j]
+        cur_idx_pos = np.where(cur_pos_time < i)[0]
+        if len(cur_idx_pos) > 0:
+            cur_idx_pos = cur_idx_pos[-1]
+            pos[j] = pos_total[j][cur_idx_pos]
     for j in rt_path_total:
         cur_time_path = rt_path_time[j]
         cur_idx_path  = np.where(cur_time_path<i)[0]
@@ -251,20 +266,11 @@ def update_graph(i):
         cur_time = rt_time_total[j]
         cur_pos_time = pos_time_total[j]
         cur_idx_list = np.where(cur_time<i)[0]
-        cur_idx_pos = np.where(cur_pos_time<i)[0]
-        if len(cur_idx_pos)>0:
-            cur_idx_pos = cur_idx_pos[-1]
-            pos[j] = pos_total[j][cur_idx_pos]
         if len(cur_idx_list)>0:
             cur_idx = cur_idx_list[-1]
             m = rt_total[j][cur_idx][-1]
-            pos_m = pos_time_total[m]
-            cur_idx_pos_m = np.where(pos_m < i)[0]
-            if len(cur_idx_pos_m)>0:
-                cur_idx_pos_m = cur_idx_pos_m[-1]
-                pos[m] =  pos_total[m][cur_idx_pos_m]
-                if (j,m) not in fixed_edges and m!=j:
-                    fixed_edges.append([j,m])
+            if (j,m) not in fixed_edges and m!=j:
+                fixed_edges.append([j,m])
     #print(i)
     #print(network_map)
     #print(fixed_positions)
@@ -291,32 +297,33 @@ def update_graph(i):
         for m in pos:
             rt_plot.scatter(pos[m][0],pos[m][1],pos[m][2], color = colors_fixed[m])
             rt_plot.text(pos[m][0],pos[m][1],pos[m][2], '%s' % (str(m)), size=10, zorder=1, color='k')
-        for j in fixed_edges:
-            x = [pos[j[0]][0], pos[j[1]][0]]
-            y = [pos[j[0]][1], pos[j[1]][1]]
-            z = [pos[j[0]][2], pos[j[1]][2]]
-            rt_plot.plot(x, y, z, c='black')
-            a = Arrow3D(x, y,
-                        z, mutation_scale=5,
-                        lw=1, arrowstyle="-|>", color="k")
-            rt_plot.add_artist(a)
-            label = str(dist_calc(pos[j[0]], pos[j[1]]))+"m"
-            rt_plot.text(np.mean(x), np.mean(y), np.mean(z), label,size=10, zorder=1, color='k')
+        # for j in fixed_edges:
+        #     x = [pos[j[0]][0], pos[j[1]][0]]
+        #     y = [pos[j[0]][1], pos[j[1]][1]]
+        #     z = [pos[j[0]][2], pos[j[1]][2]]
+        #     rt_plot.plot(x, y, z, c='black')
+        #     a = Arrow3D(x, y,
+        #                 z, mutation_scale=5,
+        #                 lw=1, arrowstyle="-|>", color="k")
+        #     rt_plot.add_artist(a)
+        #     label = str(dist_calc(pos[j[0]], pos[j[1]]))+"m"
+        #     rt_plot.text(np.mean(x), np.mean(y), np.mean(z), label,size=10, zorder=1, color='k')
         for k,j in path_edges.items():
             for m in range(0,len(j)-1):
-                x = [pos[j[m]][0], pos[j[m+1]][0]]
-                y = [pos[j[m]][1], pos[j[m+1]][1]]
-                z = [pos[j[m]][2], pos[j[m+1]][2]]
-                rt_plot.plot(x, y, z, c=colors_fixed[k])
-                a = Arrow3D(x, y,
-                            z, mutation_scale=10,
-                            lw=2, arrowstyle="-|>", color="red")
-                rt_plot.add_artist(a)
+                if j[m] in pos.keys() and j[m+1] in pos.keys():
+                    x = [pos[j[m]][0], pos[j[m+1]][0]]
+                    y = [pos[j[m]][1], pos[j[m+1]][1]]
+                    z = [pos[j[m]][2], pos[j[m+1]][2]]
+                    rt_plot.plot(x, y, z, c=colors_fixed[k])
+                    a = Arrow3D(x, y,
+                                z, mutation_scale=10,
+                                lw=2, arrowstyle="-|>", color=colors_fixed[k])
+                    rt_plot.add_artist(a)
 
 
 
 
 
-ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=300)
-#ani.save('./results/layout.mp4')
+ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=100)
+ani.save('./results/layout.mp4')
 plt.show()
