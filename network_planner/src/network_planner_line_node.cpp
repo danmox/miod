@@ -33,14 +33,20 @@ int main(int argc, char** argv)
 
   network_planner::NetworkPlanner np(nh, pnh);
 
-  // Three flows with 2 destinations each
+  // bi-directional flow between src and destination
   network_planner::CommReqs comm_reqs;
-  network_planner::Flow flow;
-  flow.srcs.insert(source);
-  flow.dests.insert(dest);
-  flow.min_margin = margin;
-  flow.confidence = confidence;
-  comm_reqs.push_back(flow);
+  network_planner::Flow flow1;
+  flow1.srcs.insert(source);
+  flow1.dests.insert(dest);
+  flow1.min_margin = margin;
+  flow1.confidence = confidence;
+  comm_reqs.push_back(flow1);
+  network_planner::Flow flow2;
+  flow2.srcs.insert(dest);
+  flow2.dests.insert(source);
+  flow2.min_margin = margin;
+  flow2.confidence = confidence;
+  comm_reqs.push_back(flow2);
 
   np.setCommReqs(comm_reqs);
 

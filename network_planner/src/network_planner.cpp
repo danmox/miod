@@ -64,7 +64,6 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(nh, "/desired_altitude", desired_altitude);
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
-  getParamStrict(pnh, "max_velocity", max_velocity);
   getParamStrict(pnh, "collision_distance", collision_distance);
   getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
   getParamStrict(pnh, "pose_topic", pose_topic);

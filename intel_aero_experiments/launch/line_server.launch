@@ -12,12 +12,12 @@
   <arg name="destination_node"       default="2"/>
   <arg name="start_x"                default="10.0"/>
   <arg name="start_y"                default="7.0"/>
-  <arg name="end_x"                  default="20.0"/> <!-- distance agent should travel in a line -->
+  <arg name="end_x"                  default="23.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
-  <rosparam param="/task_agent_ids">[2, 1]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/task_agent_ids">[1, 2]</rosparam> <!-- needed for task agent count -->
   <rosparam param="/comm_agent_ids">[3]</rosparam> <!-- needed for network agent count -->
-  <param name="/desired_altitude" value="3.0"/>
+  <param name="/desired_altitude" value="4.0"/>
   <param name="/source_node"      value="$(arg source_node)"/>
   <param name="/start_x"          value="$(arg start_x)"/>
   <param name="/start_y"          value="$(arg start_y)"/>
