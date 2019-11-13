@@ -14,18 +14,20 @@
   <arg name="collision_distance"     default="2.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="2"/>    <!-- Hz -->
-  <arg name="line_distance"          default="20.0"/> <!-- distance agent should travel in a line -->
-  <arg name="start_position"         default="6.0"/>  <!-- distance along x mobile task agent starts/ends up -->
   <arg name="source_node"            default="2"/>
   <arg name="destination_node"       default="1"/>
+  <arg name="start_x"                default="6.0"/>
+  <arg name="start_y"                default="0.0"/>
+  <arg name="end_x"                  default="20.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
-  <rosparam param="/task_agent_ids">[2, 1]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/task_agent_ids">[1, 2]</rosparam> <!-- needed for task agent count -->
   <rosparam param="/comm_agent_ids">[3]</rosparam> <!-- needed for network agent count -->
-  <param name="/line_distance"    value="$(arg line_distance)"/>
   <param name="/desired_altitude" value="2.0"/>
   <param name="/source_node"      value="$(arg source_node)"/>
-  <param name="/start_position"   value="$(arg start_position)"/>
+  <param name="/start_x"          value="$(arg start_x)"/>
+  <param name="/start_y"          value="$(arg start_y)"/>
+  <param name="/end_x"            value="$(arg end_x)"/>
 
   <!-- channel rate model params -->
   <param name="/N0" value="-70.0"/> <!-- -85.0  receiver noise (dBm) -->
@@ -56,6 +58,7 @@
   <node pkg="network_planner"
         type="network_planner_line_node"
         name="network_planner_line_node"
+        launch-prefix="gdb --args"
         output="screen">
     <param name="sample_count"        value="$(arg sample_count)"/>
     <param name="sample_variance"     value="$(arg sample_variance)"/>
@@ -71,10 +74,12 @@
     <param name="world_frame"         value="world"/>
   </node>
 
+  <!--
   <node pkg="socp"
         type="robust_routing_socp_server.py"
         name="robust_routing_socp_server"
         output="screen"/>
+        -->
 
   <!-- task (line) agents -->
 
@@ -83,7 +88,7 @@
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="0.0"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="y"              value="$(arg start_y)"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -93,8 +98,8 @@
     <arg name="id" value="2"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(arg start_position)"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="x"              value="$(arg start_x)"/>
+      <arg name="y"              value="$(arg start_y)"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -106,8 +111,8 @@
     <arg name="id" value="3"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('start_position')/2.0)"/>
-      <arg name="y"              value="0.0"/>
+      <arg name="x"              value="$(eval arg('start_x')/2.0)"/>
+      <arg name="y"              value="$(arg start_y)"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>

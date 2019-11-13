@@ -104,7 +104,7 @@
           args="standalone intel_aero_navigation/GazeboVelNavNodelet"
           output="screen">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <param name="odom_frame"      value="$(arg map_frame)"/>
+      <param name="local_frame"     value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>
       <param name="linear_vel_des"  value="$(arg linear_vel_des)"/>
@@ -119,7 +119,7 @@
           output="screen"
           launch-prefix="gdb --args">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <param name="odom_frame"      value="$(arg map_frame)"/>
+      <param name="local_frame"     value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>
       <param name="linear_vel_des"  value="$(arg linear_vel_des)"/>

@@ -1,0 +1,27 @@
+<launch>
+
+  <!-- load MAVROS parameters -->
+  <node pkg="mavros"
+        type="mavparam"
+        name="aero1_px4_param_loader"
+        output="screen"
+        args="-v -n aero1/mavros
+              load -mp $(find intel_aero_experiments)/cfg/px4_task_params.txt"/>
+
+  <!-- load MAVROS parameters -->
+  <node pkg="mavros"
+        type="mavparam"
+        name="aero2_px4_param_loader"
+        output="screen"
+        args="-v -n aero2/mavros
+              load -mp $(find intel_aero_experiments)/cfg/px4_task_params.txt"/>
+
+  <!-- load MAVROS parameters -->
+  <node pkg="mavros"
+        type="mavparam"
+        name="aero3_px4_param_loader"
+        output="screen"
+        args="-v -n aero3/mavros
+              load -mp $(find intel_aero_experiments)/cfg/px4_task_params.txt"/>
+
+</launch>

@@ -308,6 +308,10 @@ void NavBase::poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg)
     initializeSystem();
 
   geometry_msgs::PoseStamped curr_wp = waypoints.front();
+  curr_wp.pose.orientation.x = 0.0;
+  curr_wp.pose.orientation.y = 0.0;
+  curr_wp.pose.orientation.z = 0.0;
+  curr_wp.pose.orientation.w = 1.0;
   geometry_msgs::Point robot_pt = robot_pose.pose.position;
 
   // heading error
@@ -327,13 +331,13 @@ void NavBase::poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
   if (abs(yaw_error) > heading_tol && pos_error > position_tol) {
     // turn in place before moving
-    ROS_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
-    curr_wp = robot_pose;
-    curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
+    //ROS_DEBUG("turning towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    //curr_wp = robot_pose;
+    //curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (pos_error > position_tol) {
     // maintain heading and move towards waypoint
-    ROS_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
-    curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
+    //ROS_DEBUG("moving towards goal. pos_error = %.2f m, yaw_error = %.2f rad", pos_error, yaw_error);
+    //curr_wp.pose.orientation = tf2::toMsg(tf2::Quaternion(tf2::Vector3(0,0,1), yaw_d));
   } else if (waypoints.size() > 1) {
     // intermediate waypoint reached: advance to next
     ROS_DEBUG("reached waypoint: {%.2f, %.2f, %.2f}", curr_wp.pose.position.x, curr_wp.pose.position.y, curr_wp.pose.position.z);
