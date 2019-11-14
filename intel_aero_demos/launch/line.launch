@@ -8,21 +8,21 @@
   <arg name="task_agent_velocity"    default="0.5"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="1.0"/>  <!-- m/s -->
   <arg name="sample_count"           default="5000"/>
-  <arg name="sample_variance"        default="2.0"/>
-  <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.90"/> <!-- (0.5 1) -->
+  <arg name="sample_variance"        default="1.0"/>
+  <arg name="margin"                 default="0.30"/> <!-- [0 1] -->
+  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="2.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
-  <arg name="minimum_update_rate"    default="2"/>    <!-- Hz -->
-  <arg name="source_node"            default="2"/>
-  <arg name="destination_node"       default="1"/>
+  <arg name="minimum_update_rate"    default="1"/>    <!-- Hz -->
+  <arg name="source_node"            default="5"/>
+  <arg name="destination_node"       default="3"/>
   <arg name="start_x"                default="6.0"/>
   <arg name="start_y"                default="0.0"/>
   <arg name="end_x"                  default="23.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
-  <rosparam param="/task_agent_ids">[1, 2]</rosparam> <!-- needed for task agent count -->
-  <rosparam param="/comm_agent_ids">[3]</rosparam> <!-- needed for network agent count -->
+  <rosparam param="/task_agent_ids">[3, 5]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ids">[1]</rosparam> <!-- needed for network agent count -->
   <param name="/desired_altitude" value="2.0"/>
   <param name="/source_node"      value="$(arg source_node)"/>
   <param name="/start_x"          value="$(arg start_x)"/>
@@ -58,7 +58,6 @@
   <node pkg="network_planner"
         type="network_planner_line_node"
         name="network_planner_line_node"
-        launch-prefix="gdb --args"
         output="screen">
     <param name="sample_count"        value="$(arg sample_count)"/>
     <param name="sample_variance"     value="$(arg sample_variance)"/>
@@ -84,7 +83,7 @@
   <!-- task (line) agents -->
 
   <group>
-    <arg name="id" value="1"/>
+    <arg name="id" value="3"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="0.0"/>
@@ -95,7 +94,7 @@
   </group>
 
   <group>
-    <arg name="id" value="2"/>
+    <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(arg start_x)"/>
@@ -108,7 +107,7 @@
   <!-- network agents -->
 
   <group>
-    <arg name="id" value="3"/>
+    <arg name="id" value="1"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="$(eval arg('start_x')/2.0)"/>

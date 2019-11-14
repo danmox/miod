@@ -879,10 +879,10 @@ bool NetworkPlanner::updateNetworkConfig()
   for (int i = 0; i < dist.size(); ++i)
     dist[i] = x_star[i] - team_config[i];
 
-  printf("   team config:                 x_star:                      dist:\n");
+  printf("      team config:                x_star:                     dist:\n");
   for (int i = 0; i < dist.size(); ++i) {
-    printf("   [%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f], [%7.2f, %7.2f, %7.2f]\n",
-           team_config[i](0), team_config[i](1), team_config[i](2),
+    printf("   %2d |%7.2f %7.2f %7.2f|   |%7.2f %7.2f %7.2f|   |%7.2f %7.2f %7.2f|\n",
+           idx_to_id.at(i), team_config[i](0), team_config[i](1), team_config[i](2),
            x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
   }
 
@@ -943,7 +943,7 @@ bool NetworkPlanner::updateNetworkConfig()
   // send network update command
   //
 
-  sendNetworkUpdate(alpha);
+  publishNetworkUpdate(alpha);
 
   //
   // visualizations
@@ -1071,13 +1071,13 @@ bool NetworkPlanner::updateRouting()
   // send network update command
   //
 
-  sendNetworkUpdate(alpha);
+  publishNetworkUpdate(alpha);
 
   return true;
 }
 
 
-void NetworkPlanner::sendNetworkUpdate(const std::vector<arma::mat>& alpha)
+void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha)
 {
   // TODO 1) ensure sum of probabilities is 1.0
   // TODO 2) ensure the source is not a gateway

@@ -105,7 +105,7 @@ class NetworkPlanner
     bool SOCP(const point_vec& config,
               std::vector<arma::mat>& alpha,
               double& slack, bool publish_qos, bool debug);
-    void sendNetworkUpdate(const std::vector<arma::mat>& alpha);
+    void publishNetworkUpdate(const std::vector<arma::mat>& alpha);
 
   public:
 

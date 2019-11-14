@@ -49,6 +49,20 @@
       NODES
   -->
 
+  <!-- automatically record test data -->
+  <arg name="server_topics" unless="$(arg server)" value=""/>
+  <arg name="server_topics" if="$(arg server)"     value="/network_update /network_visualization /planner /tf /tf_static"/>
+  <node pkg="rosbag"
+        type="record"
+        name="$(arg robot_ns)_bag_recorder"
+        output="screen"
+        args="-o /home/$(arg robot_ns)/.ros/$(arg robot_ns)
+              /$(arg robot_ns)/mavros/global_position/global
+              /$(arg robot_ns)/mavros/imu/data
+              /$(arg robot_ns)/mavros/setpoint_position/local
+              /$(arg robot_ns)/pose
+              $(arg server_topics)"/>
+
   <group ns="$(arg robot_ns)" >
 
     <!-- MAVROS -->
