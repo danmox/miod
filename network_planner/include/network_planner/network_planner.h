@@ -13,6 +13,7 @@
 #include <armadillo>
 #include <vector>
 #include <unordered_set>
+#include <map>
 
 
 namespace network_planner {
@@ -47,8 +48,6 @@ class NetworkPlanner
     double collision_distance;  // minimum distance between agents
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
     std::string world_frame;
-    string_vec agent_ips;       // list of the ip address of each agent
-    std::vector<int> agent_ids; // list of ids of active agents (i.e. aero#)
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> pose_subs;
@@ -56,9 +55,14 @@ class NetworkPlanner
     ros::Publisher viz_pub, net_pub, qos_pub;
     ros::ServiceClient socp_srv;
 
-    int total_agents, num_dests, num_flows;
+    int agent_count, num_dests, num_flows;
     std::vector<int> comm_idcs;
     std::vector<int> task_idcs;
+    std::map<int,std::string> idx_to_ip;
+    std::map<int,std::string> id_to_ip;
+    std::map<int,int> id_to_idx;
+    std::map<int,int> idx_to_id;
+    string_vec agent_ips;       // list of the ip address of each agent
 
     point_vec team_config;
     std::vector<bool> received_odom;
@@ -66,7 +70,7 @@ class NetworkPlanner
     channel_simulator::ChannelSimulator channel_sim;
     Costmap costmap;
     bool received_costmap;
-    CommReqs comm_reqs;
+    CommReqs comm_reqs_id;
 
     // navigation vars
     typedef intel_aero_navigation::WaypointNavigationAction NavAction;
@@ -101,6 +105,7 @@ class NetworkPlanner
     bool SOCP(const point_vec& config,
               std::vector<arma::mat>& alpha,
               double& slack, bool publish_qos, bool debug);
+    void sendNetworkUpdate(const std::vector<arma::mat>& alpha);
 
   public:
 

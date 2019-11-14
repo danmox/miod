@@ -120,7 +120,7 @@ void NavBase::goalCB()
   }
 
   if (!costmap_ptr)
-    ROS_WARN("planning without a costmap");
+    ROS_WARN_ONCE("planning without a costmap (this message is printed only once)");
 
   if (nav_server.isPreemptRequested()) {
     ROS_INFO("goal preempted");

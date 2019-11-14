@@ -53,10 +53,12 @@ int main(int argc, char** argv)
   start.position.x = start_x;
   start.position.y = start_y;
   start.position.z = desired_altitude;
+  start.orientation.w = 1.0;
   geometry_msgs::Pose end;
   end.position.x = end_x;
   end.position.y = start_y;
   end.position.z = desired_altitude;
+  end.orientation.w = 1.0;
 
   intel_aero_navigation::WaypointNavigationGoal goal_msg;
   goal_msg.header.frame_id = "world";

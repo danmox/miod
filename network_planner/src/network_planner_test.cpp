@@ -50,7 +50,7 @@ int NPTest::socpDebug()
   for (int i = 0; i < team_config.size(); ++i)
     printf("agent %2d: (%6.2f, %6.2f, %6.2f)\n", i+1, team_config[i](0), team_config[i](1), team_config[i](2));
 
-  total_agents = team_config.size();
+  agent_count = team_config.size();
 
   // explicitly set channel model
   channel_sim = channel_simulator::ChannelSimulator(-48.0, 2.52, -70.0, 0.2, 6.0);
@@ -136,7 +136,7 @@ int NPTest::socpTest()
   team_config.push_back(arma::vec3("10.0 2.0 0.0"));
   team_config.push_back(arma::vec3("20.0 -2.0 0.0"));
 
-  total_agents = team_config.size();
+  agent_count = team_config.size();
 
   // initialize task spec
   network_planner::Flow flow;
@@ -181,7 +181,7 @@ int NPTest::networkConfigTest()
   team_config.push_back(arma::vec3("15.0 0.0 0.05"));
   team_config.push_back(arma::vec3("5.0 5.0 1.81"));
 
-  total_agents = team_config.size();
+  agent_count = team_config.size();
 
   // explicitly set channel model
   channel_sim = channel_simulator::ChannelSimulator(-53.0, 2.52, -70.0, 0.2, 6.0);
@@ -203,13 +203,13 @@ int NPTest::networkConfigTest()
   setCommReqs(qos);
 
   // set parameters
-  total_agents = team_config.size();
+  agent_count = team_config.size();
   comm_count = 1;
   task_count = 2;
   comm_idcs.clear();
   for (int i = 0; i < task_count; ++i)
     task_idcs.push_back(i);
-  for (int i = task_count; i < total_agents; ++i)
+  for (int i = task_count; i < agent_count; ++i)
     comm_idcs.push_back(i);
   sample_var = 1.0;
   sample_count = 5000;
@@ -238,7 +238,7 @@ int NPTest::socpSrvTest()
   for (int i = 0; i < team_config.size(); ++i)
     printf("agent %2d: (%6.2f, %6.2f, %6.2f)\n", i+1, team_config[i](0), team_config[i](1), team_config[i](2));
 
-  total_agents = team_config.size();
+  agent_count = team_config.size();
 
   // explicitly set channel model
   channel_sim = channel_simulator::ChannelSimulator(-48.0, 2.52, -70.0, 0.2, 6.0);

@@ -101,8 +101,7 @@
           pkg="nodelet"
           type="nodelet"
           name="gazebo_vel_nav_nodelet"
-          args="standalone intel_aero_navigation/GazeboVelNavNodelet"
-          output="screen">
+          args="standalone intel_aero_navigation/GazeboVelNavNodelet">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
       <param name="local_frame"     value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
