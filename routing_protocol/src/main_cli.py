@@ -142,9 +142,10 @@ def measurement_thread_traceroute():
         print("traceroute to {} succesfull".format(str(Params.TP_IP)))
         start_time = Params.final_stats["start_time"]
         while Params.sim_run is True:
-            cmdline = ["sudo", "traceroute", "-T", Params.TP_IP]
+            cmdline = ["sudo", "traceroute", "-T", Params.TP_IP, "-w", str(Params.tp_update_period)]
             cur_wireless = subprocess.run(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
             cur_wireless_update = cur_wireless.stdout.decode()
+            print(cur_wireless_update)
             ips = np.array(re.findall(r"((?<=\d\s\s)([\d]{1,3}\.){3}[\d]{1,3})", cur_wireless_update))
             delays = np.array(re.findall(r"((?<=\)\s\s)[\d]{1,4}\.[\d]{1,3})", cur_wireless_update))
             if len(ips)>0:
@@ -156,7 +157,7 @@ def measurement_thread_traceroute():
                     Params.traceroute_stats.append([time()-start_time,ips2,delays])
                     if Params.statistics_collection:
                         Params.final_stats["tr"].append([time(),ips2,delays])
-            sleep(Params.rt_update_period)
+            sleep(Params.tp_update_period)
 
 
 def status_send_update_thread():

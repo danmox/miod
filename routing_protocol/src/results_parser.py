@@ -11,6 +11,7 @@ import networkx as nx
 from haversine import haversine
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
+from matplotlib.axes import Axes
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import Axes3D, proj3d
 import numpy as np
@@ -52,6 +53,28 @@ def rsync(server, path, password, local_results_folder, timeout=30):
     return stdout
 
 
+def moving_average_inf(a, x_values, n=20, period=1) :
+    mv_average_filter = np.zeros(n)
+    j=0
+    ret = np.zeros(len(a))
+    prev_val = x_values[0]
+    cur_per = 0
+    for i in range(0,len(a)):
+        if i!=0:
+            cur_per = x_values[i]-prev_val
+            prev_val = x_values[i]
+        mv_average_filter[j] = a[i]
+        if cur_per>period:
+            print(cur_per)
+            mv_average_filter[j] = period*1000
+        j += 1
+        j = j % n
+        if i<=n:
+            ret[i]=np.mean(mv_average_filter[:i+1])
+        else:
+            ret[i]=np.mean(mv_average_filter)
+    return ret
+
 def moving_average(a, n=20) :
     mv_average_filter = np.zeros(n)
     j=0
@@ -69,9 +92,9 @@ def moving_average(a, n=20) :
 
 
 save_archive = True
-load_from_archive=True
+load_from_archive=False
 load_local = False
-archive_name = 'results/RRarchive2019-11-11 16:45.npz'
+archive_name = 'results/RRarchive2019-11-14 16:21.npz'
 home = expanduser("~")
 local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
 
@@ -87,7 +110,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.1', '10.42.0.2', '10.42.0.3']
+    hosts = ['10.42.0.1']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
@@ -117,10 +140,22 @@ fig3 = plt.figure()
 fig3_prj = fig3.gca(projection='3d')
 rt_plot = Axes3D(fig3)
 
+fig4, tp_plot_ani = plt.subplots()
+fig5, tr_plot_ani = plt.subplots()
+
 
 colors = ['b', 'g', 'r', 'c', 'y']
 colors_fixed = {}
 j=0
+
+
+tp_total = {}
+tp_total_ma = {}
+tp_total_time = {}
+
+tr_total = {}
+tr_total_ma = {}
+tr_total_time = {}
 
 rt_total = {}
 rt_path_total = {}
@@ -144,14 +179,18 @@ for i in data:
         tp_ip = dat.item()['tp_ip']
         tr = np.transpose(tr)
         rt_path_total[i] = tr[1]
-        print(tr[1])
+        print(tr)
         rt_path_time[i] = tr[0]-start_time
         y_ax = [sum(k) for k in tr[2]]
-        tr_plot_ma = moving_average(y_ax, m_av_len)
+        tr_plot_ma = moving_average_inf(y_ax, tr[0]-start_time, n=m_av_len, period=1)
         tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
                  label=('TX - {}, RX - {}'.format(i, tp_ip)))
         tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)],
              label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
+        tr_total[i] = y_ax
+        tr_total_ma[i] = tr_plot_ma
+        tr_total_time[i] = tr[0]-start_time
+
 
     tp = dat.item()["tp"]
     if len(tp)>0:
@@ -162,8 +201,13 @@ for i in data:
              label=('TX - {}, RX - {}'.format(i, tp_ip)))
         tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)],
              label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
+        tp_total[i] = tp[1]
+        tp_total_ma[i] = tp_plot_ma
+        tp_total_time[i] = tp[0]
+
     colors_fixed[i] = colors[j % len(colors)]
     j+=1
+
 
     rt = dat.item()["rt"]
     pos = dat.item()["pos"]
@@ -178,7 +222,7 @@ for i in data:
         time_pos = np.array(pos).transpose()[0,:]
         pos_time_total[i] = np.array(time_pos,dtype=float) - start_time
         pos_total[i] = np.array(pos)[:,1:]
-        pos_total[i][:,2]=pos_total[i][:,2]*(-1)
+        pos_total[i][:,2]=pos_total[i][:,2]
         if max_pos_x[0]!=None:
             max_pos_x[0] = min(max_pos_x[0], min(pos_total[i][:,0]))
         else:
@@ -208,8 +252,9 @@ for i in data:
 
 for i in pos_total:
     pos_total[i][:, 2] = pos_total[i][:,2]-max_pos_z[0]
-max_pos_z[1]-=max_pos_z[0]
-max_pos_z[0] = 0
+if max_pos_z[0]!=None:
+    max_pos_z[1]-=max_pos_z[0]
+    max_pos_z[0] = 0
 
 
 
@@ -245,6 +290,57 @@ def dist_calc(pos1, pos2):
     d3d = round(d3d,2)
     return d3d
 
+
+def update_stats_tp(i):
+    if len(fig4.texts)>0:
+        fig4.texts.clear()
+    textstr = "Time: {}".format(str(i))
+    plt.gcf().text(0.02, 0.02, textstr, fontsize=14)
+    for j in tp_total:
+        tp_ip = data[j].item()['tp_ip']
+        cur_time_tp = tp_total_time[j]
+        cur_idx_tp = np.where(cur_time_tp < i)[0]
+
+        if len(cur_idx_tp) > 0:
+            tp_plot_ani.clear()
+            tp_plot_ani.title.set_text('Throughput')
+            tp_plot_ani.set_xlabel("time, s")
+            tp_plot_ani.set_ylabel("Throughput, Mbps")
+            cur_idx = cur_idx_tp[-1]
+            tp_plot_ani.plot(tp_total_time[j][:cur_idx], tp_total[j][:cur_idx], color="r", marker='.', linewidth=0, markersize=1,
+                         label=('TX - {}, RX - {}'.format(j, tp_ip)))
+            tp_plot_ani.plot(tp_total_time[j][:cur_idx], tp_total_ma[j][:cur_idx], color="r",
+                         label=('Mov. av., TX - {}, RX - {}'.format(j, tp_ip)))
+            tp_plot_ani.legend()
+
+
+def update_stats_tr(i):
+    if len(fig5.texts)>0:
+        fig5.texts.clear()
+    textstr = "Time: {}".format(str(i))
+    plt.gcf().text(0.02, 0.02, textstr, fontsize=14)
+
+    for j in tr_total:
+        tp_ip = data[j].item()['tp_ip']
+        cur_time_tp = tr_total_time[j]
+        cur_idx_tp = np.where(cur_time_tp < i)[0]
+
+        if len(cur_idx_tp) > 0:
+            tr_plot_ani.clear()
+            tr_plot_ani.title.set_text('Delay, ms')
+            tr_plot_ani.set_xlabel("time, s")
+            tr_plot_ani.set_ylabel("Delay")
+            cur_idx = cur_idx_tp[-1]
+            tr_plot_ani.plot(tr_total_time[j][:cur_idx], tr_total[j][:cur_idx], color="r", marker='.', linewidth=0, markersize=1,
+                         label=('TX - {}, RX - {}'.format(j, tp_ip)))
+            tr_plot_ani.plot(tr_total_time[j][:cur_idx], tr_total_ma[j][:cur_idx], color="r",
+                         label=('Mov. av., TX - {}, RX - {}'.format(j, tp_ip)))
+            tr_plot_ani.legend()
+
+
+
+
+
 def update_graph(i):
     fixed_edges = []
     path_edges  = {}
@@ -279,8 +375,9 @@ def update_graph(i):
 
     rt_plot.clear()
     rt_plot.title.set_text('Network layout')
-    rt_plot.set_xlabel("x")
-    rt_plot.set_ylabel("y")
+    rt_plot.set_xlabel("lat")
+    rt_plot.set_ylabel("lon")
+    rt_plot.set_zlabel("alt, m")
     rt_plot.set_xlim(max_pos_x)
     rt_plot.set_ylim(max_pos_y)
     rt_plot.set_zlim(max_pos_z)
@@ -324,6 +421,13 @@ def update_graph(i):
 
 
 
-ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=100)
-ani.save('./results/layout.mp4')
+#ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=1000)
+
+#ani1 = FuncAnimation(fig4, update_stats_tp, frames=range(0,ceil(max_time_rt)), interval=1000)
+
+#ani2 = FuncAnimation(fig5, update_stats_tr, frames=range(0,ceil(max_time_rt)), interval=1000)
+
+#ani2.save('./results/delay_routing.mp4')
+#ani1.save('./results/throughput_routing.mp4')
+#ani.save('./results/positions_routing.mp4')
 plt.show()
