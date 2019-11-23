@@ -1,0 +1,13 @@
+<launch>
+
+  <arg name="id" default="1"/>
+
+  <!-- load MAVROS parameters -->
+  <node pkg="mavros"
+        type="mavparam"
+        name="aero_px4_param_loader"
+        output="screen"
+        args="-v -n aero$(arg id)/mavros
+              load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
+
+</launch>

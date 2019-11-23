@@ -33,17 +33,20 @@
   <arg name="costmap_frame" unless="$(arg static_map)" value="$(arg odom_frame)"/>
 
   <!-- MAVROS args -->
-  <arg name="fcu_url" default="tcp://127.0.0.1:5760"/>
+  <arg name="fcu_url" default="udp://127.0.0.1:14550@127.0.0.1:14555"/>
 
   <!-- routing args -->
+  <arg name="networking"     default="true"/> <!-- controls whether robust routing scripts are started -->
   <arg name="server"         default="false"/>
   <arg name="interface"      default="wlp1s0"/>
-  <arg name="srv"            default="10.42.0.1"/>
+  <arg name="srv" unless="$(eval arg('server') or not arg('networking'))"/>
   <arg name="routing_script" default="routing_client" unless="$(arg server)"/>
   <arg name="routing_script" default="routing_server" if="$(arg server)"/>
   <arg name="dest_arg"       default=""/>
-  <arg name="routing_args"   default="$(arg dest_arg) --srv $(arg srv) --interface $(arg interface)" unless="$(arg server)"/>
-  <arg name="routing_args"   default="$(arg dest_arg) --interface $(arg interface)" if="$(arg server)"/>
+  <arg name="routing_args"   default="$(arg dest_arg) --srv $(arg srv) --interface $(arg interface)"
+       unless="$(eval arg('server') or not arg('networking'))"/>
+  <arg name="routing_args"   default="$(arg dest_arg) --interface $(arg interface)"
+       if="$(eval arg('server') and arg('networking'))"/>
 
   <!--
       NODES
@@ -101,7 +104,8 @@
     </node>
 
     <!-- routing script -->
-    <node pkg="routing_protocol"
+    <node if="$(arg networking)"
+          pkg="routing_protocol"
           type="$(arg routing_script)"
           name="$(arg routing_script)_node"
           args="$(arg routing_args)"

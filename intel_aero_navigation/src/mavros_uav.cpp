@@ -96,7 +96,7 @@ void MavrosUAV::takeoffThread()
 
   // vertical flight speed limit governed by px4 param MPC_Z_VEL_MAX_UP
   geometry_msgs::Twist cmd;
-  cmd.linear.z = 0.2;
+  cmd.linear.z = 1.0;
 
   // send a few setpoints before starting
   MU_INFO("publishing setpoints before liftoff");
@@ -128,6 +128,20 @@ void MavrosUAV::takeoffThread()
 
   // wait for the system to report the quad is active (i.e. 4: in the air)
   while (ros::ok() && getState().system_status != 4) {
+    local_vel_pub.publish(cmd); // setpoints must continually be published
+    ros::spinOnce();
+    rate.sleep();
+  }
+  MU_INFO("system active");
+
+  // after the system is active continue to travel upward for 1.0 seconds; this
+  // is necessary for a robust ground -> air transition (sometimes the quad is
+  // reported active but still on the groud -- additionally, relative altitude
+  // gets reset on takeoff but if position commands are given before this
+  // happens it may be that the quad on the ground is already at a higher
+  // altitude which would cause it to disregard the commands)
+  start = ros::Time::now();
+  while (ros::ok() && (ros::Time::now() - start).toSec() < 1.0) {
     local_vel_pub.publish(cmd); // setpoints must continually be published
     ros::spinOnce();
     rate.sleep();

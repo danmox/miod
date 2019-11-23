@@ -25,26 +25,50 @@ int main(int argc, char** argv)
   nav_client.waitForServer();
   ROS_INFO("%s action server ready", action_server.c_str());
 
+  double x0 = 5.0;
+  double y0 = 4.0;
+  double xf = 22.0;
+  double yf = 12.0;
+  double step = 0.1;
+
   intel_aero_navigation::WaypointNavigationGoal goal_msg;
   goal_msg.header.frame_id = "world";
   goal_msg.header.stamp = ros::Time::now();
   geometry_msgs::Pose goal;
-  goal.position.x = 24.0;
-  goal.position.y = 4.0;
-  goal.position.z = 4.0;
+  goal.position.x = x0;
+  goal.position.y = y0;
+  goal.position.z = 3.0;
+  goal.orientation.w = 1.0;
   goal_msg.waypoints.push_back(goal);
-  goal.position.x = 24.0;
-  goal.position.y = 12.0;
-  goal.position.z = 4.0;
+
+  while (goal.position.x < xf-step) {
+    goal.position.x += step;
+    goal_msg.waypoints.push_back(goal);
+  }
+  goal.position.x = xf;
   goal_msg.waypoints.push_back(goal);
-  goal.position.x = 5.0;
-  goal.position.y = 12.0;
-  goal.position.z = 4.0;
+
+  while (goal.position.y < yf-step) {
+    goal.position.y += step;
+    goal_msg.waypoints.push_back(goal);
+  }
+  goal.position.y = yf;
   goal_msg.waypoints.push_back(goal);
-  goal.position.x = 5.0;
-  goal.position.y = 4.0;
-  goal.position.z = 4.0;
+
+  while (goal.position.x > x0+step) {
+    goal.position.x -= step;
+    goal_msg.waypoints.push_back(goal);
+  }
+  goal.position.x = x0;
   goal_msg.waypoints.push_back(goal);
+
+  while (goal.position.y > y0+step) {
+    goal.position.y -= step;
+    goal_msg.waypoints.push_back(goal);
+  }
+  goal.position.y = y0;
+  goal_msg.waypoints.push_back(goal);
+
   goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::LAND;
 
   ROS_INFO("sending goal");
