@@ -16,6 +16,7 @@ class NPTest : public NetworkPlanner
     int socpDebug();
     int networkConfigTest();
     int socpSrvTest();
+    int computeSlackTest();
 };
 
 
@@ -291,6 +292,57 @@ int NPTest::socpSrvTest()
 }
 
 
+int NPTest::computeSlackTest()
+{
+  // set agent states
+  team_config.clear();
+  team_config.push_back(arma::vec3("0.0 0.0 0.0"));
+  team_config.push_back(arma::vec3("30.0 0.0 0.0"));
+  team_config.push_back(arma::vec3("10.0 2.0 0.0"));
+  team_config.push_back(arma::vec3("20.0 -2.0 0.0"));
+
+  agent_count = team_config.size();
+
+  for (int i = 0; i < agent_count; ++i) {
+    idx_to_id[i] = i+1;
+    id_to_idx[i+1] = i;
+  }
+
+  // initialize task spec
+  network_planner::CommReqs qos;
+  network_planner::Flow flow1;
+  flow1.srcs.insert(2);
+  flow1.dests.insert(1);
+  flow1.min_margin = 0.1;
+  flow1.confidence = 0.7;
+  qos.push_back(flow1);
+  network_planner::Flow flow2;
+  flow2.srcs.insert(1);
+  flow2.dests.insert(2);
+  flow2.min_margin = 0.1;
+  flow2.confidence = 0.7;
+  qos.push_back(flow2);
+  setCommReqs(qos);
+
+  // solve SOCP
+  bool debug = false;
+  double slack;
+  std::vector<arma::mat> alpha;
+  if (!SOCP(team_config, alpha, slack, false, debug)) {
+    ROS_ERROR("SOCP failed");
+    return -1;
+  }
+  printRoutingTable(alpha);
+
+  debug = false;
+  double computed_slack = computeSlack(team_config, alpha, false);
+  printf("slack: %f\n", slack);
+  printf("computed: %f\n", computed_slack);
+
+  return 0;
+}
+
+
 } // namespace network_planner
 
 int main(int argc, char** argv)
@@ -315,6 +367,9 @@ int main(int argc, char** argv)
       case 3:
         printf("running socpSrvTest()\n");
         return npt.socpSrvTest();
+      case 4:
+        printf("running computeSlackTest()");
+        return npt.computeSlackTest();
     }
   } else {
     printf("provide an argument\n");

@@ -50,7 +50,6 @@ int main(int argc, char** argv)
 
   np.setCommReqs(comm_reqs);
 
-  np.initSystem();
   np.runPlanningLoop();
 
   return 0;

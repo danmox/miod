@@ -4,6 +4,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float64.h>
 #include <armadillo_socp.h>
 
 #include <functional>
@@ -61,6 +62,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 {
   // fetch parameters from ROS parameter server:
   std::string pose_topic, nav_nodelet;
+  double min_x, min_y, max_x, max_y;
   getParamStrict(nh, "/desired_altitude", desired_altitude);
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
@@ -69,6 +71,10 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(pnh, "pose_topic", pose_topic);
   getParamStrict(pnh, "nav_nodelet", nav_nodelet);
   getParamStrict(pnh, "world_frame", world_frame);
+  getParamStrict(nh, "/safety_x_min", safety_p_min(0));
+  getParamStrict(nh, "/safety_y_min", safety_p_min(1));
+  getParamStrict(nh, "/safety_x_max", safety_p_max(0));
+  getParamStrict(nh, "/safety_y_max", safety_p_max(1));
 
   // fetch task agent ids
   XmlRpc::XmlRpcValue task_agent_ids;
@@ -149,6 +155,9 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
 
   // SOCP service
   socp_srv = nh.serviceClient<socp::RobustRoutingSOCP>("RobustRoutingSOCP");
+
+  // publish slack at each iteration
+  slack_pub = nh.advertise<std_msgs::Float64>("slack", 10);
 }
 
 
@@ -673,6 +682,54 @@ void NetworkPlanner::networkState(const point_vec& state,
 }
 
 
+double NetworkPlanner::computeSlack(const point_vec& config,
+                                    const std::vector<arma::mat>& alpha,
+                                    bool debug)
+{
+  // get predicted rates
+  arma::mat R_mean;
+  arma::mat R_var;
+  networkState(config, R_mean, R_var);
+
+  int num_constraints = agent_count * num_flows;
+
+  // compute probability constraints without dividing by psi_inv_eps
+  int idx = 0;
+  std::vector<arma::mat> A_mats(num_constraints);
+  std::vector<arma::vec> b_vecs(num_constraints);
+  std::vector<arma::vec> c_vecs(num_constraints);
+  std::vector<arma::vec> d_vecs(num_constraints);
+  probConstraints(R_mean, R_var, A_mats, b_vecs, c_vecs, d_vecs, idx, false, debug);
+
+  // construct solution vector from routing matrices
+  arma::vec y = arma::zeros<arma::vec>(y_dim);
+  for (const auto& idx_ijk : idx_to_ijk) {
+    int i,j,k;
+    std::tie(i,j,k) = idx_ijk.second;
+    y[idx_ijk.first] = alpha[k](i,j);
+  }
+  if (debug) y.print("y:");
+
+  // compute: _bik - mik - psi*sqrt(~bik)
+  idx = 0;
+  arma::vec s_col(num_constraints);
+  for (int k = 0; k < num_flows; ++k) {
+
+    double psi_inv_eps = PsiInv(comm_reqs_id[k].confidence);
+
+    for (int i = 0; i < agent_count; ++i) {
+      double margin_avg = arma::as_scalar((c_vecs[idx].t()) * y + d_vecs[idx]);
+      double margin_std = arma::norm(A_mats[idx] * y);
+      s_col(idx) = margin_avg - psi_inv_eps*margin_std;
+      ++idx;
+    }
+  }
+  if (debug) s_col.print("s_col:");
+
+  return s_col.min();
+}
+
+
 double NetworkPlanner::computeV(const point_vec& config,
                                 const std::vector<arma::mat>& alpha,
                                 bool debug)
@@ -784,6 +841,9 @@ bool NetworkPlanner::updateNetworkConfig()
     return false;
   }
   printf("   slack = %f\n", slack);
+  std_msgs::Float64 slack_msg;
+  slack_msg.data = slack;
+  slack_pub.publish(slack_msg);
 
   // solve SOCP for x_star
 
@@ -842,7 +902,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
   // search for local configurations with better node margins
 
-  int new_max_count = 0, proximity_skip_count = 0;
+  int new_max_count = 0, proximity_skip_count = 0, safety_skip_count = 0;
   std::vector<bool> sample_mask(sample_count, true); // for later visualization use
   for (int j = 0; j < sample_count; ++j) {
 
@@ -857,6 +917,20 @@ bool NetworkPlanner::updateNetworkConfig()
     if (!collisionFree(x_prime)) {
       sample_mask[j] = false;
       ++proximity_skip_count;
+      continue;
+    }
+
+    // check if point is in safe zone
+    bool safety_violation = false;
+    for (int i = 0; i < comm_count; ++i) {
+      arma::vec3 dp_min = x_prime[comm_idcs[i]] - safety_p_min;
+      arma::vec3 dp_max = safety_p_max - x_prime[comm_idcs[i]];
+      if (dp_min(0) < 0 || dp_min(1) < 0 || dp_max(0) < 0 || dp_max(1) < 0)
+        safety_violation = true;
+    }
+    if (safety_violation) {
+      sample_mask[j] = false;
+      ++safety_skip_count;
       continue;
     }
 
@@ -911,39 +985,14 @@ bool NetworkPlanner::updateNetworkConfig()
   }
 
   // print out routing solution
-  for (int k = 0; k < num_flows; ++k) {
-    printf("   flow %d routes:\n", k+1);
-    printf("      |");
-    for (int i = 0; i < agent_count; ++i) {
-      if (comm_reqs_id[k].srcs.count(idx_to_id.at(i)) > 0)
-        printf("  (s)%2d", idx_to_id.at(i));
-      else if (comm_reqs_id[k].dests.count(idx_to_id.at(i)) > 0)
-        printf("  (d)%2d", idx_to_id.at(i));
-      else
-        printf("   %4d", idx_to_id.at(i));
-    }
-    printf("\n");
-    printf("   ----");
-    for (int i = 0; i < agent_count; ++i)
-      printf("-------");
-    printf("\n");
-    for (int i = 0; i < agent_count; ++i) {
-      printf("   %2d |", idx_to_id.at(i));
-      for (int j = 0; j < agent_count; ++j) {
-        if (alpha[k](i,j) > 0.01)
-          printf("   %4.2f", alpha[k](i,j));
-        else
-          printf("      -");
-      }
-      printf("\n");
-    }
-  }
+  printRoutingTable(alpha);
 
   //
   // send network update command
   //
 
-  publishNetworkUpdate(alpha);
+  bool bi_directional = false;
+  publishNetworkUpdate(alpha, bi_directional);
 
   //
   // visualizations
@@ -1008,6 +1057,53 @@ void NetworkPlanner::runPlanningLoop()
 {
   static int iter_count = 1;
 
+  //
+  // initialize system
+  //
+
+  NP_INFO("waiting for action servers to start");
+  for (auto& client : nav_clients)
+    client->waitForServer();
+  NP_INFO("action servers started");
+
+  NP_INFO("waiting for odom");
+  if (!all(received_odom, true)) ros::Rate(1).sleep();
+  NP_INFO("odom received");
+
+  ros::Rate init_loop_rate(1);
+  for (int i = 5; i > 0; --i) {
+    NP_INFO("starting network planner in %d...", i);
+    ros::spinOnce();
+    init_loop_rate.sleep();
+  }
+
+  NP_INFO("sending takeoff goals");
+  for (int i = 0; i < comm_count; ++i) {
+    geometry_msgs::Pose goal;
+    goal.orientation.w = 1.0;
+    goal.position.x = team_config[comm_idcs[i]](0);
+    goal.position.y = team_config[comm_idcs[i]](1);
+    goal.position.z = desired_altitude;
+
+    intel_aero_navigation::WaypointNavigationGoal goal_msg;
+    goal_msg.waypoints.push_back(goal);
+    goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
+    goal_msg.header.frame_id = world_frame;
+    goal_msg.header.stamp = ros::Time::now();
+
+    nav_clients[i]->sendGoal(goal_msg);
+  }
+
+  NP_INFO("waiting for agents to complete takeoff");
+  for (const auto& client : nav_clients)
+    client->waitForResult();
+
+  NP_INFO("system ready");
+
+  //
+  // main planning loop
+  //
+
   ros::Time last_call = ros::Time::now();
   ros::Rate loop_rate(minimum_update_rate);
   while (ros::ok()) {
@@ -1054,35 +1150,72 @@ bool NetworkPlanner::updateRouting()
 
   double slack;
   std::vector<arma::mat> alpha;
-  if (!SOCPsrv(team_config, alpha, slack, true, false)) {
+  if (!SOCP(team_config, alpha, slack, true, false)) {
     NP_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
   printf("slack = %f\n", slack);
+  std_msgs::Float64 slack_msg;
+  slack_msg.data = slack;
+  slack_pub.publish(slack_msg);
 
   // print out routing solution
-  for (int k = 0; k < num_flows; ++k) {
-    std::stringstream ss;
-    ss << "flow " << k+1 << " routes:";
-    alpha[k].print(ss.str());
-  }
+  printRoutingTable(alpha);
 
   //
   // send network update command
   //
 
-  publishNetworkUpdate(alpha);
+  bool bi_directional = false;
+  publishNetworkUpdate(alpha, bi_directional);
 
   return true;
 }
 
 
-void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha)
+void NetworkPlanner::printRoutingTable(const std::vector<arma::mat>& alpha)
+{
+  for (int k = 0; k < num_flows; ++k) {
+    printf("   flow %d routes:\n", k+1);
+    printf("      |");
+    for (int i = 0; i < agent_count; ++i) {
+      if (comm_reqs_id[k].srcs.count(idx_to_id.at(i)) > 0)
+        printf("  (s)%2d", idx_to_id.at(i));
+      else if (comm_reqs_id[k].dests.count(idx_to_id.at(i)) > 0)
+        printf("  (d)%2d", idx_to_id.at(i));
+      else
+        printf("   %4d", idx_to_id.at(i));
+    }
+    printf("\n");
+    printf("   ----");
+    for (int i = 0; i < agent_count; ++i)
+      printf("-------");
+    printf("\n");
+    for (int i = 0; i < agent_count; ++i) {
+      printf("   %2d |", idx_to_id.at(i));
+      for (int j = 0; j < agent_count; ++j) {
+        if (alpha[k](i,j) > 0.01)
+          printf("   %4.2f", alpha[k](i,j));
+        else
+          printf("      -");
+      }
+      printf("\n");
+    }
+  }
+}
+
+
+
+void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha, bool bi_directional)
 {
   // TODO 1) ensure sum of probabilities is 1.0
   // TODO 2) ensure the source is not a gateway
   routing_msgs::NetworkUpdate net_cmd;
   for (int k = 0; k < num_flows; ++k) {
+
+    //
+    // forward flow
+    //
 
     routing_msgs::PRTableEntry rt_entry;
     rt_entry.src  = id_to_ip.at(*comm_reqs_id[k].srcs.begin());
@@ -1115,6 +1248,43 @@ void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha)
 
       net_cmd.routes.push_back(rt_entry);
     }
+
+    //
+    // back flow
+    //
+
+    if (!bi_directional)
+      continue;
+
+    // opposite for bi-directional flow
+    rt_entry.src  = id_to_ip.at(*comm_reqs_id[k].dests.begin());
+    rt_entry.dest = id_to_ip.at(*comm_reqs_id[k].srcs.begin());
+
+    // back flow
+    for (int i = 0; i < agent_count; ++i) {
+
+      // probabilistic routing table entry for node i (all outgoing routes)
+      rt_entry.node = idx_to_ip.at(i);
+
+      // check for outgoing traffic to all other nodes
+      rt_entry.gateways.clear();
+      for (int j = 0; j < agent_count; ++j) {
+
+        // no self transmissions
+        if (i == j)
+          continue;
+
+        // only include routing table entry for significant usage
+        if (alpha[k](j,i) > 0.01) { // ignore small routing vars
+          routing_msgs::ProbGateway prob_gateway;
+          prob_gateway.IP = idx_to_ip.at(j);
+          prob_gateway.prob = alpha[k](j,i);
+          rt_entry.gateways.push_back(prob_gateway);
+        }
+      }
+
+      net_cmd.routes.push_back(rt_entry);
+    }
   }
   if (net_pub) net_pub.publish(net_cmd); // needed for testing w/o ROS
 }
@@ -1123,6 +1293,21 @@ void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha)
 void NetworkPlanner::runRoutingLoop()
 {
   static int iter_count = 1;
+
+  // init system
+
+  NP_INFO("waiting for odom");
+  if (!all(received_odom, true)) ros::Rate(1).sleep();
+  NP_INFO("odom received");
+
+  ros::Rate init_loop_rate(1);
+  for (int i = 5; i > 0; --i) {
+    NP_INFO("starting network planner in %d...", i);
+    ros::spinOnce();
+    init_loop_rate.sleep();
+  }
+
+  // main loop
 
   ros::Time last_call = ros::Time::now();
   ros::Rate loop_rate(minimum_update_rate);
@@ -1137,49 +1322,6 @@ void NetworkPlanner::runRoutingLoop()
     ++iter_count;
     loop_rate.sleep();
   }
-}
-
-
-void NetworkPlanner::initSystem()
-{
-  NP_INFO("waiting for action servers to start");
-  for (auto& client : nav_clients)
-    client->waitForServer();
-  NP_INFO("action servers started");
-
-  NP_INFO("waiting for odom");
-  if (!all(received_odom, true)) ros::Rate(1).sleep();
-  NP_INFO("odom received");
-
-  ros::Rate loop_rate(1);
-  for (int i = 5; i > 0; --i) {
-    NP_INFO("starting network planner in %d...", i);
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
-
-  NP_INFO("sending takeoff goals");
-  for (int i = 0; i < comm_count; ++i) {
-    geometry_msgs::Pose goal;
-    goal.orientation.w = 1.0;
-    goal.position.x = team_config[comm_idcs[i]](0);
-    goal.position.y = team_config[comm_idcs[i]](1);
-    goal.position.z = desired_altitude;
-
-    intel_aero_navigation::WaypointNavigationGoal goal_msg;
-    goal_msg.waypoints.push_back(goal);
-    goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
-    goal_msg.header.frame_id = world_frame;
-    goal_msg.header.stamp = ros::Time::now();
-
-    nav_clients[i]->sendGoal(goal_msg);
-  }
-
-  NP_INFO("waiting for agents to complete takeoff");
-  for (const auto& client : nav_clients)
-    client->waitForResult();
-
-  NP_INFO("system ready");
 }
 
 

@@ -47,12 +47,14 @@ class NetworkPlanner
     double max_velocity;        // limit for largest step from gradient
     double collision_distance;  // minimum distance between agents
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
+    arma::vec3 safety_p_min;
+    arma::vec3 safety_p_max;
     std::string world_frame;
 
     ros::NodeHandle nh, pnh;
     std::vector<ros::Subscriber> pose_subs;
     ros::Subscriber map_sub;
-    ros::Publisher viz_pub, net_pub, qos_pub;
+    ros::Publisher viz_pub, net_pub, qos_pub, slack_pub;
     ros::ServiceClient socp_srv;
 
     int agent_count, num_dests, num_flows;
@@ -87,6 +89,9 @@ class NetworkPlanner
     double computeV(const point_vec& config,
                     const std::vector<arma::mat>& alpha,
                     bool debug);
+    double computeSlack(const point_vec& config,
+                        const std::vector<arma::mat>& alpha,
+                        bool debug);
     void probConstraints(const arma::mat& R_mean,
                          const arma::mat& R_var,
                          std::vector<arma::mat>& A_mats,
@@ -105,7 +110,8 @@ class NetworkPlanner
     bool SOCP(const point_vec& config,
               std::vector<arma::mat>& alpha,
               double& slack, bool publish_qos, bool debug);
-    void publishNetworkUpdate(const std::vector<arma::mat>& alpha);
+    void publishNetworkUpdate(const std::vector<arma::mat>& alpha, bool bi_directional);
+    void printRoutingTable(const std::vector<arma::mat>& alpha);
 
   public:
 
@@ -119,7 +125,6 @@ class NetworkPlanner
     void setCommReqs(const CommReqs& reqs);
     void runPlanningLoop();
     void runRoutingLoop();
-    void initSystem();
 };
 
 
