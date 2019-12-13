@@ -33,4 +33,4 @@ source devel/setup.bash
 roslaunch intel_aero_demos 3_task_1_network.launch margin:=0.05
 ```
 
-You should see an rviz window pop up showing 3 quadrotors in a triangle formation and 1 quadrotor in the interior. After the nodes have initialized the interior (network) quadrotor takes off and positions itself at the center of the triangle, the optimal configuration for this scenario.
+You should see an rviz window pop up showing 3 (task) quadrotors in a triangle formation and 1 (network) quadrotor in the interior. After the nodes have initialized the network quadrotor takes off and positions itself at the center of the triangle, the optimal configuration for this scenario. A margin of 0.05 has been manually specified on command line as a single network agent is unable to deliver the default margin of 0.15 set in the launch file.
