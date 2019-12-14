@@ -1,6 +1,5 @@
 #include <network_planner/network_planner.h>
 #include <geometry_msgs/Point.h>
-#include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Float64MultiArray.h>
@@ -21,7 +20,6 @@ namespace network_planner {
 
 #define NP_INFO(fmt, ...) ROS_INFO("[network_planner] " fmt, ##__VA_ARGS__)
 #define NP_WARN(fmt, ...) ROS_WARN("[network_planner] " fmt, ##__VA_ARGS__)
-#define NP_WARN_ONCE(fmt, ...) ROS_WARN_ONCE("[network_planner] " fmt, ##__VA_ARGS__)
 #define NP_ERROR(fmt, ...) ROS_ERROR("[network_planner] " fmt, ##__VA_ARGS__)
 #define NP_FATAL(fmt, ...) ROS_FATAL("[network_planner] " fmt, ##__VA_ARGS__)
 #define NP_DEBUG(fmt, ...) ROS_DEBUG("[network_planner] " fmt, ##__VA_ARGS__)
@@ -57,6 +55,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   nh(nh_),
   pnh(pnh_),
   channel_sim(nh_),
+  use_safety_bdry(true),
   received_costmap(false),
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
@@ -71,10 +70,13 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   getParamStrict(pnh, "pose_topic", pose_topic);
   getParamStrict(pnh, "nav_nodelet", nav_nodelet);
   getParamStrict(pnh, "world_frame", world_frame);
-  getParamStrict(nh, "/safety_x_min", safety_p_min(0));
-  getParamStrict(nh, "/safety_y_min", safety_p_min(1));
-  getParamStrict(nh, "/safety_x_max", safety_p_max(0));
-  getParamStrict(nh, "/safety_y_max", safety_p_max(1));
+  if (!nh.getParam("/safety_x_min", safety_p_min(0)) ||
+      !nh.getParam("/safety_y_min", safety_p_min(1)) ||
+      !nh.getParam("/safety_x_max", safety_p_max(0)) ||
+      !nh.getParam("/safety_y_max", safety_p_max(1))) {
+    use_safety_bdry = false;
+    NP_WARN("failed to get safety boundary parameters; continuing without using a safety boundary");
+  }
 
   // fetch task agent ids
   XmlRpc::XmlRpcValue task_agent_ids;
@@ -649,10 +651,6 @@ bool NetworkPlanner::SOCP(const point_vec& config,
     R_var.print("R_var:");
   }
 
-  // remove small values for alpha
-  for (arma::mat& alpha_ij : alpha)
-    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
-
   return true;
 }
 
@@ -825,15 +823,12 @@ bool NetworkPlanner::updateNetworkConfig()
     NP_WARN("unable to plan: no task specification set");
     return false;
   }
-  //if (!received_costmap)
-  //  NP_WARN_ONCE("planning without costmap");
 
   //
   // find optimal routing variables
   //
 
   // solve SOCP for team_config
-
   double slack;
   std::vector<arma::mat> alpha;
   if (!SOCP(team_config, alpha, slack, true, false)) {
@@ -921,17 +916,19 @@ bool NetworkPlanner::updateNetworkConfig()
     }
 
     // check if point is in safe zone
-    bool safety_violation = false;
-    for (int i = 0; i < comm_count; ++i) {
-      arma::vec3 dp_min = x_prime[comm_idcs[i]] - safety_p_min;
-      arma::vec3 dp_max = safety_p_max - x_prime[comm_idcs[i]];
-      if (dp_min(0) < 0 || dp_min(1) < 0 || dp_max(0) < 0 || dp_max(1) < 0)
-        safety_violation = true;
-    }
-    if (safety_violation) {
-      sample_mask[j] = false;
-      ++safety_skip_count;
-      continue;
+    if (use_safety_bdry) {
+      bool safety_violation = false;
+      for (int i = 0; i < comm_count; ++i) {
+        arma::vec3 dp_min = x_prime[comm_idcs[i]] - safety_p_min;
+        arma::vec3 dp_max = safety_p_max - x_prime[comm_idcs[i]];
+        if (dp_min(0) < 0 || dp_min(1) < 0 || dp_max(0) < 0 || dp_max(1) < 0)
+          safety_violation = true;
+      }
+      if (safety_violation) {
+        sample_mask[j] = false;
+        ++safety_skip_count;
+        continue;
+      }
     }
 
     // check if x_prime is a better config
@@ -948,6 +945,7 @@ bool NetworkPlanner::updateNetworkConfig()
   if (new_max_count == 0)
     printf("   \033[0;33mat local optimum\033[0m\n");
 
+  /*
   // optimal direction
   point_vec dist = team_config;
   for (int i = 0; i < dist.size(); ++i)
@@ -959,12 +957,13 @@ bool NetworkPlanner::updateNetworkConfig()
            idx_to_id.at(i), team_config[i](0), team_config[i](1), team_config[i](2),
            x_star[i](0), x_star[i](1), x_star[i](2), dist[i](0), dist[i](1), dist[i](2));
   }
+  */
 
   //
   // send waypoint updates
   //
 
-  if (new_max_count != 0) {
+  if (new_max_count > 0) {
     printf("   sending navigation goal\n");
     for (int i = 0; i < comm_count; ++i) {
       geometry_msgs::Pose goal;
@@ -976,7 +975,6 @@ bool NetworkPlanner::updateNetworkConfig()
       intel_aero_navigation::WaypointNavigationGoal goal_msg;
       goal_msg.waypoints.push_back(goal);
       goal_msg.end_action = intel_aero_navigation::WaypointNavigationGoal::HOVER;
-      // TODO this should not be hardcoded!!
       goal_msg.header.frame_id = world_frame;
       goal_msg.header.stamp = ros::Time::now();
 
@@ -985,7 +983,7 @@ bool NetworkPlanner::updateNetworkConfig()
   }
 
   // print out routing solution
-  printRoutingTable(alpha);
+  //printRoutingTable(alpha);
 
   //
   // send network update command
@@ -1013,8 +1011,8 @@ bool NetworkPlanner::updateNetworkConfig()
   sample_points.color.r = 1.0;
   sample_points.color.a = 0.5;
   for (int j = 0; j < sample_count; ++j) {
-    if (sample_mask[j]) { // true if the sample was not skipped due to collision
-      for (int i = 0; i < comm_count; ++ i) {
+    for (int i = 0; i < comm_count; ++ i) {
+      if (sample_mask[i*comm_count+j]) { // true if the sample was not skipped due to collision
         geometry_msgs::Point sampled_point;
         sampled_point.x = samples(2*i,j);
         sampled_point.y = samples(2*i+1,j);

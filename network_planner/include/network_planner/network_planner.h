@@ -49,6 +49,7 @@ class NetworkPlanner
     double minimum_update_rate; // minimum rate at which updateNetworkConfig can run
     arma::vec3 safety_p_min;
     arma::vec3 safety_p_max;
+    bool use_safety_bdry;
     std::string world_frame;
 
     ros::NodeHandle nh, pnh;
@@ -126,11 +127,6 @@ class NetworkPlanner
     void runPlanningLoop();
     void runRoutingLoop();
 };
-
-
-// combinatorial functions
-std::vector<int> extract_inds(int num, const int agents);
-std::vector<int> compute_combinations(const int len, const int num_digits);
 
 
 } // namespace network_planner
