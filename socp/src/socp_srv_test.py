@@ -11,62 +11,106 @@ from geometry_msgs.msg import Point
 import matplotlib.pyplot as plt
 
 
+def plot_config(config):
+    x = []
+    y = []
+    for pt in config:
+        x += [pt.x]
+        y += [pt.y]
+
+    plt.plot(x, y, 'ro', markersize=12)
+    plt.axis('scaled')
+    plt.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
+    for i in range(len(x)):
+        plt.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
+    plt.show()
+
+
+def socp_info(routes, qos, config=None):
+    assert len(qos) == routes.shape[2]
+    n = routes.shape[0]
+
+    for k in range(len(qos)):
+        # flow info
+        print "flow %d: %d -> %s, margin = %.2f, confidence = %.2f:"\
+              % (k+1, qos[k].src, ", ".join(map(str, qos[k].dest)), qos[k].margin, qos[k].confidence)
+        # column header
+        node_names = ["%6s" % (i+1) for i in range(n)]
+        node_names[qos[k].src-1] = "%6s" % ("(s) " + str(qos[k].src))  # nodes numbered from 1
+        for d in qos[k].dest:
+            node_names[d-1] = "%6s" % ("(d) " + str(d))
+        print "   %6s|%s|%5s" % (" ", "".join(map(str, node_names)), "Tx")
+        print "   %s" % ("-" * (6 * (n+2) + 1))
+        for i in range(n):
+            num_str = ["%6.2f" % a if a > 0.01 else "%6s" % '-' for a in routes[i, :, k]]
+            if sum(routes[i, :, k]) > 0.01:
+                num_str += ["|%5.2f" % sum(routes[i, :, k])]
+            else:
+                num_str += ["|%5s" % "-"]
+            print "   %6s|%s" % (node_names[i], "".join(num_str))
+        print "   %6s|%s|" % ("", "-" * (6*n))
+        rx_str = ["%6.2f" % sum(routes[:, i, k]) if sum(routes[:, i, k]) > 0.01 else "%6s" % "-" for i in range(n)]
+        print "   %6s|%s" % ("Rx", "".join(rx_str))
+
+    if config:
+        plot_config(config)
+
+
 # Test 1
-def test1():
+def multiple_dest_test():
+    print "running multiple_dest_test()\n"
     msg = RobustRoutingSOCPRequest()
 
-    pt = Point()
-    pt.x = 20
-    pt.y = 0
-    pt.z = 0
-    # pt.z = 0.05
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = -10
-    pt.y = 17.32
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = -10
-    pt.y = -17.32
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = 5
-    pt.y = 5
-    # pt.z = 1.85
-    msg.config += [copy.deepcopy(pt)]
-    n = len(msg.config)
+    x = [20.0, -10.0, -10.0, 5.0]
+    y = [0.0, 17.32, -17.32, 5.0]
+    n = len(x)
+    for i in range(n):
+        pt = Point()
+        pt.x = x[i]
+        pt.y = y[i]
+        msg.config += [copy.deepcopy(pt)]
 
     qos = QoS()
     qos.margin = 0.02
     qos.confidence = 0.7
-    qos.src = 1
-    qos.dest = [3, 2]
-    msg.qos += [copy.deepcopy(qos)]
-    qos.src = 2
-    qos.dest = [3, 1]
-    msg.qos += [copy.deepcopy(qos)]
-    qos.src = 3
-    qos.dest = [2, 1]
-    msg.qos += [copy.deepcopy(qos)]
-    k = len(msg.qos)
-
-    res = rrss.solve_socp(msg)
-    routes = np.reshape(res.routes, (n, n, k), 'F')
-    print(res.slack)
+    src = [1, 2, 3]
+    dest = [[3, 2], [3, 1], [2, 1]]
+    k = len(src)
     for i in range(k):
-        print('alpha_ij_%d' % (i + 1))
-        print(np.array_str(routes[:, :, i], precision=4, suppress_small=True))
+        qos.src = src[i]
+        qos.dest = dest[i]
+        msg.qos += [copy.deepcopy(qos)]
+
+    rrsolver = rrss.RobustRoutingSolver()
+    res = rrsolver.solve_socp(msg)
+    if res.status != 'optimal':
+        print("solve_socp returned with status: %s" % res.status)
+        return
+
+    routes = np.reshape(res.routes, (n, n, k), 'F')
+    print("slack = %f" % res.slack)
+    socp_info(routes, msg.qos, msg.config)
 
 
 # Test 2
-def test2():
+def speed_test():
+    print "running speed test\n"
+
     patrol_rad = 20
     comm_rad = 8
     task_agent_count = 3
     comm_agent_count = 6
 
-    qos = []
-    qos1 = {"flow": {"src": 1, "dest": [2, 3]}, "margin": 0.10, "confidence": 0.70}
-    qos2 = {"flow": {"src": 2, "dest": [1, 3]}, "margin": 0.10, "confidence": 0.70}
-    qos3 = {"flow": {"src": 3, "dest": [1, 2]}, "margin": 0.10, "confidence": 0.70}
-    qos = [qos1, qos2, qos3]
+    qos_list = []
+    src = [1, 2, 3]
+    dest = [[2, 3], [1, 3], [1, 2]]
+    qos = QoS()
+    qos.margin = 0.10
+    qos.confidence = 0.70
+    for i in range(len(src)):
+        qos.src = src[i]
+        qos.dest = dest[i]
+        qos_list += [copy.deepcopy(qos)]
 
     # build team structure
 
@@ -80,28 +124,27 @@ def test2():
 
     # solve SOCP
 
+    rrsolver = rrss.RobustRoutingSolver()
     for i in range(10):
         start = time.time()
-        slack, routes, status = rrss.rrsocpconf(qos, x)
+        slack, routes, status = rrsolver.rrsocpconf(qos_list, x)
         print("found solution in %.4f second" % (time.time() - start))
 
 
 # Test 3
-def test3(margin=0.1, confidence=0.7):
-    dist = 30
-
+def simple_routing_test(margin=0.1, confidence=0.7):
+    print "running simple_routing_test()\n"
     msg = RobustRoutingSOCPRequest()
-    pt = Point()
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = dist
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = 1.0 / 3.0 * dist
-    pt.y = 3.0
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = 2.0 / 3.0 * dist
-    pt.y = -3.0
-    msg.config += [copy.deepcopy(pt)]
-    n = len(msg.config)
+
+    dist = 30
+    x = [0.0, dist, 1.0/3.0 * dist, 2.0/3.0 * dist]
+    y = [0.0, 0.0, 3.0, -3.0]
+    n = len(x)
+    for i in range(n):
+        pt = Point()
+        pt.x = x[i]
+        pt.y = y[i]
+        msg.config += [copy.deepcopy(pt)]
 
     print("margin = %.3f, confidence = %.3f" % (margin, confidence))
     qos = QoS()
@@ -112,97 +155,75 @@ def test3(margin=0.1, confidence=0.7):
     msg.qos += [copy.deepcopy(qos)]
     k = len(msg.qos)
 
-    res = rrss.solve_socp(msg)
+    rrsolver = rrss.RobustRoutingSolver()
+    res = rrsolver.solve_socp(msg)
     if res.status != 'optimal':
         print("solve_socp returned with status: %s" % res.status)
         return
 
     routes = np.reshape(res.routes, (n, n, k), 'F')
     print("slack = %.4f" % res.slack)
-    for i in range(k):
-        print('alpha_ij_%d' % (i + 1))
-        routes_tmp = routes[:, :, i]
-        routes_tmp[np.absolute(routes_tmp) < 1e-6] = 0.0
-        print(np.array_str(routes_tmp, precision=2, suppress_small=True))
-
-    # plot results
-
-    x = []
-    y = []
-    for pt in msg.config:
-        x += [pt.x]
-        y += [pt.y]
-
-    plt.plot(x, y, 'ro', markersize=12)
-    plt.axis('scaled')
-    plt.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
-    for i in range(n):
-        plt.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
-    plt.show()
+    socp_info(routes, msg.qos, msg.config)
 
 
 # Test 4
-# TODO results inconsistant with SOCP!!!
-def test4(margin=0.05, confidence=0.7):
-    rrss.cm = rrss.ChannelModel(fetch_params=False, print_values=True, l0=-48.0)
+# TODO these results are inconsistent with MATLAB
+def matlab_match_test(margin=0.05, confidence=0.7):
+    print "running matlab_match_test()\n"
 
+    x = [20.0, -10.0, -10.0, 5.0]
+    y = [0.0, 17.32, -17.32, 5.0]
+    z = [0.05, 0.05, 0.05, 1.83]
+    n = len(x)
     msg = RobustRoutingSOCPRequest()
-    pt = Point()
-    pt.x = 20.0
-    pt.y = 0.0
-    pt.z = 0.05
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = -10.0
-    pt.y = 17.32
-    msg.config += [copy.deepcopy(pt)]
-    pt.y = -17.32
-    msg.config += [copy.deepcopy(pt)]
-    pt.x = 5.0
-    pt.y = 5.0
-    pt.z = 1.83
-    msg.config += [copy.deepcopy(pt)]
-    n = len(msg.config)
+    for i in range(n):
+        pt = Point()
+        pt.x = x[i]
+        pt.y = y[i]
+        pt.z = z[i]
+        msg.config += [copy.deepcopy(pt)]
 
-    for pt in msg.config:
-        print("(%6.2f, %6.2f, %6.2f)" % (pt.x, pt.y, pt.z))
-
+    src = [1, 2, 3]
+    dest = [[2, 3], [1, 3], [1, 2]]
+    k = len(src)
     qos = QoS()
     qos.margin = margin
     qos.confidence = confidence
-    qos.src = 1
-    qos.dest = [2, 3]
-    msg.qos += [copy.deepcopy(qos)]
-    qos.src = 2
-    qos.dest = [1, 3]
-    msg.qos += [copy.deepcopy(qos)]
-    qos.src = 3
-    qos.dest = [1, 2]
-    msg.qos += [copy.deepcopy(qos)]
-    k = len(msg.qos)
+    for i in range(k):
+        qos.src = src[i]
+        qos.dest = dest[i]
+        msg.qos += [copy.deepcopy(qos)]
 
-    for i in range(0, k):
-        print("flow %d:" % (i + 1))
-        print("  sources: %d" % msg.qos[i].src)
-        print("  destinations: %s" % ', '.join(map(str, msg.qos[i].dest)))
-        print("  margin = %.2f" % margin)
-        print("  confidence = %.2f" % confidence)
-
-    res = rrss.solve_socp(msg)
+    rrsolver = rrss.RobustRoutingSolver(l0=-48.0)
+    res = rrsolver.solve_socp(msg)
     if res.status != 'optimal':
         print("solve_socp returned with status: %s" % res.status)
         return
 
     routes = np.reshape(res.routes, (n, n, k), 'F')
     print("slack = %.4f" % res.slack)
-    for i in range(k):
-        print('alpha_ij_%d' % (i + 1))
-        routes_tmp = routes[:, :, i]
-        routes_tmp[np.absolute(routes_tmp) < 1e-6] = 0.0
-        print(np.array_str(routes_tmp, precision=3, suppress_small=True))
+    socp_info(routes, msg.qos, msg.config)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) is not 3:
-        test4()
+    if len(sys.argv) is not 2:
+        print "running all tests\n"
+        multiple_dest_test()
+        print "\n"
+        speed_test()
+        print "\n"
+        simple_routing_test()
+        print "\n"
+        matlab_match_test()
     else:
-        test4(float(sys.argv[1]), float(sys.argv[2]))
+        arg = int(sys.argv[1])
+        if arg == 1:
+            multiple_dest_test()
+        elif arg == 2:
+            speed_test()
+        elif arg == 3:
+            simple_routing_test()
+        elif arg == 4:
+            matlab_match_test()
+        else:
+            print "unkown argument %d" % arg
