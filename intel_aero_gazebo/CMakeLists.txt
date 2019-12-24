@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   intel_aero_navigation
 )
 find_package(gazebo REQUIRED)
+ign_import_target(UUID)
 
 catkin_package(
   CATKIN_DEPENDS

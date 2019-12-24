@@ -22,7 +22,11 @@ class SetModelVelocity : public gazebo::ModelPlugin
     std::thread queue_thread;
 
     std::string link_name;
+#if GAZEBO_MAJOR_VERSION > 8
+    ignition::math::Vector3d linear_vel, angular_vel;
+#else
     gazebo::math::Vector3 linear_vel, angular_vel;
+#endif
 
     gazebo::physics::ModelPtr model;
     gazebo::event::ConnectionPtr updateConnection;
@@ -38,9 +42,8 @@ class SetModelVelocity : public gazebo::ModelPlugin
 
 void SetModelVelocity::QueueThread()
 {
-  while (ros_nh->ok()) {
+  while (ros_nh->ok())
     ros_queue.callAvailable(ros::WallDuration(0.01));
-  }
 }
 
 void SetModelVelocity::velCB(const geometry_msgs::Twist::ConstPtr& msg)
@@ -59,14 +62,12 @@ void SetModelVelocity::Load(gazebo::physics::ModelPtr _model,
   // fetch link_name from plugin parameters
   if (_sdf->HasElement("link_name")) {
     link_name = _sdf->Get<std::string>("link_name");
-    if (model->GetLink(link_name)) {
+    if (model->GetLink(link_name))
       ROS_INFO("[SetModelVelocity] setting velocity of link %s", link_name.c_str());
-    } else {
+    else
       ROS_ERROR("[SetModelVelocity] %s does not name an element in the model", link_name.c_str());
-    }
-  } else {
+  } else
     ROS_ERROR("[SetModelVelocity] SDF missing link_name parameter");
-  }
 
   if (!ros::isInitialized()) {
     int ac = 0;
@@ -98,9 +99,8 @@ void SetModelVelocity::Update(const gazebo::common::UpdateInfo &_info)
   if (link) {
     link->SetLinearVel(linear_vel);
     link->SetAngularVel(angular_vel);
-  } else {
+  } else
     ROS_DEBUG("[SetAngularVel] model %s not found", link_name.c_str());
-  }
 }
 
 GZ_REGISTER_MODEL_PLUGIN(SetModelVelocity)
