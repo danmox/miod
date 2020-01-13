@@ -39,7 +39,6 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${octomap_INCLUDE_DIRS}
   ${ARMADILLO_INCLUDE_DIRS}
 )
 

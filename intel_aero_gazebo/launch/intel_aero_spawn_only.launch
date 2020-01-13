@@ -54,7 +54,7 @@
 
     <!-- load intel aero urdf to param -->
     <param name="robot_description"
-           command="$(find xacro)/xacro -i
+           command="$(find xacro)/xacro
                     $(find intel_aero_description)/urdf/intel_aero.xacro
                     namespace:=$(arg robot_ns)
                     spawn_only:=true
