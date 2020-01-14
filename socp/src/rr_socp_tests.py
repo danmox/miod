@@ -3,7 +3,8 @@
 import copy
 import sys
 import numpy as np
-import robust_routing_socp_server as rrss
+import rr_socp
+import rr_socp_server
 import time
 from socp.srv import RobustRoutingSOCPRequest
 from socp.msg import QoS
@@ -12,6 +13,10 @@ import matplotlib.pyplot as plt
 
 
 def plot_config(config):
+    """
+    plot the 2D spatial configuration of the network
+    :param config: a list of geometry_msgs.Point msgs
+    """
     x = []
     y = []
     for pt in config:
@@ -27,6 +32,12 @@ def plot_config(config):
 
 
 def socp_info(routes, qos, config=None):
+    """
+    print the routes and qos information and (optionally) plot the corresponding configuration of the team
+    :param routes: an NxNxK array of routing variables
+    :param qos: an array of flow requirements with length(qos) == K
+    :param config: (optional) the configuration of the team to plot
+    """
     assert len(qos) == routes.shape[2]
     n = routes.shape[0]
 
@@ -81,8 +92,8 @@ def multiple_dest_test():
         qos.dest = dest[i]
         msg.qos += [copy.deepcopy(qos)]
 
-    rrsolver = rrss.RobustRoutingSolver()
-    res = rrsolver.solve_socp(msg)
+    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
+    res = rrserver.solve_socp(msg)
     if res.status != 'optimal':
         print("solve_socp returned with status: %s" % res.status)
         return
@@ -114,20 +125,20 @@ def speed_test():
 
     # build team structure
 
-    x_task = np.zeros([2, task_agent_count])
-    x_task[0, :] = patrol_rad * np.cos(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
-    x_task[1, :] = patrol_rad * np.sin(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
-    x_comm = np.zeros([2, comm_agent_count])
-    x_comm[0, 1:] = comm_rad * np.cos(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
-    x_comm[1, 1:] = comm_rad * np.sin(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
-    x = np.hstack([x_task, x_comm])
+    x_task = np.zeros((task_agent_count, 2))
+    x_task[:, 0] = patrol_rad * np.cos(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
+    x_task[:, 1] = patrol_rad * np.sin(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
+    x_comm = np.zeros((comm_agent_count, 2))
+    x_comm[1:, 0] = comm_rad * np.cos(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
+    x_comm[1:, 1] = comm_rad * np.sin(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
+    x = np.vstack([x_task, x_comm])
 
     # solve SOCP
 
-    rrsolver = rrss.RobustRoutingSolver()
+    rrsolver = rr_socp.RobustRoutingSolver(print_values=True)
     for i in range(10):
         start = time.time()
-        slack, routes, status = rrsolver.rrsocpconf(qos_list, x)
+        slack, routes, status = rrsolver.solve_socp(qos_list, x)
         print("found solution in %.4f second" % (time.time() - start))
 
 
@@ -155,8 +166,8 @@ def simple_routing_test(margin=0.1, confidence=0.7):
     msg.qos += [copy.deepcopy(qos)]
     k = len(msg.qos)
 
-    rrsolver = rrss.RobustRoutingSolver()
-    res = rrsolver.solve_socp(msg)
+    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
+    res = rrserver.solve_socp(msg)
     if res.status != 'optimal':
         print("solve_socp returned with status: %s" % res.status)
         return
@@ -194,8 +205,8 @@ def matlab_match_test(margin=0.05, confidence=0.7):
         qos.dest = dest[i]
         msg.qos += [copy.deepcopy(qos)]
 
-    rrsolver = rrss.RobustRoutingSolver(l0=-48.0)
-    res = rrsolver.solve_socp(msg)
+    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False, l0=-48.0)
+    res = rrserver.solve_socp(msg)
     if res.status != 'optimal':
         print("solve_socp returned with status: %s" % res.status)
         return

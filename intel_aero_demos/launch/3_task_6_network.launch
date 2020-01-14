@@ -75,7 +75,7 @@
   </node>
 
   <node pkg="socp"
-        type="robust_routing_socp_server.py"
+        type="rr_socp_server.py"
         name="robust_routing_socp_server"
         output="screen"/>
 
