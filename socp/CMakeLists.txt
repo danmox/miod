@@ -17,21 +17,11 @@ set(RUN_DEPENDS
   message_runtime
 )
 
-#######################################
-## Find dependencies
-#######################################
-
 find_package(catkin REQUIRED ${BUILD_DEPENDS})
 
 find_package(Armadillo REQUIRED)
-
-if(APPLE)
-  SET(CBLAS_LIBRARIES "-framework Accelerate")  # or "-framework accelerate" ?
-  MESSAGE(STATUS "MacOS X detected. Added '-framework Accelerate' to compiler flags")
-else()
-  find_package(LAPACK REQUIRED)
-  SET(CBLAS_LIBRARIES "-lcblas")
-endif()
+find_package(LAPACK REQUIRED)
+SET(CBLAS_LIBRARIES "-lcblas")
 
 add_message_files(FILES
   QoS.msg
@@ -41,10 +31,19 @@ add_service_files(FILES
   RobustRoutingSOCP.srv
 )
 
+catkin_python_setup()
+
 generate_messages(
   DEPENDENCIES
   std_msgs
   geometry_msgs
+)
+
+catkin_package(
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS ${RUN_DEPENDS}
+  DEPENDS
+  LIBRARIES ${PROJECT_NAME} ${ARMADILLO_LIBRARIES} armadillo_socp
 )
 
 include_directories(
@@ -52,17 +51,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${LAPACK_INCLUDE_DIRS}
   ${ARMADILLO_INCLUDE_DIRS}
-  )
-
-#######################################
-## Declare Catkin package and installation
-#######################################
-
-catkin_package(
-  INCLUDE_DIRS include
-  CATKIN_DEPENDS ${RUN_DEPENDS}
-  DEPENDS
-  LIBRARIES ${PROJECT_NAME} ${ARMADILLO_LIBRARIES} armadillo_socp
   )
 
 #common commands for building c++ executables and libraries
@@ -80,3 +68,4 @@ target_link_libraries(radio_example armadillo_socp)
 
 add_executable(radio_example2 src/radio_example2.cc)
 target_link_libraries(radio_example2 armadillo_socp)
+

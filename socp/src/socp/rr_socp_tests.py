@@ -10,12 +10,36 @@ from socp.srv import RobustRoutingSOCPRequest
 from socp.msg import QoS
 from geometry_msgs.msg import Point
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+# helps the figures to be readable on hidpi screens
+mpl.rcParams['figure.dpi'] = 200
 
-def plot_config(config):
+def numpy_to_ros(np_config):
+    """
+    convert a Nx2 numpy array of 2D node positions to a list of
+    geometry_msgs.Points
+
+    """
+    ros_config = []
+    for i in range(np_config.shape[0]):
+        pt = Point()
+        pt.x = np_config[i,0]
+        pt.y = np_config[i,1]
+        ros_config += [copy.deepcopy(pt)]
+    return ros_config
+
+def plot_config(config, ax=None, pause=None, clear_axes=False, show=True):
     """
     plot the 2D spatial configuration of the network
-    :param config: a list of geometry_msgs.Point msgs
+
+    Input:
+      config: a list of geometry_msgs.Point msgs
+      ax (optional): axes to plot on
+      pause (optional): avoids blocking by continuing after a short pause
+      clear_axes: clear ax before plotting
+      show: call plt.show()
+
     """
     x = []
     y = []
@@ -23,20 +47,34 @@ def plot_config(config):
         x += [pt.x]
         y += [pt.y]
 
-    plt.plot(x, y, 'ro', markersize=12)
-    plt.axis('scaled')
-    plt.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    if clear_axes:
+        ax.cla()
+
+    ax.plot(x, y, 'ro', markersize=10)
+    ax.axis('scaled')
+    ax.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
     for i in range(len(x)):
-        plt.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
-    plt.show()
+        ax.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
+
+    if show:
+        if pause is None:
+            plt.show()
+        else:
+            plt.pause(pause)
 
 
-def socp_info(routes, qos, config=None):
+def socp_info(routes, qos, config=None, ax=None, solver=None):
     """
-    print the routes and qos information and (optionally) plot the corresponding configuration of the team
-    :param routes: an NxNxK array of routing variables
-    :param qos: an array of flow requirements with length(qos) == K
-    :param config: (optional) the configuration of the team to plot
+    print information about the robust routing solution
+
+    Input:
+      routes: an NxNxK array of routing variables
+      qos: an array of flow requirements with length(qos) == K
+      config: (optional) the configuration of the team to plot
+
     """
     assert len(qos) == routes.shape[2]
     n = routes.shape[0]
@@ -63,8 +101,13 @@ def socp_info(routes, qos, config=None):
         rx_str = ["%6.2f" % sum(routes[:, i, k]) if sum(routes[:, i, k]) > 0.01 else "%6s" % "-" for i in range(n)]
         print "   %6s|%s" % ("Rx", "".join(rx_str))
 
-    if config:
-        plot_config(config)
+    if config is not None and solver is not None:
+        rate_mean, rate_var = solver.cm.predict(config)
+        with np.printoptions(precision=3, suppress=True):
+            print('rate_mean:')
+            print(rate_mean)
+            print('rate_var:')
+            print(rate_var)
 
 
 # Test 1

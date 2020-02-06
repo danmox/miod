@@ -29,12 +29,19 @@ class ChannelModel:
             print('a  = %.3f' % self.a)
             print('b  = %.3f' % self.b)
 
-    def predict(self, d):
+    def predict(self, x):
         """
         compute the expected channel rates and variances for each link
-        :param d: distance matrix where intry d[i,j] is the distance between agents i and j
-        :return: a matrix of expected channel rates and a matrix of channel variances indexed in the same way as d
+
+        Inputs:
+          x: a Nx2 list of node positions [x y]
+
+        Outputs:
+          rate: matrix of expected channel rates between each pair of agents
+          var: matrix of channel rate variances between each pair of agents
         """
+
+        d = spatial.distance_matrix(x, x)
         dist_mask = ~np.eye(d.shape[0], dtype=bool)
         power = np.zeros(d.shape)
         power[dist_mask] = dbm2mw(self.L0 - 10 * self.n * np.log10(d[dist_mask]))
@@ -47,12 +54,20 @@ class RobustRoutingSolver:
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         self.cm = ChannelModel(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
 
-    def solve_socp(self, qos, x):
+    def solve_socp(self, qos, x, reshape_routes=False):
         """
-        solve the robust routing problem for the given network requirements and configuration
-        :param qos: a list of socp.QoS messages
-        :param x: a Nx2 list of node positions [x y]
-        :return: the slack, routes, and status of the robust routing problem (status == 'optimal' if a soln was found)
+        solve the robust routing problem for the given network requirements and
+        configuration
+
+        Inputs:
+          qos: a list of socp.QoS messages
+          x: a Nx2 list of node positions [x y]
+          reshape_routes: returns routing variables in NxNxK matrix form
+
+        Outputs:
+          slack: slack of the associated robust routing solution
+          routes: optimal routing variables
+          status: 'optimal' if a soln was found
         """
 
         assert x.shape[1] == 2
@@ -85,16 +100,35 @@ class RobustRoutingSolver:
         socp = cp.Problem(cp.Maximize(slack), constraints)
         socp.solve()
 
-        return slack.value, routes.value, socp.status
+        if reshape_routes:
+            routing_vars = np.reshape(routes.value, (n, n, k), 'F')
+        else:
+            routing_vars = routes.value
+
+        return slack.value[0], routing_vars, socp.status
 
     def socp_constraints(self, qos, x):
         """
-        compute the coefficient matrices and vectors to form the 2nd-order constraints (node rate margin constraints) of
-        the form ||A*y + b|| <= c^T*y + d --> B*y - m_ik / ||A*y|| >= I(eps), where y is the vector of optimization
-        variables and I(eps) is the inverse normal cumulative distribution function
-        :param qos: a list of socp.QoS messages
-        :param x: a Nx2 list of node positions [x y]
-        :return: the A, B coefficient matrices and m_ik, I(eps) vectors as described above as well as vars to ignore
+        compute the coefficient matrices and vectors of the 2nd order
+        constraints of the robust routing problem.
+
+        2nd order cone constraints of the form:
+        ||A*y + b|| <= c^T*y + d
+        are equivalent to the node margin constraints:
+        B*y - m_ik / ||A*y|| >= I(eps)
+        where y is the vector of optimization variables and I(eps) is the
+        inverse normal cumulative distribution function.
+
+        Inputs:
+          qos: a list of socp.QoS messages
+          x: a Nx2 list of node positions [x y]
+
+        Outputs:
+          a_mat: variance coefficient matrix
+          b_mat: mean coefficient matrix
+          zero_vars: which optimization variables can safely be set to zero
+          conf: the probabilistic confidence of each constraint
+          m_ik: the required rate margin of each constraint
         """
 
         assert x.shape[1] == 2
@@ -102,10 +136,9 @@ class RobustRoutingSolver:
         k = len(qos)
 
         # predicted channel rates
+        rate_mean, rate_var = self.cm.predict(x)
 
-        dist = spatial.distance_matrix(x, x)
-        rate_mean, rate_var = self.cm.predict(dist)
-
+        # variables that should be zero
         zero_vars = np.reshape(np.eye(n, dtype=bool), (n, n, 1), 'F')
         zero_vars = np.repeat(zero_vars, k, axis=2)
 
@@ -153,3 +186,39 @@ class RobustRoutingSolver:
         m_ik = np.reshape(m_ik, (n * k), 'F')
 
         return a_mat, b_mat, zero_vars, conf, m_ik
+
+    def compute_slack(self, qos, x, routes):
+        """
+        compute the slack of each SOC constrain of a robust routing problem
+        given a team configuration, qos, and routing variables
+
+        Input:
+          qos: a list of socp.QoS messages
+          x: a Nx2 list of node positions [x y]
+          config: Nx2 list of node positions in [x y] form
+          routes: NxNxK matrix of routing variables
+
+        Output:
+          slack_vec: slack in each SOC constraint
+
+        """
+
+        assert x.shape[1] == 2
+        n = x.shape[0]
+        k = len(qos)
+
+        # form solution vector from routing matrix
+        y = np.zeros((n*n*k+1))
+        if routes.shape[0] is n:
+            y[:-1] = np.reshape(routes, (n*n*k), 'F')
+        else:
+            y[:-1] = routes
+
+        a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x)
+        slack_vec = np.zeros_like(m_ik)
+        for i in range(m_ik.shape[0]):
+            b_exp = np.matmul(b_mat[i,:], y)
+            b_var = np.linalg.norm(np.matmul(np.diag(a_mat[i,:]), y))
+            slack_vec[i] = b_exp - m_ik[i] - conf[i]*b_var
+
+        return slack_vec

@@ -2,14 +2,11 @@
   <name>socp</name>
   <version>1.0.0</version>
   <description>socp</description>
-  <maintainer email="a@a.com">Jon Fink</maintainer>
+  <maintainer email="a@a.com">Daniel Mox</maintainer>
 
   <license>BSD</license>
 
-  <url type="website">http://ros.org/wiki/socp</url>
-  <!-- <url type="bugtracker"></url> -->
-
-  <author>Jon Fink</author>
+  <author>Daniel Mox</author>
 
   <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
@@ -33,9 +30,6 @@
   <run_depend>std_msgs</run_depend>
   <run_depend>message_runtime</run_depend>
   <run_depend>rospy</run_depend>
-
-  <!-- Dependencies needed only for running tests. -->
-  <!-- <test_depend>armadillo</test_depend> -->
 
 <export>
     <cpp lflags="-Wl,-rpath,${prefix} -L${prefix}/lib -larmadillo_socp" cflags="-I${prefix}/include"/>
