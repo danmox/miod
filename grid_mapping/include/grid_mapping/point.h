@@ -26,7 +26,7 @@ class Point
 
     void components(double& x_, double& y_) const {x_ = x; y_ = y;}
 
-    double norm() const {sqrt(pow(x, 2.0) + pow(y, 2.0));}
+    double norm() const {return sqrt(pow(x, 2.0) + pow(y, 2.0));}
     double max() const {return x > y ? x : y;}
     Point abs() const {return Point(fabs(x), fabs(y));}
 
