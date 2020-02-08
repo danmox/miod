@@ -52,8 +52,9 @@
         type="routing_visualization_node"
         name="routing_visualization_node"
         output="screen">
-    <param name="world_frame" value="world"/>
-    <param name="pose_topic"  value="pose"/>
+    <param name="world_frame"       value="world"/>
+    <param name="pose_topic_prefix" value="/"/>
+    <param name="pose_topic_suffix" value="/pose"/>
   </node>
 
   <!-- network planner nodes -->
@@ -69,7 +70,8 @@
     <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
-    <param name="pose_topic"            value="pose"/>
+    <param name="pose_topic_prefix"     value=""/>
+    <param name="pose_topic_suffix"     value="/pose"/>
     <param name="nav_nodelet"           value="gazebo_vel_nav_nodelet"/>
     <param name="world_frame"           value="world"/>
   </node>

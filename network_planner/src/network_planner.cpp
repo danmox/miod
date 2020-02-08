@@ -60,14 +60,15 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   costmap(grid_mapping::Point(0.0, 0.0), 0.2, 1, 1)
 {
   // fetch parameters from ROS parameter server:
-  std::string pose_topic, nav_nodelet;
+  std::string pose_topic_prefix, pose_topic_suffix, nav_nodelet;
   double min_x, min_y, max_x, max_y;
   getParamStrict(nh, "/desired_altitude", desired_altitude);
   getParamStrict(pnh, "sample_count", sample_count);
   getParamStrict(pnh, "sample_variance", sample_var);
   getParamStrict(pnh, "collision_distance", collision_distance);
   getParamStrict(pnh, "minimum_update_rate", minimum_update_rate);
-  getParamStrict(pnh, "pose_topic", pose_topic);
+  getParamStrict(pnh, "pose_topic_prefix", pose_topic_prefix);
+  getParamStrict(pnh, "pose_topic_suffix", pose_topic_suffix);
   getParamStrict(pnh, "nav_nodelet", nav_nodelet);
   getParamStrict(pnh, "world_frame", world_frame);
   if (!nh.getParam("/safety_x_min", safety_p_min(0)) ||
@@ -131,7 +132,7 @@ NetworkPlanner::NetworkPlanner(ros::NodeHandle& nh_, ros::NodeHandle& pnh_) :
   namespace stdph = std::placeholders;
   for (int i = 0; i < agent_count; ++i) {
     std::stringstream ss;
-    ss << "/aero" << idx_to_id.at(i) << "/" << pose_topic.c_str();
+    ss << pose_topic_prefix << "aero" << idx_to_id.at(i) << pose_topic_suffix;
     auto fcn = std::bind(&NetworkPlanner::poseCB, this, stdph::_1, i);
     pose_subs.push_back(nh.subscribe<geometry_msgs::PoseStamped>(ss.str(), 10, fcn));
   }

@@ -56,11 +56,12 @@ int main(int argc, char** argv)
   ros::Subscriber net_sub = nh.subscribe("network_update", 2, networkUpdateCB);
 
   XmlRpc::XmlRpcValue task_agent_ids, comm_agent_ids;
-  std::string world_frame, pose_topic;
+  std::string world_frame, pose_topic_prefix, pose_topic_suffix;
   getParamStrict(nh, "/comm_agent_ids", task_agent_ids);
   getParamStrict(nh, "/task_agent_ids", comm_agent_ids);
   getParamStrict(pnh, "world_frame", world_frame);
-  getParamStrict(pnh, "pose_topic", pose_topic);
+  getParamStrict(pnh, "pose_topic_prefix", pose_topic_prefix);
+  getParamStrict(pnh, "pose_topic_suffix", pose_topic_suffix);
   int total_agents = task_agent_ids.size() + comm_agent_ids.size();
 
   // extract agent ids
@@ -93,7 +94,7 @@ int main(int argc, char** argv)
   std::vector<ros::Subscriber> pose_subs;
   for (int i = 0; i < total_agents; ++i) {
     std::stringstream ss;
-    ss << "/aero" << agent_ids[i] << "/" << pose_topic.c_str();
+    ss << pose_topic_prefix << "aero" << agent_ids[i] << pose_topic_suffix;
     auto fcn = std::bind(&poseCB, stdph::_1, agent_ids[i]);
     pose_subs.push_back(nh.subscribe<geometry_msgs::PoseStamped>(ss.str(), 10, fcn));
   }
