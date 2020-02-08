@@ -123,6 +123,7 @@ int main(int argc, char** argv)
       marker.type = visualization_msgs::Marker::LINE_LIST;
       marker.action = visualization_msgs::Marker::ADD;
       marker.scale.x = 0.5;
+      marker.pose.orientation.w = 1.0;
       for (const auto& prt_entry : net_cmd->routes) {
         for (int j = 0; j < prt_entry.gateways.size(); ++j) {
 

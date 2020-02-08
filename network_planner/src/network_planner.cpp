@@ -1010,6 +1010,7 @@ bool NetworkPlanner::updateNetworkConfig()
   sample_points.scale.y = 0.05; // meter
   sample_points.color.r = 1.0;
   sample_points.color.a = 0.5;
+  sample_points.pose.orientation.w = 1.0;
   for (int j = 0; j < sample_count; ++j) {
     for (int i = 0; i < comm_count; ++ i) {
       if (sample_mask[i*comm_count+j]) { // true if the sample was not skipped due to collision
@@ -1037,6 +1038,7 @@ bool NetworkPlanner::updateNetworkConfig()
   goal_config.scale.x = 1.0;
   goal_config.scale.y = 1.0;
   goal_config.scale.z = 1.0;
+  goal_config.pose.orientation.w = 1.0;
   for (int i = 0; i < comm_count; ++i) {
     geometry_msgs::Point goal;
     goal.x = x_star[comm_idcs[i]](0);
