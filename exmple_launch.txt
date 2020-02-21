@@ -1,0 +1,39 @@
+
+#sync code:
+
+aero_sync agent_id(last number of ip)
+
+
+
+#each aero:
+
+roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.7" server:=true srv:="10.42.0.6"
+
+#set PX parameters (do not need to do it all the time - just do once):
+
+roslaunch intel_aero_experiments mavros_params.launch id:=id
+
+#check that parameters were loaded
+rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
+
+
+#server aero:
+
+roslaunch intel_aero_experiments line_server.launch
+#line server starts the networp planner, NP has 5 second countdown before it starts NA
+
+#Patroling TA:
+
+rosrun intel_aero_demos line_demo
+
+
+
+
+#testing demo in gazeebo
+
+roslaunch intel_aero_demos line.launch
+
+rosrun intel_aero_demos line_demo _nav_nodelet:=gazebo_vel_nav_nodelet
+
+#record rosbag in demo:
+line_rosbag #change the parameters inside the file accroding to ids in line_demo

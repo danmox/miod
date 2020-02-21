@@ -6,6 +6,8 @@
 
   <arg name="id"                 default="1" />
   <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
+  <arg name="rviz"        default="true" />
+
 
   <!-- global reference datum args -->
   <arg name="datum_lat"  default="-34.919144"/>   <!-- University Uguguay 1: -34.919144  -56.167607; Philly net 39.941154 -75.198973-->
@@ -66,7 +68,33 @@
               /$(arg robot_ns)/pose
               $(arg server_topics)"/>
 
+  <arg name="start_x"                default="10.0"/>
+  <arg name="start_y"                default="7.0"/>
+  <arg name="end_x"                  default="23.0"/> <!-- distance agent should travel in a line -->
+
+  <!-- line demo params -->
+  <rosparam param="/task_agent_ids">[7]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ids">[7]</rosparam>
+  <param name="/desired_altitude" value="4.0"/>
+  <param name="/source_node"      value="7"/>  <!-- TA that flies is a source node-->
+  <param name="/start_x"          value="$(arg start_x)"/>
+  <param name="/start_y"          value="$(arg start_y)"/>
+  <param name="/end_x"            value="$(arg end_x)"/>
+
+  <node pkg="network_status"
+        type="routing_visualization_node"
+        name="routing_visualization_node"
+        output="screen">
+    <param name="world_frame" value="world"/>
+    <param name="pose_topic"  value="pose"/>
+  </node>
+
+
+
+
   <group ns="$(arg robot_ns)" >
+
+
 
     <!-- MAVROS -->
     <node pkg="mavros"
