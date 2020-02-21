@@ -6,8 +6,8 @@
   <arg name="heading_tol"            default="3.5"/>  <!-- agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="0.5"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
-  <arg name="source"                 default="1"/>
-  <arg name="dest"                   default="2"/>
+  <arg name="source"                 default="2"/>
+  <arg name="dest"                   default="1"/>
 
   <rosparam param="/task_agent_ids">[1,2]</rosparam>
   <rosparam param="/comm_agent_ids">[10]</rosparam>

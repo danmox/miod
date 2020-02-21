@@ -55,7 +55,7 @@
   </node>
 
   <!-- network planner nodes -->
-
+<!--
   <node pkg="network_planner"
         type="network_planner_line_node"
         name="network_planner_line_node"
@@ -74,7 +74,7 @@
     <param name="nav_nodelet"         value="gazebo_vel_nav_nodelet"/>
     <param name="world_frame"         value="world"/>
   </node>
-
+ -->
   <!--
   <node pkg="socp"
         type="rr_socp_server.py"
@@ -107,6 +107,7 @@
   </group>
 
   <!-- network agents -->
+  <!--
 
   <group>
     <arg name="id" value="1"/>
@@ -118,5 +119,6 @@
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
+        -->
 
 </launch>
