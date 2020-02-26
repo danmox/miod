@@ -144,6 +144,8 @@ std::ostream& operator<<(std::ostream& out, const Grid<H>& grid)
       std::cout << std::endl << "  " << grid.data[i] << ", ";
   }
   std::cout << std::endl;
+
+  return out;
 }
 
 
