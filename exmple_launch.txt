@@ -4,7 +4,20 @@
 aero_sync agent_id(last number of ip)
 
 
+#One UAV:
+#on uav (change the appropriate IDs in the launch file)
+roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch dest_arg:="10.42.0.7" server:=true srv:="10.42.0.6"
 
+#set PX parameters (do not need to do it all the time - just do once):
+roslaunch intel_aero_experiments mavros_params.launch id:=id
+#check that parameters were loaded
+rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
+
+
+
+
+
+#line server
 #each aero:
 
 roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.7" server:=true srv:="10.42.0.6"
@@ -25,6 +38,10 @@ roslaunch intel_aero_experiments line_server.launch
 #Patroling TA:
 
 rosrun intel_aero_demos line_demo
+
+
+
+
 
 
 
