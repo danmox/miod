@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
+cmake_policy(SET CMP0048 NEW)
 project(intel_aero_navigation)
 
 add_compile_options(-std=c++11)
@@ -62,6 +63,7 @@ include_directories(
 )
 
 set(LIB_FILES
+  src/vel_nav.cpp
   src/nav_base.cpp
   src/mavros_uav.cpp
   src/gazebo_vel_nav.cpp
@@ -80,6 +82,12 @@ target_link_libraries(px4_nav_node waypoint_navigation ${catkin_LIBRARIES})
 
 add_executable(action_test src/action_test.cpp)
 target_link_libraries(action_test waypoint_navigation ${catkin_LIBRARIES})
+
+add_library(vel_nav_nodelet src/vel_nav_nodelet.cpp)
+target_link_libraries(vel_nav_nodelet waypoint_navigation ${catkin_LIBRARIES})
+
+add_executable(vel_nav_node src/vel_nav_node.cpp src/vel_nav.cpp)
+target_link_libraries(vel_nav_node waypoint_navigation ${catkin_LIBRARIES})
 
 add_library(gazebo_vel_nav_nodelet src/gazebo_vel_nav_nodelet.cpp)
 target_link_libraries(gazebo_vel_nav_nodelet waypoint_navigation ${catkin_LIBRARIES})
