@@ -5,8 +5,9 @@ aero_sync agent_id(last number of ip)
 
 
 #One UAV:
-#on uav (change the appropriate IDs in the launch file)
-roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch dest_arg:="10.42.0.7" server:=true srv:="10.42.0.6"
+#on uav (change the appropriate IDs), wait for 20 seconds to initializw parameters
+roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch id:=4
+
 
 #set PX parameters (do not need to do it all the time - just do once):
 roslaunch intel_aero_experiments mavros_params.launch id:=id
