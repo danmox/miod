@@ -8,9 +8,9 @@
   <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.919144"/>   <!-- University Uguguay 1: -34.919144  -56.167607; Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="-56.167607"/>
-  <arg name="datum_yaw"  default="0"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 -->
+  <arg name="datum_lat"  default="-34.918110"/>   <!-- University Uguguay 1: -34.919144  -56.167607; Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="-56.167703"/>
+  <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 -->
 
   <!-- topics / frames args -->
   <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
@@ -43,9 +43,9 @@
   <arg name="routing_script" default="routing_client" unless="$(arg server)"/>
   <arg name="routing_script" default="routing_server" if="$(arg server)"/>
   <arg name="dest_arg"       default=""/>
-  <arg name="routing_args"   default="$(arg dest_arg) --srv $(arg srv) --interface $(arg interface)"
+  <arg name="routing_args"   default="--dest_arg $(arg dest_arg) --srv $(arg srv) --interface $(arg interface)"
        unless="$(eval arg('server') or not arg('networking'))"/>
-  <arg name="routing_args"   default="$(arg dest_arg) --interface $(arg interface)"
+  <arg name="routing_args"   default="--dest_arg $(arg dest_arg) --interface $(arg interface)"
        if="$(eval arg('server') and arg('networking'))"/>
 
   <!--

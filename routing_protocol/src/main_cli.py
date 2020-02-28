@@ -57,7 +57,7 @@ class Params:
     traceroute_stats = []
 
     home = expanduser("~")
-    results_folder = home+'/ws_intel/src/intel_aero/routing_protocol/src/results/'
+    results_folder = home+'/ws_intel/src/infrastructure-on-demand/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
     final_stats["ws"] = []
@@ -76,6 +76,7 @@ def unique(sequence):
 
 def measurement_thread_throughput_cli():
     if Params.TP_IP!=None:
+        print("Initializing throughput measurements")
         cmdline = ["iperf3", "-c", Params.TP_IP, "-i", str(Params.tp_update_period), "-t", "1"]
         while Params.sim_run is True:
             try:
@@ -400,6 +401,7 @@ def main():
     ]
 
     if Params.statistics_collection is True:
+        print("Enabling routing statistics collection")
         threads.append(threading.Thread(target=status_send_update_thread))
         threads.append(threading.Thread(target=measurement_thread_throughput_cli))
         threads.append(threading.Thread(target=measurement_thread_throughput_srv))
@@ -409,7 +411,11 @@ def main():
         threads.append(threading.Thread(target=pos_update_thread))
     try:
         for t in threads:
-            t.start()
+            try:
+                t.start()
+            except:
+                print("Unexpected error in one of the routing threads:", sys.exc_info()[0])
+            print("Routing thread {}".format(str(t)))
         while Params.sim_run is True:
             r, __, __ = select.select([sys.stdin, ], [], [], Params.RESPONSIVENESS_TIMEOUT)
             if r:
@@ -425,7 +431,7 @@ def main():
         print("Threads successfully closed")
     finally:
         remove_network()
-        if Params.statistics_collection:
+        if Params.statistics_collection is True:
 
             if os.path.exists(Params.results_folder) is True:
                 print("saving results to {}".format(Params.results_folder))

@@ -8,15 +8,15 @@
   <arg name="collision_distance"     default="0.1"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="2"/>    <!-- Hz -->
-  <arg name="source_node"            default="2"/> <!-- id = ip last number, e.g. id 1  = 10.42.0.1 -->
-  <arg name="destination_node"       default="1"/> <!-- source and destination, but flow is bi-directional -->
-  <arg name="start_x"                default="10.0"/>
-  <arg name="start_y"                default="7.0"/>
-  <arg name="end_x"                  default="23.0"/> <!-- distance agent should travel in a line -->
+  <arg name="source_node"            default="7"/> <!-- id = ip last number, e.g. id 1  = 10.42.0.1 -->
+  <arg name="destination_node"       default="6"/> <!-- source and destination, but flow is bi-directional -->
+  <arg name="start_x"                default="5.0"/>
+  <arg name="start_y"                default="-10.0"/>
+  <arg name="end_x"                  default="30.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
-  <rosparam param="/task_agent_ids">[1,2]</rosparam> <!-- needed for task agent count -->
-  <rosparam param="/comm_agent_ids">[10]</rosparam> <!-- needed for network agent count -->
+  <rosparam param="/task_agent_ids">[6,7]</rosparam> <!-- needed for task agent count -->
+  <rosparam param="/comm_agent_ids">[4]</rosparam> <!-- needed for network agent count -->
   <param name="/desired_altitude" value="4.0"/>
   <param name="/source_node"      value="$(arg source_node)"/>  <!-- TA that flies is a source node-->
   <param name="/start_x"          value="$(arg start_x)"/>

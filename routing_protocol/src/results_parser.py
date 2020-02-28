@@ -96,7 +96,7 @@ load_from_archive=False
 load_local = False
 archive_name = 'results/RRarchive2019-11-14 16:21.npz'
 home = expanduser("~")
-local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
+local_results_folder = home+"/workspace_aero/src/infrastructure-on-demand/routing_protocol/src/results/"
 
 data = {}
 
@@ -110,14 +110,14 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.1']#, '10.42.0.2', '10.42.0.10']
+    hosts = ['10.42.0.4', '10.42.0.6','10.42.0.7']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
         files[i] = file_name+"_"+str(i)+".npz"
         aero_id = i.split(".")[-1]
         server = "aero{}@{}".format(aero_id,i)
-        path = "~/ws_intel/src/intel_aero/routing_protocol/src/{}".format(files[i])
+        path = "~/ws_intel/src/infrastructure-on-demand/routing_protocol/src/{}".format(files[i])
         if load_from_archive is not True:
             rsync(server,path,passwd,local_results_folder)
 
@@ -171,7 +171,7 @@ max_pos_z = [None, None]
 for i in data:
     dat = data[i]
     #print(dat.item())
-    print(dat.item()["ws"])
+    print(dat.item()["tp"])
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]

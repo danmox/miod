@@ -4,25 +4,18 @@
 aero_sync agent_id(last number of ip)
 
 
+-------------------------------------------------------------------------------
+
+
 #One UAV:
 #on uav (change the appropriate IDs), wait for 20 seconds to initializw parameters
 roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch id:=4
 
 
-#set PX parameters (do not need to do it all the time - just do once):
-roslaunch intel_aero_experiments mavros_params.launch id:=id
-#check that parameters were loaded
-rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
+-------------------------------------------------------------------------------
 
 
-
-
-
-#line server
-#each aero:
-
-roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.7" server:=true srv:="10.42.0.6"
-
+#Parameters (speed, height, etc.)
 #set PX parameters (do not need to do it all the time - just do once):
 
 roslaunch intel_aero_experiments mavros_params.launch id:=id
@@ -30,12 +23,22 @@ roslaunch intel_aero_experiments mavros_params.launch id:=id
 #check that parameters were loaded
 rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
 
+
+-------------------------------------------------------------------------------
+#Assuming server and dest is 10.42.0.6, source is 10.42.0.7
+#Robust routing line test
+
+#source ta:
+roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.6" server:=false srv:="10.42.0.6"
+
+#network agents:
+roslaunch intel_aero_experiments intel_aero_live.launch server:=false srv:="10.42.0.6"
 
 #server aero:
-
+roslaunch intel_aero_experiments intel_aero_live.launch server:="true"
 roslaunch intel_aero_experiments line_server.launch
-#line server starts the networp planner, NP has 5 second countdown before it starts NA
 
+#line server starts the networp planner, NP has 5 second countdown before it starts NA
 #Patroling TA:
 
 rosrun intel_aero_demos line_demo
@@ -43,6 +46,7 @@ rosrun intel_aero_demos line_demo
 
 
 
+-------------------------------------------------------------------------------
 
 
 
