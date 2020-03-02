@@ -12,7 +12,7 @@
   <arg name="destination_node"       default="6"/> <!-- source and destination, but flow is bi-directional -->
   <arg name="start_x"                default="5.0"/>
   <arg name="start_y"                default="-10.0"/>
-  <arg name="end_x"                  default="30.0"/> <!-- distance agent should travel in a line -->
+  <arg name="end_x"                  default="35.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
   <rosparam param="/task_agent_ids">[6,7]</rosparam> <!-- needed for task agent count -->

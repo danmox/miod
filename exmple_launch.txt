@@ -28,26 +28,27 @@ rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
 #Assuming server and dest is 10.42.0.6, source is 10.42.0.7
 #Robust routing line test
 
-#source ta:
+#source ta (10.42.0.7):
 roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.6" server:=false srv:="10.42.0.6"
 
-#network agents:
+#network agents (10.42.0.4):
 roslaunch intel_aero_experiments intel_aero_live.launch server:=false srv:="10.42.0.6"
 
-#server aero:
+#server aero (10.42.0.6):
 roslaunch intel_aero_experiments intel_aero_live.launch server:="true"
 roslaunch intel_aero_experiments line_server.launch
+#OR, if testing in the office, instead on line_server.launch run (check the parameters first)
+roslaunch network_planner routing.launch
+
 
 #line server starts the networp planner, NP has 5 second countdown before it starts NA
-#Patroling TA:
+#Patroling TA (10.42.0.7):
 
 rosrun intel_aero_demos line_demo
 
 
 
-
 -------------------------------------------------------------------------------
-
 
 
 

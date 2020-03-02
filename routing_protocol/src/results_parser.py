@@ -110,7 +110,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.4', '10.42.0.6','10.42.0.7']#, '10.42.0.2', '10.42.0.10']
+    hosts = ['10.42.0.4','10.42.0.6', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
@@ -171,13 +171,13 @@ max_pos_z = [None, None]
 for i in data:
     dat = data[i]
     #print(dat.item())
-    print(dat.item()["tp"])
+    print(dat.item()["tr"])
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]
     if len(tr)>0:
         tp_ip = dat.item()['tp_ip']
-        tr = np.transpose(tr)
+        tr = np.transpose(np.array(tr, dtype=object))
         rt_path_total[i] = tr[1]
         print(tr)
         rt_path_time[i] = tr[0]-start_time

@@ -371,8 +371,9 @@ def main():
 
     args, unknown = parser.parse_known_args()
 
-    Params.TP_IP=args.dest_ip
-    Params.final_stats["tp_ip"] = args.dest_ip
+    if args.dest_ip != "None":
+        Params.TP_IP = args.dest_ip
+        Params.final_stats["tp_ip"] = args.dest_ip
     if args.srv != None:
         Params.SERVER = args.srv
     if args.interface != None:

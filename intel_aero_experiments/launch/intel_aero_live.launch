@@ -42,10 +42,10 @@
   <arg name="srv" unless="$(eval arg('server') or not arg('networking'))"/>
   <arg name="routing_script" default="routing_client" unless="$(arg server)"/>
   <arg name="routing_script" default="routing_server" if="$(arg server)"/>
-  <arg name="dest_arg"       default=""/>
-  <arg name="routing_args"   default="--dest_arg $(arg dest_arg) --srv $(arg srv) --interface $(arg interface)"
+  <arg name="dest_arg"       default="None"/>
+  <arg name="routing_args"   default="--dest_ip $(arg dest_arg) --srv $(arg srv) --interface $(arg interface)"
        unless="$(eval arg('server') or not arg('networking'))"/>
-  <arg name="routing_args"   default="--dest_arg $(arg dest_arg) --interface $(arg interface)"
+  <arg name="routing_args"   default="$--dest_ip $(arg dest_arg) --interface $(arg interface)"
        if="$(eval arg('server') and arg('networking'))"/>
 
   <!--
