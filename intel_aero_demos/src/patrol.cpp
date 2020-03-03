@@ -25,20 +25,31 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "patrol_demo");
   ros::NodeHandle nh, gnh("/");
 
-  int agent_count;
+  XmlRpc::XmlRpcValue task_agent_ids;
+  if (!gnh.getParam("task_agent_ids", task_agent_ids)) {
+    ROS_FATAL("[patrol_demo] failed to fetch \"task_agetn_ids\" from parameter server");
+    exit(EXIT_FAILURE);
+  }
+  ROS_ASSERT(task_agent_ids.getType() == XmlRpc::XmlRpcValue::TypeArray);
+  std::vector<std::string> ids;
+  for (int i = 0; i < task_agent_ids.size(); ++i) {
+    ROS_ASSERT(task_agent_ids[i].getType() == XmlRpc::XmlRpcValue::TypeInt);
+    ids.push_back(std::to_string(static_cast<int>(task_agent_ids[i])));
+  }
+  int agent_count = ids.size();
+
   double circle_radius;
-  if (!gnh.getParam("task_agent_count", agent_count) ||
-      !gnh.getParam("patrol_radius", circle_radius)) {
-    ROS_FATAL("[patrol_demo] failed to fetch parameters from server");
+  if (!gnh.getParam("patrol_radius", circle_radius)) {
+    ROS_FATAL("[patrol_demo] failed to fetch \"patrol_radius\" from parameter server");
     exit(EXIT_FAILURE);
   }
 
   typedef intel_aero_navigation::WaypointNavigationAction NavAction;
   typedef actionlib::SimpleActionClient<NavAction> NavClient;
   std::vector<std::shared_ptr<NavClient>> nav_clients;
-  for (int i = 1; i <= agent_count; ++i) {
+  for (std::string& id : ids) {
     std::stringstream ss;
-    ss << "/aero" << i << "/gazebo_vel_nav_nodelet";
+    ss << "/aero" << id << "/gazebo_vel_nav_nodelet";
     std::string sn = ss.str();
     std::shared_ptr<NavClient> ac_ptr(new NavClient(sn.c_str(), true));
     ROS_INFO("[patrol_demo] waiting for %s action server to start", sn.c_str());
