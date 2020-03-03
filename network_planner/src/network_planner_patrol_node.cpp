@@ -8,7 +8,7 @@ void getParamWarn(const ros::NodeHandle& nh, std::string name, T& param, T defau
     std::stringstream ss;
     ss << default_val;
     std::string default_val_str = ss.str();
-    ROS_WARN("[network_planner_node] failed to get ROS param \"%s\"; using default value %s", name.c_str(), default_val_str.c_str());
+    ROS_WARN("[network_planner_node] failed to get ROS param \"%s\"; using default value: %s", name.c_str(), default_val_str.c_str());
   } else {
     std::stringstream ss;
     ss << param;
@@ -24,8 +24,10 @@ int main(int argc, char** argv)
   ros::NodeHandle nh, pnh("~");
 
   double margin, confidence;
+  std::string planner_type;
   getParamWarn(pnh, "margin", margin, 0.1);
   getParamWarn(pnh, "confidence", confidence, 0.8);
+  getParamWarn(pnh, "planner_type", planner_type, std::string("moving"));
 
   ros::AsyncSpinner spinner(4);
   spinner.start();
@@ -60,7 +62,15 @@ int main(int argc, char** argv)
 
   np.setCommReqs(comm_reqs);
 
-  np.runPlanningLoop();
+  if (planner_type.compare("fixed") == 0) {
+    ROS_INFO("[network_planner_patrol_node] running routing loop");
+    np.runRoutingLoop();
+  } else if (planner_type.compare("moving") == 0) {
+    ROS_INFO("[network_planner_patrol_node] running planning loop");
+    np.runPlanningLoop();
+  } else {
+    ROS_INFO("[network_planner_patrol_node] unknown planner type: %s", planner_type.c_str());
+  }
 
   return 0;
 }
