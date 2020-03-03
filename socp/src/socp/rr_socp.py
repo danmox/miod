@@ -100,12 +100,13 @@ class RobustRoutingSolver:
         socp = cp.Problem(cp.Maximize(slack), constraints)
         socp.solve()
 
-        if reshape_routes:
-            routing_vars = np.reshape(routes.value, (n, n, k), 'F')
-        else:
-            routing_vars = routes.value
-
-        return slack.value[0], routing_vars, socp.status
+        if socp.status is 'optimal':
+            if reshape_routes:
+                routing_vars = np.reshape(routes.value, (n, n, k), 'F')
+            else:
+                routing_vars = routes.value
+            return slack.value[0], routing_vars, socp.status
+        return None, None, socp.status
 
     def socp_constraints(self, qos, x):
         """

@@ -259,6 +259,41 @@ def matlab_match_test(margin=0.05, confidence=0.7):
     socp_info(routes, msg.qos, msg.config)
 
 
+# Test 5
+def infeasible_test(margin=0.5, confidence=0.9):
+    print "running simple_routing_test()\n"
+    msg = RobustRoutingSOCPRequest()
+
+    dist = 30
+    x = [0.0, dist, 1.0/3.0 * dist, 2.0/3.0 * dist]
+    y = [0.0, 0.0, 3.0, -3.0]
+    n = len(x)
+    for i in range(n):
+        pt = Point()
+        pt.x = x[i]
+        pt.y = y[i]
+        msg.config += [copy.deepcopy(pt)]
+
+    print("margin = %.3f, confidence = %.3f" % (margin, confidence))
+    qos = QoS()
+    qos.margin = margin
+    qos.confidence = confidence
+    qos.src = 2
+    qos.dest = [1]
+    msg.qos += [copy.deepcopy(qos)]
+    k = len(msg.qos)
+
+    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
+    res = rrserver.solve_socp(msg)
+    if res.status != 'optimal':
+        print("solve_socp returned with status: %s" % res.status)
+        return
+
+    routes = np.reshape(res.routes, (n, n, k), 'F')
+    print("slack = %.4f" % res.slack)
+    socp_info(routes, msg.qos, msg.config)
+
+
 if __name__ == "__main__":
     if len(sys.argv) is not 2:
         print "running all tests\n"
@@ -269,6 +304,8 @@ if __name__ == "__main__":
         simple_routing_test()
         print "\n"
         matlab_match_test()
+        print "\n"
+        infeasible_test()
     else:
         arg = int(sys.argv[1])
         if arg == 1:
@@ -279,5 +316,7 @@ if __name__ == "__main__":
             simple_routing_test()
         elif arg == 4:
             matlab_match_test()
+        elif arg == 5:
+            infeasible_test()
         else:
             print "unkown argument %d" % arg
