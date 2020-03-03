@@ -1146,7 +1146,7 @@ bool NetworkPlanner::updateRouting()
 
   double slack;
   std::vector<arma::mat> alpha;
-  if (!SOCP(team_config, alpha, slack, true, false)) {
+  if (!SOCPsrv(team_config, alpha, slack, true, false)) {
     NP_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
@@ -1156,7 +1156,7 @@ bool NetworkPlanner::updateRouting()
   slack_pub.publish(slack_msg);
 
   // print out routing solution
-  printRoutingTable(alpha);
+  //printRoutingTable(alpha);
 
   //
   // send network update command
