@@ -153,17 +153,24 @@ class RobustRoutingSolver:
                 aki = np.zeros([n, n])
                 bki = np.zeros([n, n])
 
-                aki[:, i] = np.sqrt(rate_var[:, i])
-                aki[i, :] = np.sqrt(rate_var[i, :])
-                aki[zero_vars[:, :, flow_idx]] = 0.0
-
+                # source, network nodes
                 if not np.any(np.asarray(qos[flow_idx].dest) - 1 == i):
-                    bki[:, i] = -rate_mean[:, i]
-                    bki[i, :] = rate_mean[i, :]
+                    aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
+                    aki[i, :] = np.sqrt(rate_var[i, :]) # outgoing
+                    aki[zero_vars[:, :, flow_idx]] = 0.0
+
+                    bki[:, i] = -rate_mean[:, i] # incoming
+                    bki[i, :] = rate_mean[i, :]  # outgoing
                     bki[zero_vars[:, :, flow_idx]] = 0.0
+
+                # destination node
                 else:
-                    bki[:, i] = rate_mean[:, i]
-                    # Bki[i,:] = -R[i,:]
+                    aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
+                    # aki[i, :] = np.sqrt(rate_var[i, :])
+                    aki[zero_vars[:, :, flow_idx]] = 0.0
+
+                    bki[:, i] = rate_mean[:, i]  # incoming
+                    # bki[i,:] = -rate_mean[i,:]
                     bki[zero_vars[:, :, flow_idx]] = 0.0
 
                 a_mat[idx, flow_idx * n * n:(flow_idx + 1) * n * n] = np.reshape(aki, (1, -1), 'F')

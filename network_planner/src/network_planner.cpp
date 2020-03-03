@@ -353,7 +353,7 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
     srv.request.qos.push_back(qos);
   }
 
-  std::cout << "srv:" << std::endl << srv.request << std::endl;
+  //std::cout << "request:" << std::endl << srv.request << std::endl;
 
   if (!socp_srv.call(srv)) {
     NP_WARN("socp service call failed");
@@ -370,6 +370,8 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
     return false;
   }
 
+  //std::cout << "response:" << std::endl << srv.response << std::endl;
+
   // unpack result
 
   slack = srv.response.slack;
@@ -383,13 +385,6 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
         alpha[k](i,j) = srv.response.routes[ind];
       }
     }
-  }
-
-  // remove small values for alpha
-
-  for (arma::mat& alpha_ij : alpha) {
-    alpha_ij.elem(find(alpha_ij < 0.01)).zeros(); // clear out small values
-    if (debug) alpha_ij.print("alpha_ij");
   }
 
   // publish delivered qos
@@ -832,7 +827,7 @@ bool NetworkPlanner::updateNetworkConfig()
   // solve SOCP for team_config
   double slack;
   std::vector<arma::mat> alpha;
-  if (!SOCP(team_config, alpha, slack, true, false)) {
+  if (!SOCPsrv(team_config, alpha, slack, true, false)) {
     NP_ERROR("no valid solution to SOCP found for team_config");
     return false;
   }
@@ -849,7 +844,7 @@ bool NetworkPlanner::updateNetworkConfig()
 
   double slack_star;
   std::vector<arma::mat> alpha_star;
-  if (!SOCP(x_star, alpha_star, slack_star, false, false)) {
+  if (!SOCPsrv(x_star, alpha_star, slack_star, false, false)) {
     NP_ERROR("no valid solution to SOCP found for x_star");
     return false;
   }
