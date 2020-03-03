@@ -8,12 +8,13 @@ void getParamWarn(const ros::NodeHandle& nh, std::string name, T& param, T defau
     std::stringstream ss;
     ss << default_val;
     std::string default_val_str = ss.str();
-    ROS_WARN("[network_planner_node] failed to get ROS param \"%s\"; using default value: %s", name.c_str(), default_val_str.c_str());
+    ROS_WARN("[network_planner_patrol_node] failed to get ROS param \"%s\"; using default value: %s", name.c_str(), default_val_str.c_str());
+    param = default_val;
   } else {
     std::stringstream ss;
     ss << param;
     std::string val_str = ss.str();
-    ROS_INFO("[network_planner_node] using %s for %s", val_str.c_str(), name.c_str());
+    ROS_INFO("[network_planner_patrol_node] using %s for %s", val_str.c_str(), name.c_str());
   }
 }
 
