@@ -16,6 +16,7 @@
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
+  <arg name="planner_type"           default="moving"/> <!-- fixed, moving -->
 
   <!-- patrol demo params -->
   <rosparam param="/task_agent_ids">[1, 2, 3]</rosparam> <!-- needed for task agent count -->
@@ -74,6 +75,7 @@
     <param name="pose_topic_suffix"     value="/pose"/>
     <param name="nav_nodelet"           value="gazebo_vel_nav_nodelet"/>
     <param name="world_frame"           value="world"/>
+    <param name="planner_type"          value="$(arg planner_type)"/>
   </node>
 
   <node pkg="socp"
