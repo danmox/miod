@@ -11,10 +11,10 @@
   <arg name="sample_count"           default="1000"/>
   <arg name="sample_variance"        default="3.0"/>
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
+  <arg name="confidence"             default="0.75"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
-  <arg name="minimum_update_rate"    default="10"/>   <!-- Hz -->
+  <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
   <arg name="planner_type"           default="moving"/> <!-- fixed, moving -->
 

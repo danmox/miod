@@ -11,7 +11,7 @@
   <arg name="sample_count"           default="1000"/>
   <arg name="sample_variance"        default="2.0"/>
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
+  <arg name="confidence"             default="0.75"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
@@ -124,8 +124,8 @@
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="5.0"/>
-      <arg name="y"              value="5.0"/>
+      <arg name="x"              value="7.0"/>
+      <arg name="y"              value="7.0"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>

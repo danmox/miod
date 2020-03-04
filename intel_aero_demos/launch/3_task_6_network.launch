@@ -8,10 +8,10 @@
   <!-- patrol demo args -->
   <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
-  <arg name="sample_count"           default="5000"/>
+  <arg name="sample_count"           default="1000"/>
   <arg name="sample_variance"        default="2.0"/>
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
+  <arg name="confidence"             default="0.75"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
