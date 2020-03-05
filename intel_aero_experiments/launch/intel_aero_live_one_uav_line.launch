@@ -61,11 +61,11 @@
               $(arg server_topics)"/>
 
   <arg name="start_x"                default="5.0"/>
-  <arg name="start_y"                default="5.0"/>
-  <arg name="end_x"                  default="10.0"/> <!-- distance agent should travel in a line -->
+  <arg name="start_y"                default="-10.0"/>
+  <arg name="end_x"                  default="35.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
-  <param name="/desired_altitude" value="4.0"/>
+  <param name="/desired_altitude" value="5.0"/>
   <param name="/source_node"      value="$(arg id)"/>  <!-- TA that flies is a source node-->
   <param name="/start_x"          value="$(arg start_x)"/>
   <param name="/start_y"          value="$(arg start_y)"/>

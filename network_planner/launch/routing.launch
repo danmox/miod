@@ -1,16 +1,16 @@
 <launch>
 
-  <arg name="margin"                 default="0.2"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.8"/>  <!-- (0.5 1) -->
+  <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
+  <arg name="confidence"             default="0.7"/>  <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="0.5"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
   <arg name="source"                 default="7"/>
-  <arg name="dest"                   default="6"/>
+  <arg name="dest"                   default="4"/>
 
-  <rosparam param="/task_agent_ids">[6,7]</rosparam>
-  <rosparam param="/comm_agent_ids">[4]</rosparam>
+  <rosparam param="/task_agent_ids">[4,7]</rosparam>
+  <rosparam param="/comm_agent_ids">[6]</rosparam>
   <param name="/desired_altitude" value="0.0"/>
 
   <!-- channel rate model params -->

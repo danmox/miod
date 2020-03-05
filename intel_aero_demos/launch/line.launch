@@ -9,7 +9,7 @@
   <arg name="network_agent_velocity" default="1.0"/>  <!-- m/s -->
   <arg name="sample_count"           default="5000"/>
   <arg name="sample_variance"        default="1.0"/>
-  <arg name="margin"                 default="0.30"/> <!-- [0 1] -->
+  <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
   <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="2.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
@@ -18,12 +18,12 @@
   <arg name="destination_node"       default="3"/>
   <arg name="start_x"                default="6.0"/>
   <arg name="start_y"                default="0.0"/>
-  <arg name="end_x"                  default="23.0"/> <!-- distance agent should travel in a line -->
+  <arg name="end_x"                  default="36.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
   <rosparam param="/task_agent_ids">[3, 5]</rosparam> <!-- needed for task agent count -->
   <rosparam param="/comm_agent_ids">[1]</rosparam> <!-- needed for network agent count -->
-  <param name="/desired_altitude" value="2.0"/>
+  <param name="/desired_altitude" value="5.0"/>
   <param name="/source_node"      value="$(arg source_node)"/>
   <param name="/start_x"          value="$(arg start_x)"/>
   <param name="/start_y"          value="$(arg start_y)"/>

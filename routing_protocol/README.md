@@ -1,5 +1,5 @@
 
-sudo apt install python3-pip arp-scan iperf3
+sudo apt install python3-pip arp-scan iperf3 traceroute fping
 
 sudo apt install python3-matplotlib
 

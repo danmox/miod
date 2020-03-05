@@ -35,7 +35,7 @@ class Params:
     MAC = None
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
     PORT_PING = 54546
-    WIFI_IF = "wlx9cefd5fc63ef" #'wlx9cefd5fc63ef' 'wlp1s0'
+    WIFI_IF = "wlp1s0" #'wlx9cefd5fc63ef' 'wlp1s0'
     period = 1  # routing table update frequency in s
     rt_update_period = 0.5 # probabilistic routing table update period, s
     cs=None #initialize socket with None
@@ -61,6 +61,7 @@ class Params:
     results_folder = home + '/ws_intel/src/intel_aero/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
+    final_stats["delay"] = []
     final_stats["ws"] = []
     final_stats["tp"] = []
     final_stats["tr"] = []
@@ -164,30 +165,31 @@ def local_rt_update_thread():
         if Params.HOST in Params.routing_table.keys():
             new_rt = Params.routing_table[Params.HOST]
             for src in new_rt.keys():
-                if not src in Params.rt_tables_ids:
-                    Params.rt_tables_ids.append(src)
-                    subprocess.run(["sudo", "ip", "rule", "add", "from", str(src), "table", str(Params.rt_tables_ids.index(src)+1), "prio", "2"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
                 dest = new_rt[src][0][0]
-                subprocess.run(["sudo", "ip", "route", "del", dest, "table", str(Params.rt_tables_ids.index(src)+1)],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                if len(new_rt[src][0])>2:
-                    cur_prob=0
-                    coin=random.uniform(0, sum(new_rt[src][1]))
-                    for i in range(0, len(new_rt[src][1])):
-                        cur_prob+=new_rt[src][1][i]
-                        if coin<=cur_prob:
-                            if Params.statistics_collection:
-                                Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][i + 1]])
-                            subprocess.run(
-                                ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i+1], "dev", Params.WIFI_IF, "table",str(Params.rt_tables_ids.index(src)+1)],
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                            print("changing route: from {} to {} is now via {}".format(str(src),dest,new_rt[src][0][i+1]))
+                if dest != Params.HOST:
+                    if not src in Params.rt_tables_ids:
+                        Params.rt_tables_ids.append(src)
+                        subprocess.run(["sudo", "ip", "rule", "add", "from", str(src), "table", str(Params.rt_tables_ids.index(src)+1), "prio", "2"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-                elif len(new_rt[src][0])==2:
-                    if Params.statistics_collection:
-                        Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][1]])
-                    subprocess.run(["sudo", "ip", "route", "add", dest,"via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table", str(Params.rt_tables_ids.index(src)+1)] ,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    print("changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][1]))
+                    subprocess.run(["sudo", "ip", "route", "del", dest, "table", str(Params.rt_tables_ids.index(src)+1)],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if len(new_rt[src][0])>2:
+                        cur_prob=0
+                        coin=random.uniform(0, sum(new_rt[src][1]))
+                        for i in range(0, len(new_rt[src][1])):
+                            cur_prob+=new_rt[src][1][i]
+                            if coin<=cur_prob:
+                                if Params.statistics_collection:
+                                    Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][i + 1]])
+                                subprocess.run(
+                                    ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i+1], "dev", Params.WIFI_IF, "table",str(Params.rt_tables_ids.index(src)+1)],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                print("changing route: from {} to {} is now via {}".format(str(src),dest,new_rt[src][0][i+1]))
+
+                    elif len(new_rt[src][0])==2:
+                        if Params.statistics_collection:
+                            Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][1]])
+                        subprocess.run(["sudo", "ip", "route", "add", dest,"via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table", str(Params.rt_tables_ids.index(src)+1)] ,stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        print("changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][1]))
 
         sleep(Params.rt_update_period)
 
@@ -273,10 +275,32 @@ def measurement_thread_throughput_srv():
         sleep(0.1)
     cur_wireless.terminate()
 
+def measurement_thread_delay():
+    if Params.TP_IP!=None:
+        while Params.sim_run is True:
+            cmdline = ["fping", Params.TP_IP, "-c1", "-t", str(Params.tp_update_period * 1000)]
+            while Params.sim_run is True:
+                try:
+                    subprocess.check_output(cmdline)
+                    break
+                except subprocess.CalledProcessError:
+                    print("retrying fping")
+                    sleep(1)
+            cur_wireless = subprocess.run(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+            cur_wireless_update = cur_wireless.stdout.decode()
+            delays = re.search(r"bytes,\s(.*?)\sms", cur_wireless_update)
+            if delays is not None:
+                delays = float(delays.group(1))
+                print(delays)
+                if Params.statistics_collection:
+                    Params.final_stats["delay"].append([time(), delays])
+            sleep(Params.tp_update_period)
+
+
 
 def measurement_thread_traceroute():
     if Params.TP_IP!=None:
-        cmdline = ["sudo", "traceroute", "-T", Params.TP_IP]
+        cmdline = ["sudo", "traceroute", Params.TP_IP]
         while Params.sim_run is True:
             try:
                 subprocess.check_output(cmdline)
@@ -288,21 +312,18 @@ def measurement_thread_traceroute():
         start_time = Params.final_stats["start_time"]
         Params.traceroute_stats[Params.HOST, Params.TP_IP] = []
         while Params.sim_run is True:
-            cmdline = ["sudo", "traceroute", "-T", Params.TP_IP]
+            cmdline = ["sudo", "traceroute", Params.TP_IP]
             cur_wireless = subprocess.run(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
             cur_wireless_update = cur_wireless.stdout.decode()
             ips = np.array(re.findall(r"((?<=\d\s\s)([\d]{1,3}\.){3}[\d]{1,3})", cur_wireless_update))
-            delays = np.array(re.findall(r"((?<=\)\s\s)[\d]{1,4}\.[\d]{1,3})", cur_wireless_update))
-
-            if len(ips)>0:
+            if len(ips) > 0:
                 ips2 = ips.transpose()[0]
                 if len(ips2) > 0:
                     ips2 = list(ips2)
-                    ips2.insert(0,Params.HOST)
-                    delays = np.around(delays.astype(float),1)
-                    Params.traceroute_stats[Params.HOST, Params.TP_IP].append([time()-start_time,ips2,delays])
+                    ips2.insert(0, Params.HOST)
+                    Params.traceroute_stats[Params.HOST, Params.TP_IP].append([time() - start_time, ips2])
                     if Params.statistics_collection:
-                        Params.final_stats["tr"].append([time(),ips2,delays])
+                        Params.final_stats["tr"].append([time(), ips2])
             sleep(Params.rt_update_period)
 
 
@@ -342,29 +363,6 @@ def dynamic_statistics_parsing_thread():
             ax1.set_xlabel("time, s")
             ax1.set_ylabel("Throughput, Mbps")
 
-        if len(data_traceroute)>0:
-            ax2.clear()
-            ax2.title.set_text('Delay, ms')
-            max_tick = 0
-            j = 0
-            for i in data_traceroute.keys():
-                if len(data_traceroute[i])>0:
-                    m_av_len = 20
-                    tr_plot = np.transpose(data_traceroute[i])
-                    y_ax = [sum(k) for k in tr_plot[2]]
-                    tr_plot_ma = moving_average(y_ax, m_av_len)
-                    ax2.plot(tr_plot[0],y_ax,color=colors[j%len(colors)], marker='.',linewidth=0, markersize=1, label=('TX - {}, RX - {}'.format(i[0], i[1])))
-                    ax2.plot(tr_plot[0],tr_plot_ma,color=colors[j%len(colors)], label=('Mov. av., TX - {}, RX - {}'.format(i[0], i[1])))
-
-                    if len(tr_plot[0])>1:
-                        if max(tr_plot[0])>max_tick:
-                            max_tick = max(tr_plot[0])
-                            ax2.set_xticks(np.arange(0, max_tick, step=max_tick/10))
-                j+=1
-            ax2.legend()
-            ax2.set_xlabel("Time, s")
-            ax2.set_ylabel("Delay, ms")
-
 
         network_map = nx.MultiGraph()
         fixed_positions = {}
@@ -403,30 +401,6 @@ def dynamic_statistics_parsing_thread():
             plt.xticks([-5, 5])
             positions = nx.spring_layout(network_map, pos=fixed_positions, fixed=fixed_nodes)
             nx.draw_networkx(network_map, positions, with_labels=True)
-            #nx.draw_networkx_edges(network_map, positions, edge_color="b", alpha=0.3, edge_labels=edge_labels)
-            names = data_traceroute.keys()
-            weights = np.linspace(2, 4, len(names))
-            color_idx=0
-            for trace in data_traceroute.values():
-                trace_last = trace[-1]
-                color = colors[color_idx % len(colors)]
-                if len(trace_last[1]) > 1 and set(trace_last[1]).issubset(set(network_map.nodes)):
-                    edges = trace_last[1]
-                    edgelist = [(edges[i], edges[i+1]) for i in range(0,len(edges)-1)]
-                    edge_labels_new = trace_last[2]
-
-                    nx.draw_networkx_edges(network_map, positions, edge_color=color, alpha =0.3 , width=weights[color_idx], edge_labels=edge_labels, edgelist=edgelist)
-                    for i in range(0,len(edgelist)):
-                        if edgelist[i] in edge_labels.keys():
-                            edge_labels[edgelist[i]]+= ","+str(edge_labels_new[i])+"ms "
-                        elif edgelist[i][::-1] in edge_labels.keys():
-                            edge_labels[edgelist[i][::-1]]+= ", "+str(edge_labels_new[i])+"ms"
-                        else:
-                            edge_labels[edgelist[i]] = str(edge_labels_new[i])+"ms"
-
-                        nx.draw_networkx_edge_labels(network_map, positions, edge_labels=edge_labels, with_labels=True)
-                color_idx+=1
-
         fig.canvas.draw()
         sleep(0.1)
     plt.savefig("./results/test_run.png")
@@ -439,14 +413,6 @@ def parse_wireless_status(msg,source):
     time_stamp = time()
     if Params.dynamic_statistics_parsing is True:
         Params.snr_stats[source] = (msg,time_stamp)
-    # if Params.statistics_collection:
-    #     #TODO: make the appropriate statistics record
-    #     if "ws" in Params.final_stats.keys():
-    #         Params.final_stats["ws"].append([msg, time_stamp])
-    #     else:
-    #         Params.final_stats["ws"] = [[msg, time_stamp]]
-        #time = time.time() - start_time
-        #Params.full_stats[time]
 
 def parse_throughput_status(msg,src):
     tp = msg[0]
@@ -549,6 +515,7 @@ def main():
         threads.append(threading.Thread(target=receive_ping_thread))
         threads.append(threading.Thread(target=measurement_thread_traceroute))
         threads.append(threading.Thread(target=pos_update_thread))
+        threads.append(threading.Thread(target=measurement_thread_delay))
 
     if Params.routing is True:
         threads.append(threading.Thread(target=global_rt_update_thread))
