@@ -65,7 +65,7 @@
               /$(arg robot_ns)/mavros/setpoint_position/local
               /$(arg robot_ns)/pose
               $(arg server_topics)"/>
-  <!-- line demo params-->
+  <!-- line demo params
   <arg name="source_node"            default="7"/>
   <arg name="destination_node"       default="4"/>
   <arg name="start_x"                default="5.0"/>
@@ -76,7 +76,7 @@
   <param name="/start_x"          value="$(arg start_x)"/>
   <param name="/start_y"          value="$(arg start_y)"/>
   <param name="/end_x"            value="$(arg end_x)"/>
-
+  -->
   <group ns="$(arg robot_ns)" >
 
     <!-- MAVROS -->
