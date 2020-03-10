@@ -90,10 +90,10 @@ def moving_average(a, n=20) :
     return ret
 
 
-save_archive = True
-load_from_archive=False
+save_archive = False
+load_from_archive=True
 load_local = False
-archive_name = 'results/RRarchive2020-03-02 16:01.npz'
+archive_name = 'results/RRarchive2020-03-05 15:45.npz'
 home = expanduser("~")
 local_results_folder = home+"/workspace_aero/src/infrastructure-on-demand/routing_protocol/src/results/"
 
@@ -135,9 +135,9 @@ else:
 print("Loading files complete, parsing...")
 fig, tp_plot = plt.subplots()
 fig2, delay_plot = plt.subplots()
-#fig3 = plt.figure()
-#fig3_prj = fig3.gca(projection='3d')
-#rt_plot = Axes3D(fig3)
+fig3 = plt.figure()
+fig3_prj = fig3.gca(projection='3d')
+rt_plot = Axes3D(fig3)
 
 #fig4, tp_plot_ani = plt.subplots()
 #fig5, tr_plot_ani = plt.subplots()
@@ -174,13 +174,11 @@ for i in data:
     m_av_len = 20
     tr = dat.item()["tr"]
     ws = dat.item()["ws"]
-    print(ws)
     delay = dat.item()["delay"]
     #print(delay)
     if len(delay)>0:
         tp_ip = dat.item()['tp_ip']
         delay = np.transpose(np.array(delay, dtype=object))
-        rt_path_time[i] = delay[0]-start_time
         y_ax = delay[1]
         delay_plot_ma = moving_average_inf(y_ax, delay[0] - start_time, n=m_av_len, period=10)
         delay_plot.plot(delay[0] - start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
@@ -193,8 +191,12 @@ for i in data:
 
     #print(tr)
     tr = np.transpose(np.array(tr, dtype=object))
+    print(tr)
+
     if len(tr) > 0:
         rt_path_total[i] = tr[1]
+        rt_path_time[i] = tr[0]-start_time
+
 
     tp = dat.item()["tp"]
     if len(tp)>0:
@@ -423,7 +425,7 @@ def update_graph(i):
 
 
 
-#ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=100)
+ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=100)
 
 #ani1 = FuncAnimation(fig4, update_stats_tp, frames=range(0,ceil(max_time_rt)), interval=1000)
 

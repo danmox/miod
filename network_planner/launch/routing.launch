@@ -10,8 +10,8 @@
   <arg name="dest"                   default="4"/>
 
   <rosparam param="/task_agent_ids">[4,7]</rosparam>
-  <rosparam param="/comm_agent_ids">[6]</rosparam>
-  <param name="/desired_altitude" value="0.0"/>
+  <rosparam param="/comm_agent_ids">[]</rosparam>
+  <param name="/desired_altitude" value="8.0"/>
 
   <!-- channel rate model params -->
   <param name="/N0" value="-70.0"/> <!-- -85.0  receiver noise (dBm) -->
@@ -19,6 +19,15 @@
   <param name="/L0" value="-52.0"/> <!-- -48.0  transmit power (dBm) -->
   <param name="/a"  value="0.2"/>   <!--   0.2  variance sigmoid param 1 -->
   <param name="/b"  value="0.6"/>   <!--   0.6  variance sigmoid param 2 -->
+
+  <arg name="source_node"            default="$(arg source)"/>
+  <arg name="start_x"                default="5.0"/>
+  <arg name="start_y"                default="-10.0"/>
+  <arg name="end_x"                  default="35.0"/>
+  <param name="/source_node"      value="7"/>
+  <param name="/start_x"          value="$(arg start_x)"/>
+  <param name="/start_y"          value="$(arg start_y)"/>
+  <param name="/end_x"            value="$(arg end_x)"/>
 
   <node pkg="network_planner"
         type="network_planner_routing_node"

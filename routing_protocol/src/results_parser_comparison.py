@@ -138,94 +138,83 @@ rt_path_total = {}
 rt_path_time = {}
 
 j=0
-for i in data_1:
+
+for (i,m) in zip(data_1,data_2):
     dat = data_1[i]
+    dat2 = data_2[m]
     #print(dat.item())
     print(dat.item()["delay"])
     start_time = dat.item()["start_time"]
+    start_time2 = dat2.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["delay"]
+    tr2 = dat2.item()["delay"]
     if len(tr)>0:
+
         tp_ip = dat.item()['tp_ip']
+        tp_ip2 = dat2.item()['tp_ip']
+
         tr = np.transpose(np.array(tr, dtype=object))
-        rt_path_total[i] = tr[1]
-        print(tr)
-        rt_path_time[i] = tr[0]-start_time
+        tr2 = np.transpose(np.array(tr2, dtype=object))
+
+        max_time = max([max(tr2[0] - start_time2), max(tr[0] - start_time)])
+        print(max_time)
+
+        x_ax1 = np.flip(-1*(tr[0]-start_time-max_time),axis=0)
+        x_ax2 = np.flip(-1*(tr2[0]-start_time2-max_time),axis=0)
+
+
         y_ax = tr[1]
-        tr_plot_ma = moving_average_inf(y_ax, tr[0]-start_time, n=m_av_len, period=10)
-        tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
+        y_ax2 = tr2[1]
+
+
+
+        tr_plot_ma = moving_average_inf(y_ax, x_ax1, n=m_av_len, period=10)
+        tr_plot.plot(x_ax1, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
                  label=('TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)],
+        tr_plot.plot(x_ax1, tr_plot_ma, color=colors[j % len(colors)],
              label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_total[i] = y_ax
-        tr_total_ma[i] = tr_plot_ma
-        tr_total_time[i] = tr[0]-start_time
+
+        tr_plot_ma2 = moving_average_inf(y_ax2, x_ax2, n=m_av_len, period=10)
+        tr_plot.plot(x_ax2, y_ax2, color=colors[j+2 % len(colors)], marker='.', linewidth=0, markersize=1,
+                     label=('TX - {}, RX - {}'.format(m, tp_ip2)))
+        tr_plot.plot(x_ax2, tr_plot_ma2, color=colors[j+2 % len(colors)],
+                     label=('Mov. av., TX - {}, RX - {}'.format(m, tp_ip2)))
+
 
 
     tp = dat.item()["tp"]
+    tp2 = dat2.item()["tp"]
+
     if len(tp)>0:
         tp_ip = dat.item()['tp_ip']
+        tp_ip2 = dat2.item()['tp_ip']
+
         tp = np.transpose(tp)
+        tp2 = np.transpose(tp2)
+
+
+
+        max_time = max([max(tp2[0]), max(tp[0])])
+        print(max_time)
+
+        x_ax1 = np.flip(-1 * (tp[0]  - max_time), axis=0)
+        x_ax2 = np.flip(-1 * (tp2[0] - max_time), axis=0)
+
         tp_plot_ma = moving_average(tp[1], m_av_len)
-        tp_plot.plot(tp[0], tp[1], color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
-             label=('TX - {}, RX - {}'.format(i, tp_ip)))
-        tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)],
-             label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-        tp_total[i] = tp[1]
-        tp_total_ma[i] = tp_plot_ma
-        tp_total_time[i] = tp[0]
+        tp_plot_ma2 = moving_average(tp2[1], m_av_len)
 
-    colors_fixed[i] = colors[j % len(colors)]
-    j+=1
-
-tp_total = {}
-tp_total_ma = {}
-tp_total_time = {}
-
-tr_total = {}
-tr_total_ma = {}
-tr_total_time = {}
-
-rt_total = {}
-rt_path_total = {}
-rt_path_time = {}
-
-for i in data_2:
-    dat = data_2[i]
-    #print(dat.item())
-    print(dat.item()["tr"])
-    start_time = dat.item()["start_time"]
-    m_av_len = 20
-    tr = dat.item()["delay"]
-    if len(tr)>0:
-        tp_ip = dat.item()['tp_ip']
-        tr = np.transpose(np.array(tr, dtype=object))
-        rt_path_total[i] = tr[1]
-        print(tr)
-        rt_path_time[i] = tr[0]-start_time
-        y_ax = tr[1]
-        tr_plot_ma = moving_average_inf(y_ax, tr[0]-start_time, n=m_av_len, period=10)
-        tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
+        tp_plot.plot(x_ax1, tp[1], color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
                  label=('TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)],
+        tp_plot.plot(x_ax1, tp_plot_ma, color=colors[j % len(colors)],
              label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_total[i] = y_ax
-        tr_total_ma[i] = tr_plot_ma
-        tr_total_time[i] = tr[0]-start_time
+
+        tp_plot.plot(x_ax2, tp2[1], color=colors[j+2 % len(colors)], marker='.', linewidth=0, markersize=1,
+                     label=('TX - {}, RX - {}'.format(i, tp_ip)))
+        tp_plot.plot(x_ax2, tp_plot_ma2, color=colors[j+2 % len(colors)],
+                     label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
 
 
-    tp = dat.item()["tp"]
-    if len(tp)>0:
-        tp_ip = dat.item()['tp_ip']
-        tp = np.transpose(tp)
-        tp_plot_ma = moving_average(tp[1], m_av_len)
-        tp_plot.plot(tp[0], tp[1], color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
-             label=('TX - {}, RX - {}'.format(i, tp_ip)))
-        tp_plot.plot(tp[0], tp_plot_ma, color=colors[j % len(colors)],
-             label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-        tp_total[i] = tp[1]
-        tp_total_ma[i] = tp_plot_ma
-        tp_total_time[i] = tp[0]
 
     colors_fixed[i] = colors[j % len(colors)]
     j+=1
