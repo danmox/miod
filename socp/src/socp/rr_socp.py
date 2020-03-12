@@ -155,7 +155,7 @@ class RobustRoutingSolver:
                 bki = np.zeros([n, n])
 
                 # source, network nodes
-                if not np.any(np.asarray(qos[flow_idx].dest) - 1 == i):
+                if not np.any(np.asarray(qos[flow_idx].dest) == i):
                     aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
                     aki[i, :] = np.sqrt(rate_var[i, :]) # outgoing
                     aki[zero_vars[:, :, flow_idx]] = 0.0
@@ -182,7 +182,7 @@ class RobustRoutingSolver:
 
         # probabilistic confidence requirements
 
-        conf = np.ones([n, k]) * np.asarray([qos[i].confidence for i in range(0, k)])
+        conf = np.ones([n, k]) * np.asarray([qos[i].confidence for i in range(k)])
         conf = np.reshape(conf, [-1, 1], 'F')
         conf = stats.norm.ppf(conf)
 
@@ -190,7 +190,7 @@ class RobustRoutingSolver:
 
         m_ik = np.zeros([n, k])
         for i in range(0, k):
-            m_ik[np.hstack([qos[i].src, qos[i].dest]) - 1, i] = qos[i].margin
+            m_ik[np.hstack([qos[i].src, qos[i].dest]), i] = qos[i].margin
         m_ik = np.reshape(m_ik, (n * k), 'F')
 
         return a_mat, b_mat, zero_vars, conf, m_ik

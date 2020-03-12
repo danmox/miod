@@ -346,8 +346,9 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
 
   for (const Flow& flow : comm_reqs_id) {
     socp::QoS qos;
-    qos.src = *flow.srcs.begin();
-    qos.dest.insert(qos.dest.begin(), flow.dests.begin(), flow.dests.end());
+    qos.src = id_to_idx.at(*flow.srcs.begin());
+    for (int dest : flow.dests)
+      qos.dest.push_back(id_to_idx.at(dest));
     qos.margin = flow.min_margin;
     qos.confidence = flow.confidence;
     srv.request.qos.push_back(qos);

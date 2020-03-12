@@ -84,10 +84,10 @@ def socp_info(routes, qos, config=None, ax=None, solver=None):
         print "flow %d: %d -> %s, margin = %.2f, confidence = %.2f:"\
               % (k+1, qos[k].src, ", ".join(map(str, qos[k].dest)), qos[k].margin, qos[k].confidence)
         # column header
-        node_names = ["%6s" % (i+1) for i in range(n)]
-        node_names[qos[k].src-1] = "%6s" % ("(s) " + str(qos[k].src))  # nodes numbered from 1
+        node_names = ["%6s" % i for i in range(n)]
+        node_names[qos[k].src] = "%6s" % ("(s) " + str(qos[k].src))  # nodes numbered from 1
         for d in qos[k].dest:
-            node_names[d-1] = "%6s" % ("(d) " + str(d))
+            node_names[d] = "%6s" % ("(d) " + str(d))
         print "   %6s|%s|%5s" % (" ", "".join(map(str, node_names)), "Tx")
         print "   %s" % ("-" * (6 * (n+2) + 1))
         for i in range(n):
@@ -127,8 +127,8 @@ def multiple_dest_test():
     qos = QoS()
     qos.margin = 0.02
     qos.confidence = 0.7
-    src = [1, 2, 3]
-    dest = [[3, 2], [3, 1], [2, 1]]
+    src = [0, 1, 2]
+    dest = [[2, 1], [2, 0], [1, 0]]
     k = len(src)
     for i in range(k):
         qos.src = src[i]
@@ -156,8 +156,8 @@ def speed_test():
     comm_agent_count = 6
 
     qos_list = []
-    src = [1, 2, 3]
-    dest = [[2, 3], [1, 3], [1, 2]]
+    src = [0, 1, 2]
+    dest = [[1, 2], [0, 2], [0, 1]]
     qos = QoS()
     qos.margin = 0.10
     qos.confidence = 0.70
@@ -204,8 +204,8 @@ def simple_routing_test(margin=0.1, confidence=0.7):
     qos = QoS()
     qos.margin = margin
     qos.confidence = confidence
-    qos.src = 2
-    qos.dest = [1]
+    qos.src = 1
+    qos.dest = [0]
     msg.qos += [copy.deepcopy(qos)]
     k = len(msg.qos)
 
@@ -237,8 +237,8 @@ def matlab_match_test(margin=0.05, confidence=0.7):
         pt.z = z[i]
         msg.config += [copy.deepcopy(pt)]
 
-    src = [1, 2, 3]
-    dest = [[2, 3], [1, 3], [1, 2]]
+    src = [0, 1, 2]
+    dest = [[1, 2], [0, 2], [0, 1]]
     k = len(src)
     qos = QoS()
     qos.margin = margin
@@ -278,8 +278,8 @@ def infeasible_test(margin=0.5, confidence=0.9):
     qos = QoS()
     qos.margin = margin
     qos.confidence = confidence
-    qos.src = 2
-    qos.dest = [1]
+    qos.src = 1
+    qos.dest = [0]
     msg.qos += [copy.deepcopy(qos)]
     k = len(msg.qos)
 

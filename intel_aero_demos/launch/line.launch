@@ -73,12 +73,11 @@
     <param name="nav_nodelet"         value="gazebo_vel_nav_nodelet"/>
     <param name="world_frame"         value="world"/>
   </node>
-  <!--
+
   <node pkg="socp"
         type="rr_socp_server.py"
         name="robust_routing_socp_server"
         output="screen"/>
-        -->
 
   <!-- task (line) agents -->
 
@@ -116,6 +115,5 @@
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
-
 
 </launch>
