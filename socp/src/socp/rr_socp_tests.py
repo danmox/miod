@@ -29,7 +29,7 @@ def numpy_to_ros(np_config):
         ros_config += [copy.deepcopy(pt)]
     return ros_config
 
-def plot_config(config, ax=None, pause=None, clear_axes=False, show=True):
+def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=None):
     """
     plot the 2D spatial configuration of the network
 
@@ -58,6 +58,9 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True):
     ax.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
     for i in range(len(x)):
         ax.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
+
+    if title is not None:
+        ax.set_title(title)
 
     if show:
         if pause is None:
