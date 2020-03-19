@@ -45,9 +45,31 @@ class ChannelModel:
         dist_mask = ~np.eye(d.shape[0], dtype=bool)
         power = np.zeros(d.shape)
         power[dist_mask] = dbm2mw(self.L0 - 10 * self.n * np.log10(d[dist_mask]))
-        rate = 1 - special.erfc(np.sqrt(power / self.PN0))
+        rate = special.erf(np.sqrt(power / self.PN0))
         var = (self.a * d / (self.b + d)) ** 2
         return rate, var
+
+    def derivative(self, xi, xj):
+        """
+        compute the derivative of channel rate function with respect to xi (note:
+        the derivative with respect to xj can be found by swapping the inputs)
+
+        Inputs:
+          xi: [x y] node position
+          xj: [x y] node position
+
+        Outputs:
+          der: 2x1 derivative of Rij w.r.t xi
+        """
+
+        xi = np.reshape(xi, (2,1))
+        xj = np.reshape(xj, (2,1))
+
+        dist = np.linalg.norm(xi - xj)
+        der = - 10.0**(self.L0/20) * self.n * np.sqrt(dist ** (-self.n) / self.PN0) \
+            * np.exp(-10.0**(self.L0 / 10.0) * dist**(-self.n) / self.PN0) \
+            / (np.sqrt(np.pi) * dist) * (xi - xj) / dist
+        return der
 
 
 class RobustRoutingSolver:
