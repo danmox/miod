@@ -31,7 +31,8 @@ class ChannelModel:
 
     def predict(self, x):
         """
-        compute the expected channel rates and variances for each link
+        compute the expected channel rates and variances for each link in the
+        network with node positions given by x
 
         Inputs:
           x: a Nx2 list of node positions [x y]
@@ -45,6 +46,25 @@ class ChannelModel:
         dist_mask = ~np.eye(d.shape[0], dtype=bool)
         power = np.zeros(d.shape)
         power[dist_mask] = dbm2mw(self.L0 - 10 * self.n * np.log10(d[dist_mask]))
+        rate = special.erf(np.sqrt(power / self.PN0))
+        var = (self.a * d / (self.b + d)) ** 2
+        return rate, var
+
+    def predict_link(self, xi, xj):
+        """
+        compute the expected channel rate and variance of a single link
+
+        Inputs:
+          xi: 1x2 node position
+          xj: 1x2 node position
+
+        Outputs:
+          rate: expected channel rate between xi, xj
+          var: variance ("confidence") in expected channel rate between xi, xj
+        """
+
+        d = np.linalg.norm(xi - xj)
+        power = dbm2mw(self.L0 - 10 * self.n * np.log10(d))
         rate = special.erf(np.sqrt(power / self.PN0))
         var = (self.a * d / (self.b + d)) ** 2
         return rate, var
