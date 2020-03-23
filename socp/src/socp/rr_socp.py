@@ -86,6 +86,8 @@ class ChannelModel:
         xj = np.reshape(xj, (2,1))
 
         dist = np.linalg.norm(xi - xj)
+        if dist < 1e-6:
+            return np.zeros((2,1))
         der = - 10.0**(self.L0/20) * self.n * np.sqrt(dist ** (-self.n) / self.PN0) \
             * np.exp(-10.0**(self.L0 / 10.0) * dist**(-self.n) / self.PN0) \
             / (np.sqrt(np.pi) * dist) * (xi - xj) / dist
