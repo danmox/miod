@@ -22,6 +22,10 @@ rospy.sleep(20)
 
 node = roslaunch.core.Node(cli_args2[0], cli_args2[1], args=cli_args2[2])
 process = launch.launch(node)
+
+
 rospy.sleep(10)
+print(process.is_alive())
+
 # 3 seconds later
-launch.shutdown()
+launch.stop()
