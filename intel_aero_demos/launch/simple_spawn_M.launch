@@ -1,0 +1,70 @@
+<launch>
+
+  <!-- simulation args -->
+  <arg name="gazebo_gui"  default="false" />
+  <arg name="rviz"        default="true" />
+
+  <!-- line demo args -->
+  <arg name="task_agent_velocity"    default="0.5"/>  <!-- m/s -->
+  <arg name="network_agent_velocity" default="1.0"/>  <!-- m/s -->
+  <arg name="sample_count"           default="5000"/>
+  <arg name="sample_variance"        default="1.0"/>
+  <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
+  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
+  <arg name="collision_distance"     default="2.0"/>  <!-- m -->
+  <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
+  <arg name="minimum_update_rate"    default="1"/>    <!-- Hz -->
+  <arg name="source_node"            default="5"/>
+  <arg name="destination_node"       default="3"/>
+  <arg name="start_x"                default="6.0"/>
+  <arg name="start_y"                default="0.0"/>
+  <arg name="end_x"                  default="36.0"/> <!-- distance agent should travel in a line -->
+
+
+  <!-- gazebo and rviz -->
+  <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
+    <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
+    <arg name="world"            value="worlds/empty.world"/>
+    <arg name="rviz"             value="$(arg rviz)"/>
+    <arg name="rviz_config_file" value="$(find intel_aero_demos)/rviz/line.rviz"/>
+  </include>
+
+
+  <!-- agents -->
+
+  <group>
+    <arg name="id" value="3"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="0.0"/>
+      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="5"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(arg start_x)"/>
+      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <!-- network agents -->
+
+  <group>
+    <arg name="id" value="1"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('start_x')/2.0)"/>
+      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+</launch>
