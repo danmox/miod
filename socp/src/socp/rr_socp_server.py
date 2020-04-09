@@ -31,7 +31,7 @@ class RRSOCPServer:
             x[i, 0] = req.config[i].x
             x[i, 1] = req.config[i].y
 
-        slack, routes, status = self.solver.solve_socp(req.qos, x)
+        slack, routes, status = self.solver.solve_socp(req.qos, x, req.idx_to_id)
         if status == 'optimal':
             res.slack = slack
             res.routes = routes

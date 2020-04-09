@@ -98,7 +98,7 @@ class RobustRoutingSolver:
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         self.cm = ChannelModel(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
 
-    def solve_socp(self, qos, x, reshape_routes=False):
+    def solve_socp(self, qos, x, idx_to_id=None, reshape_routes=False):
         """
         solve the robust routing problem for the given network requirements and
         configuration
@@ -114,12 +114,22 @@ class RobustRoutingSolver:
           status: 'optimal' if a soln was found
         """
 
-        assert x.shape[1] == 2
+
         n = x.shape[0]
         k = len(qos)
 
+        assert x.shape[1] == 2
+
+        # if no idx_to_id list is provided it is assumed idx == id
+        # if idx_to_id is provided there must be a entry for each index
+        if idx_to_id is None or len(idx_to_id) == 0:
+            idx_to_id = range(n)
+        else:
+            assert len(idx_to_id) == n
+        id_to_idx = {idx_to_id[i]: i for i in range(n)}
+
         # socp constraints
-        a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x)
+        a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x, id_to_idx)
 
         # optimization variables
         slack, routes = cp.Variable((1)), cp.Variable((n * n * k))
@@ -152,7 +162,7 @@ class RobustRoutingSolver:
             return slack.value[0], routing_vars, socp.status
         return None, None, socp.status
 
-    def socp_constraints(self, qos, x):
+    def socp_constraints(self, qos, x, id_to_idx):
         """
         compute the coefficient matrices and vectors of the 2nd order
         constraints of the robust routing problem.
@@ -167,6 +177,7 @@ class RobustRoutingSolver:
         Inputs:
           qos: a list of socp.QoS messages
           x: a Nx2 list of node positions [x y]
+          id_to_idx: a map between IDs in qos and indices in x
 
         Outputs:
           a_mat: variance coefficient matrix
@@ -177,6 +188,7 @@ class RobustRoutingSolver:
         """
 
         assert x.shape[1] == 2
+
         n = x.shape[0]
         k = len(qos)
 
@@ -193,13 +205,14 @@ class RobustRoutingSolver:
         b_mat = np.zeros([n * k, n * n * k + 1])
 
         idx = 0
-        for flow_idx in range(0, k):
-            for i in range(0, n):
+        for flow_idx in range(k):
+            for i in range(n):
                 aki = np.zeros([n, n])
                 bki = np.zeros([n, n])
 
                 # source, network nodes
-                if not np.any(np.asarray(qos[flow_idx].dest) == i):
+                dest_node_idcs = [id_to_idx[id] for id in qos[flow_idx].dest]
+                if not np.any(np.asarray(dest_node_idcs) == i):
                     aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
                     aki[i, :] = np.sqrt(rate_var[i, :]) # outgoing
                     aki[zero_vars[:, :, flow_idx]] = 0.0
@@ -226,15 +239,16 @@ class RobustRoutingSolver:
 
         # probabilistic confidence requirements
 
-        conf = np.ones([n, k]) * np.asarray([qos[i].confidence for i in range(k)])
+        conf = np.ones([n, k]) * np.asarray([q.confidence for q in qos])
         conf = np.reshape(conf, [-1, 1], 'F')
         conf = stats.norm.ppf(conf)
 
         # node margin requirements
 
         m_ik = np.zeros([n, k])
-        for i in range(0, k):
-            m_ik[np.hstack([qos[i].src, qos[i].dest]), i] = qos[i].margin
+        for i in range(k):
+            node_indices = np.array([id_to_idx[id] for id in [qos[i].src] + qos[i].dest])
+            m_ik[node_indices, i] = qos[i].margin
         m_ik = np.reshape(m_ik, (n * k), 'F')
 
         return a_mat, b_mat, zero_vars, conf, m_ik

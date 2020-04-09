@@ -15,7 +15,7 @@ import matplotlib as mpl
 # helps the figures to be readable on hidpi screens
 mpl.rcParams['figure.dpi'] = 200
 
-def numpy_to_ros(np_config):
+def numpy_to_ros(np_config, z=0.):
     """
     convert a Nx2 numpy array of 2D node positions to a list of
     geometry_msgs.Points
@@ -26,6 +26,7 @@ def numpy_to_ros(np_config):
         pt = Point()
         pt.x = np_config[i,0]
         pt.y = np_config[i,1]
+        pt.z = z
         ros_config += [copy.deepcopy(pt)]
     return ros_config
 
@@ -69,7 +70,7 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=
             plt.pause(pause)
 
 
-def socp_info(routes, qos, config=None, ax=None, solver=None):
+def socp_info(routes, qos, config=None, solver=None, ids=None):
     """
     print information about the robust routing solution
 
@@ -77,20 +78,28 @@ def socp_info(routes, qos, config=None, ax=None, solver=None):
       routes: an NxNxK array of routing variables
       qos: an array of flow requirements with length(qos) == K
       config: (optional) the configuration of the team to plot
+      solver: (optional) will print the channel rate, var if the config is provided
+      ids: (optional) node ids to use instead of 1,...,n
 
     """
     assert len(qos) == routes.shape[2]
     n = routes.shape[0]
+    if ids is not None:
+        assert len(ids) == n
+    else:
+        ids = range(1,n+1)
+    id_to_idx = {id: idx for id, idx in zip(ids, range(n))}
+    idx_to_id = {idx: id for id, idx in zip(ids, range(n))}
 
     for k in range(len(qos)):
         # flow info
         print "flow %d: %d -> %s, margin = %.2f, confidence = %.2f:"\
               % (k+1, qos[k].src, ", ".join(map(str, qos[k].dest)), qos[k].margin, qos[k].confidence)
         # column header
-        node_names = ["%6s" % i for i in range(n)]
-        node_names[qos[k].src] = "%6s" % ("(s) " + str(qos[k].src))  # nodes numbered from 1
+        node_names = ["%6s" % i for i in ids]
+        node_names[id_to_idx[qos[k].src]] = "%6s" % ("(s) " + str(qos[k].src))
         for d in qos[k].dest:
-            node_names[d] = "%6s" % ("(d) " + str(d))
+            node_names[id_to_idx[d]] = "%6s" % ("(d) " + str(d))
         print "   %6s|%s|%5s" % (" ", "".join(map(str, node_names)), "Tx")
         print "   %s" % ("-" * (6 * (n+2) + 1))
         for i in range(n):
