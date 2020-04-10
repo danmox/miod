@@ -1,0 +1,35 @@
+#!/usr/bin/env python2
+
+
+import rospy
+from network_planner.network_planner import NetworkPlanner
+from socp.msg import QoS
+
+
+if __name__ == '__main__':
+    try:
+        node_name = 'connectivity_network_planner'
+        rospy.init_node(node_name)
+
+        required_params = ['~margin', '~confidence']
+        params = {}
+        run_planner = True
+        for param in required_params:
+            if rospy.has_param(param):
+                params[param[1:]] = rospy.get_param(param)
+            else:
+                rospy.logfatal('[{}] failed to fetch ROS param \'{}\''.format(node_name, param[1:]))
+                run_planner = False
+
+        if run_planner is True:
+            margin = params['margin']
+            confidence = params['confidence']
+
+            task_ids = range(1,4)
+            qos = [QoS(margin, confidence, i, [j for j in task_ids if j != i]) for i in task_ids]
+
+            network_planner = NetworkPlanner(qos)
+            network_planner.run()
+
+    except rospy.ROSInterruptException:
+        pass

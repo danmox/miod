@@ -18,6 +18,8 @@ find_package(catkin REQUIRED
 
 find_package(Armadillo REQUIRED)
 
+catkin_python_setup()
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -44,9 +46,6 @@ include_directories(
 
 add_library(${PROJECT_NAME} src/network_planner.cpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${ARMADILLO_LIBRARIES})
-
-add_executable(${PROJECT_NAME}_patrol_node src/network_planner_patrol_node.cpp)
-target_link_libraries(${PROJECT_NAME}_patrol_node ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_routing_node src/network_planner_routing_node.cpp)
 target_link_libraries(${PROJECT_NAME}_routing_node ${PROJECT_NAME} ${catkin_LIBRARIES})
