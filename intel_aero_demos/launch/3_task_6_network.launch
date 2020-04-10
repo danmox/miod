@@ -8,8 +8,6 @@
   <!-- patrol demo args -->
   <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
-  <arg name="sample_count"           default="1000"/>
-  <arg name="sample_variance"        default="2.0"/>
   <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
   <arg name="confidence"             default="0.75"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
@@ -17,6 +15,7 @@
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
   <arg name="patrol_radius"          default="20.0"/> <!-- radius of patrol circle -->
   <arg name="planner_type"           default="moving"/> <!-- fixed, moving -->
+  <arg name="print_routes"           default="false"/>
 
   <!-- patrol demo params -->
   <rosparam param="/task_agent_ids">[1, 2, 3]</rosparam> <!-- needed for task agent count -->
@@ -58,30 +57,21 @@
     <param name="pose_topic_suffix" value="/pose"/>
   </node>
 
-  <!-- network planner nodes -->
-
-  <node pkg="network_planner"
+  <!-- network planner -->
+  <node pkg="intel_aero_demos"
         type="network_planner_patrol_node"
-        name="network_planner_patrol_node"
+        name="connectivity_network_planner"
         output="screen">
-    <param name="sample_count"          value="$(arg sample_count)"/>
-    <param name="sample_variance"       value="$(arg sample_variance)"/>
-    <param name="max_velocity"          value="$(arg task_agent_velocity)"/>
     <param name="margin"                value="$(arg margin)"/>
     <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
-    <param name="pose_topic_prefix"     value=""/>
-    <param name="pose_topic_suffix"     value="/pose"/>
-    <param name="nav_nodelet"           value="gazebo_vel_nav_nodelet"/>
+    <param name="pose_topic"            value="/aero#/pose"/>
+    <param name="nav_nodelet"           value="/aero#/gazebo_vel_nav_nodelet"/>
     <param name="world_frame"           value="world"/>
     <param name="planner_type"          value="$(arg planner_type)"/>
+    <param name="print_routes"          value="$(arg print_routes)"/>
   </node>
-
-  <node pkg="socp"
-        type="rr_socp_server.py"
-        name="robust_routing_socp_server"
-        output="screen"/>
 
   <!-- task (patrol) agents -->
 

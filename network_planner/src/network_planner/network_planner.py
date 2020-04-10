@@ -183,7 +183,7 @@ class NetworkPlanner:
 
             # update network routes
 
-            slack = self.update_routes()
+            self.update_routes()
 
             # print iteration information
 
@@ -192,7 +192,7 @@ class NetworkPlanner:
             print('iteration duration / minimum duration : {:.3f}/{:.3f}s'.format(
                 systime.time() - t_prev_it, 1.0/self.params['minimum_update_rate']))
             print('lambda2                               : {}'.format(lambda2))
-            print('slack                                 : {}'.format(slack))
+            print('slack                                 : {}'.format(self.slack))
             if self.params['print_routes']:
                 print('')
                 socp_info(self.routing_vars, self.comm_reqs)

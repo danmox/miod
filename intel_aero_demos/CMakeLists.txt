@@ -9,6 +9,7 @@ find_package(catkin REQUIRED
   roscpp
   geometry_msgs
   mavros_msgs
+  network_planner
 )
 
 catkin_package(
@@ -17,6 +18,7 @@ catkin_package(
     roscpp
     geometry_msgs
     mavros_msgs
+    network_planner
 )
 
 include_directories(

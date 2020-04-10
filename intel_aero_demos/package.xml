@@ -14,6 +14,7 @@
   <depend>roscpp</depend>
   <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
+  <depend>network_planner</depend>
   <exec_depend>map_server</exec_depend>
   <exec_depend>octomap_server</exec_depend>
 
