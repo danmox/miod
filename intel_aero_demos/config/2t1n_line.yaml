@@ -1,0 +1,25 @@
+# demo parameters
+task_agent_ids:    [3, 5] # NOTE need to match IDs of agents spawned in launch file
+comm_agent_ids:    [1]    # NOTE need to match IDs of agents spawned in launch file
+desired_altitude:  5.0    # meters
+moving_agent:      5
+start_pos:         [6.0, 0.0]
+end_pos:           [26.0, 0.0]
+
+# channel model
+N0: -70.0  # -85.0  receiver noise (dBm)
+n:    2.52 #   2.52 decay exponent
+L0: -48.0  # -53.0  transmit power (dBm)
+a:    0.2  #   0.2  variance sigmoid param 1
+b:    0.6  #   0.6  variance sigmoid param 2
+
+# communication requirements
+qos:
+  - margin: 0.1
+    confidence: 0.7
+    src: 5
+    dest: [3]
+  - margin: 0.1
+    confidence: 0.7
+    src: 3
+    dest: [5]

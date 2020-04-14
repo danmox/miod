@@ -1,0 +1,68 @@
+#!/usr/bin/env python2
+
+import actionlib
+import copy
+from std_msgs.msg import Header
+from geometry_msgs.msg import Pose, Quaternion
+from intel_aero_navigation.msg import WaypointNavigationAction, WaypointNavigationGoal
+from socp.rr_socp_tests import numpy_to_ros
+from math import cos, sin, pi
+import numpy as np
+import rospy
+
+
+def fetch_param_warn(name, default_value):
+    try:
+        value = rospy.get_param(name)
+    except KeyError:
+        rospy.logwarn('failed to fetch param \'%s\' from parameter server; using a default value of %s' % (name, str(default_value)))
+        return default_value
+    return value
+
+
+def circle(rad, theta):
+    pts = np.zeros((theta.size,2))
+    pts[:,0] = rad*np.cos(theta)
+    pts[:,1] = rad*np.sin(theta)
+    return pts
+
+
+if __name__ == '__main__':
+
+    try:
+        rospy.init_node('circle_patrol_node')
+
+        required_params = ['/desired_altitude', '/task_agent_ids', '/patrol_radius']
+        params = {}
+        run_patrol = True
+        for param in required_params:
+            if rospy.has_param(param):
+                params[param[1:]] = rospy.get_param(param)
+            else:
+                rospy.fatal('[{}] failed to fetch ROS param \'{}\''.format(node_name, param))
+                run_patrol = False
+
+        clients = []
+        for i in params['task_agent_ids']:
+            name = '/aero{}/gazebo_vel_nav_nodelet'.format(i)
+            clients += [actionlib.SimpleActionClient(name, WaypointNavigationAction)]
+            rospy.loginfo('waiting for %s to start' % (name))
+            clients[-1].wait_for_server()
+
+        for i, client in enumerate(clients):
+            goal = WaypointNavigationGoal()
+            goal.header = Header(frame_id='world', stamp=rospy.get_rostime())
+            goal.end_action = WaypointNavigationGoal.LAND
+
+            angles = np.linspace(0.0, 2.0*pi, num=50) + i*2.0*pi/len(params['task_agent_ids'])
+            circle_pts = numpy_to_ros(circle(params['patrol_radius'], angles), params['desired_altitude'])
+            goal.waypoints = [Pose(pt, Quaternion(w=1.)) for pt in circle_pts]
+
+            client.send_goal(goal)
+
+        for id, client in zip(params['task_agent_ids'], clients):
+            rospy.loginfo('waiting for aero{} to complete'.format(id))
+            client.wait_for_result()
+
+    except rospy.ROSInterruptException:
+        pass

@@ -8,8 +8,6 @@
   <!-- patrol demo args -->
   <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
-  <arg name="margin"                 default="0.15"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.75"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
@@ -17,18 +15,8 @@
   <arg name="planner_type"           default="moving"/> <!-- fixed, moving -->
   <arg name="print_routes"           default="false"/>
 
-  <!-- patrol demo params -->
-  <rosparam param="/task_agent_ids">[1, 2, 3]</rosparam> <!-- needed for task agent count -->
-  <rosparam param="/comm_agent_ids">[4, 5, 6]</rosparam> <!-- needed for network agent count -->
+  <rosparam command="load" file="$(find intel_aero_demos)/config/3t6n_circle_patrol.yaml"/>
   <param name="/patrol_radius"       value="$(arg patrol_radius)"/>
-  <param name="/desired_altitude"    value="2.0"/>
-
-  <!-- channel rate model params -->
-  <param name="/N0" value="-70.0"/> <!-- -85.0  receiver noise (dBm) -->
-  <param name="/n"  value="2.52"/>  <!--   2.52 decay exponent -->
-  <param name="/L0" value="-48.0"/> <!-- -53.0  transmit power (dBm) -->
-  <param name="/a"  value="0.2"/>   <!--   0.2  variance sigmoid param 1 -->
-  <param name="/b"  value="0.6"/>   <!--   0.6  variance sigmoid param 2 -->
 
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
@@ -59,11 +47,9 @@
 
   <!-- network planner -->
   <node pkg="intel_aero_demos"
-        type="network_planner_patrol_node"
+        type="network_planner_node"
         name="connectivity_network_planner"
         output="screen">
-    <param name="margin"                value="$(arg margin)"/>
-    <param name="confidence"            value="$(arg confidence)"/>
     <param name="collision_distance"    value="$(arg collision_distance)"/>
     <param name="minimum_update_rate"   value="$(arg minimum_update_rate)"/>
     <param name="pose_topic"            value="/aero#/pose"/>
@@ -110,14 +96,14 @@
 
   <!-- network agents -->
 
-  <arg name="net_rad" default="8.0"/>
+  <arg name="rad" value="8.0"/>
 
   <group>
     <arg name="id" value="4"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="0.0"/>
+      <arg name="y"              value="0.0"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -127,8 +113,8 @@
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -138,11 +124,45 @@
     <arg name="id" value="6"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('net_rad')*cos(2.0*3.141592/3.0*(arg('id')-4)))"/>
-      <arg name="y"              value="$(eval arg('net_rad')*sin(2.0*3.141592/3.0*(arg('id')-4)))"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
   </group>
+  
+  <group>
+    <arg name="id" value="7"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="8"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="9"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/5.0*(arg('id')-5)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
 
 </launch>

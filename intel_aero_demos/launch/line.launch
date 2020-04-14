@@ -7,34 +7,12 @@
   <!-- line demo args -->
   <arg name="task_agent_velocity"    default="0.5"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="1.0"/>  <!-- m/s -->
-  <arg name="sample_count"           default="5000"/>
-  <arg name="sample_variance"        default="1.0"/>
-  <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
-  <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="2.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="1"/>    <!-- Hz -->
-  <arg name="source_node"            default="5"/>
-  <arg name="destination_node"       default="3"/>
-  <arg name="start_x"                default="6.0"/>
-  <arg name="start_y"                default="0.0"/>
-  <arg name="end_x"                  default="36.0"/> <!-- distance agent should travel in a line -->
+  <arg name="print_routes"           default="false"/>
 
-  <!-- line demo params -->
-  <rosparam param="/task_agent_ids">[3, 5]</rosparam> <!-- needed for task agent count -->
-  <rosparam param="/comm_agent_ids">[1]</rosparam> <!-- needed for network agent count -->
-  <param name="/desired_altitude" value="5.0"/>
-  <param name="/source_node"      value="$(arg source_node)"/>
-  <param name="/start_x"          value="$(arg start_x)"/>
-  <param name="/start_y"          value="$(arg start_y)"/>
-  <param name="/end_x"            value="$(arg end_x)"/>
-
-  <!-- channel rate model params -->
-  <param name="/N0" value="-70.0"/> <!-- -85.0  receiver noise (dBm) -->
-  <param name="/n"  value="2.52"/>  <!--   2.52 decay exponent -->
-  <param name="/L0" value="-48.0"/> <!-- -53.0  transmit power (dBm) -->
-  <param name="/a"  value="0.2"/>   <!--   0.2  variance sigmoid param 1 -->
-  <param name="/b"  value="0.6"/>   <!--   0.6  variance sigmoid param 2 -->
+  <rosparam command="load" file="$(find intel_aero_demos)/config/2t1n_line.yaml"/>
 
   <!-- gazebo and rviz -->
   <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
@@ -54,30 +32,20 @@
     <param name="pose_topic_suffix" value="/pose"/>
   </node>
 
-  <!-- network planner nodes -->
-  <node pkg="network_planner"
-        type="network_planner_line_node"
-        name="network_planner_line_node"
+  <!-- network planner node -->
+  <node pkg="intel_aero_demos"
+        type="network_planner_node"
+        name="connectivity_network_planner"
         output="screen">
-    <param name="sample_count"        value="$(arg sample_count)"/>
-    <param name="sample_variance"     value="$(arg sample_variance)"/>
     <param name="max_velocity"        value="$(arg task_agent_velocity)"/>
-    <param name="source"              value="$(arg source_node)"/>
-    <param name="destination"         value="$(arg destination_node)"/>
-    <param name="margin"              value="$(arg margin)"/>
-    <param name="confidence"          value="$(arg confidence)"/>
     <param name="collision_distance"  value="$(arg collision_distance)"/>
     <param name="minimum_update_rate" value="$(arg minimum_update_rate)"/>
-    <param name="pose_topic_prefix"   value=""/>
-    <param name="pose_topic_suffix"   value="/pose"/>
-    <param name="nav_nodelet"         value="gazebo_vel_nav_nodelet"/>
+    <param name="pose_topic"          value="/aero#/pose"/>
+    <param name="nav_nodelet"         value="/aero#/gazebo_vel_nav_nodelet"/>
     <param name="world_frame"         value="world"/>
+    <param name="planner_type"        value="moving"/>
+    <param name="print_routes"        value="$(arg print_routes)"/>
   </node>
-
-  <node pkg="socp"
-        type="rr_socp_server.py"
-        name="robust_routing_socp_server"
-        output="screen"/>
 
   <!-- task (line) agents -->
 
@@ -86,7 +54,7 @@
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
       <arg name="x"              value="0.0"/>
-      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="y"              value="0.0"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -96,8 +64,8 @@
     <arg name="id" value="5"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(arg start_x)"/>
-      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="x"              value="6.0"/>
+      <arg name="y"              value="0.0"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
@@ -109,8 +77,8 @@
     <arg name="id" value="1"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="$(eval arg('start_x')/2.0)"/>
-      <arg name="y"              value="$(arg start_y)"/>
+      <arg name="x"              value="3.0"/>
+      <arg name="y"              value="0.0"/>
       <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>
     </include>
