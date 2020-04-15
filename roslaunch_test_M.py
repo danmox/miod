@@ -7,7 +7,9 @@ from trajectory import run_trajectory
 #packacge requires rebuilding catkin and running rosdep install -i -y --from-paths .
 package = 'intel_aero_demos'
 #executable = 'trajectory'
-
+nav_node= 'gazebo_vel_nav_nodelet'
+#nav_nod= 'vel_nav_nodelet'
+dron_name ='aero'
 launch = roslaunch.scriptapi.ROSLaunch()
 
 uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -26,12 +28,13 @@ trajectory_list=[
     [[3,0,3],[3,0,0]],
     [[0,3,3],[0,3,0]]
 ]
-rospy.set_param('/aero1/gazebo_vel_nav_nodelet/desired_trajectory',trajectory_list[0])
-rospy.set_param('/aero3/gazebo_vel_nav_nodelet/desired_trajectory',trajectory_list[1])
-rospy.set_param('/aero5/gazebo_vel_nav_nodelet/desired_trajectory',trajectory_list[2])
+rospy.set_param('/'+ dron_name +'1/'+ nav_node +'/desired_trajectory',trajectory_list[0])
+rospy.set_param('/'+ dron_name +'3/'+ nav_node +'/desired_trajectory',trajectory_list[1])
+rospy.set_param('/'+ dron_name +'5/'+ nav_node +'/desired_trajectory',trajectory_list[2])
 
 for i in id_list:
-    run_trajectory(i)
+    client=run_trajectory(i,dron_name,nav_node)
+    client.wait_for_result()
 
 rospy.sleep(10)
 # 3 seconds later
