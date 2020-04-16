@@ -1,6 +1,10 @@
 import roslaunch
 import rospy
+
 from trajectory import run_trajectory
+from trajectory import get_data
+
+
 #run roscore localy
 #running the script with poython2 ./name_of_the_script.py
 #requires installation of package ros-melodic-ros-comm and sourcing setup.bash
@@ -22,18 +26,12 @@ launch.parent = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
 launch.start()
 
 rospy.sleep(20)
-id_list=[1, 3, 5]
-trajectory_list=[
-    [[3,3,3],[3,3,0]],
-    [[3,0,3],[3,0,0]],
-    [[0,3,3],[0,3,0]]
-]
-rospy.set_param('/'+ dron_name +'1/'+ nav_node +'/desired_trajectory',trajectory_list[0])
-rospy.set_param('/'+ dron_name +'3/'+ nav_node +'/desired_trajectory',trajectory_list[1])
-rospy.set_param('/'+ dron_name +'5/'+ nav_node +'/desired_trajectory',trajectory_list[2])
 
-for i in id_list:
-    client=run_trajectory(i,dron_name,nav_node)
+id_list, trajectory_list = get_data("dictex.yaml")
+
+for id in id_list:
+    rospy.set_param('/'+ dron_name + id +'/'+ nav_node +'/desired_trajectory',trajectory_list[id_list.index(id)])
+    client=run_trajectory(id,dron_name,nav_node)
     client.wait_for_result()
 
 rospy.sleep(10)

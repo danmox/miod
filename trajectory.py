@@ -3,6 +3,17 @@ import copy
 from geometry_msgs.msg import Pose
 from intel_aero_navigation.msg import WaypointNavigationAction, WaypointNavigationGoal
 import rospy
+import yaml
+
+def get_data(file_name):
+    with open(file_name, 'r') as stream:
+        data_loaded = yaml.safe_load(stream)
+    id_list = []
+    trajectory_list = []
+    for x in data_loaded['wp_dict']:
+        id_list.append(x)
+        trajectory_list.append(data_loaded['wp_dict'][x])
+    return id_list , trajectory_list
 
 def fetch_param_warn(name):
     try:
