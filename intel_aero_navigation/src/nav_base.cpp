@@ -57,10 +57,13 @@ NavBase::NavBase(std::string name, ros::NodeHandle& nh_, ros::NodeHandle& pnh_):
   if (pnh.getParam("debug", debug) && debug)
     if(ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
       ros::console::notifyLoggerLevelsChanged();
+  NB_DEBUG("debug set to %s", debug ? "TRUE" : "FALSE");
 
   costmap_sub = nh.subscribe("costmap", 10, &NavBase::costmapCB, this);
   pose_sub = nh.subscribe("pose", 10, &NavBase::poseCB, this);
   path_pub = nh.advertise<nav_msgs::Path>("path", 10);
+
+  NB_DEBUG("exiting constructor");
 }
 
 NavBase::~NavBase()
@@ -72,6 +75,7 @@ NavBase::~NavBase()
 // TODO also have a map updates sub?
 void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
+  NB_DEBUG("in NavBase::costmapCB(...)");
   // NOTE: it is assumed the pose of the robot is given with respect to the
   // same frame as the costmap (i.e. no transformations need to take place)
   if (!costmap_ptr) {
@@ -110,6 +114,7 @@ void NavBase::costmapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
 void NavBase::goalCB()
 {
+  NB_DEBUG("in NavBase::goalCB(...)");
   // abort any existing goals
   if (nav_server.isActive()) {
     NB_INFO("goal aborted");
@@ -279,6 +284,7 @@ bool NavBase::obstacleFree(const std::vector<int>& cells) const
 
 void NavBase::preemptCB()
 {
+  NB_DEBUG("in NavBase::preemptCB()");
   if (nav_server.isActive()) {
     NB_INFO("goal aborted");
     nav_server.setAborted();
@@ -295,6 +301,7 @@ void NavBase::preemptCB()
 // actual tracking of the waypoints happens here
 void NavBase::poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
+  NB_DEBUG("in NavBase::poseCB(...)");
   robot_pose = *msg;
   robot_pose.header.stamp = ros::Time(0); // to fetch the latest transform
   try {
