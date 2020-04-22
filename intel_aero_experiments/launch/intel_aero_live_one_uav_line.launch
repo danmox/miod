@@ -5,15 +5,15 @@
   -->
 
   <arg name="id"                 default="1" />
-  <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
+  <arg name="robot_ns"           value="$(optenv AGENT nuc1)" />
   <arg name="update_params_delay" default="15.0" />
   <arg name="launch_start_delay" default="20.0" />
 
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.918110"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2: -34.918110  -56.167703  University Uguguay 1: -34.919144  -56.167607; Philly net 39.941154 -75.198973-->
+  <arg name="datum_lat"  default="-34.918110"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2: -34.918110  -56.167703  Fake GPS indoor test: 47.3783008 8.5387768; Philly net 39.941154 -75.198973-->
   <arg name="datum_lon"  default="-56.167703"/>
-  <arg name="datum_yaw"  default="0.0"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 Football field Uy: 0.296-->
+  <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 Football field Uy: 0.296-->
 
   <!-- topics / frames args -->
   <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->
@@ -37,7 +37,7 @@
 
   <!-- MAVROS args -->
   <arg name="fcu_url" default="udp://127.0.0.1:14550@127.0.0.1:14555"/>
-
+  <!--for NUC  /dev/ttyACM0:921600 for aero udp://127.0.0.1:14550@127.0.0.1:14555 -->
   <!-- routing args -->
   <arg name="networking"     default="true"/> <!-- controls whether robust routing scripts are started -->
   <arg name="server"         default="false"/>
@@ -61,8 +61,8 @@
               $(arg server_topics)"/>
 
   <arg name="start_x"                default="5.0"/>
-  <arg name="start_y"                default="-10.0"/>
-  <arg name="end_x"                  default="35.0"/> <!-- distance agent should travel in a line -->
+  <arg name="start_y"                default="-15.0"/>
+  <arg name="end_x"                  default="20.0"/> <!-- distance agent should travel in a line -->
 
   <!-- line demo params -->
   <param name="/desired_altitude" value="5.0"/>
@@ -113,18 +113,29 @@
       <remap from="imu" to="mavros/imu/data"/>
     </node>
 
-    <!-- navigation nodes -->
+
 
     <node pkg="nodelet"
           type="nodelet"
           name="px4_waypoint_navigation_nodelet"
           args="standalone intel_aero_navigation/PX4NavNodelet"
           output="screen">
+      <param name="debug"   value="false"/>
       <param name="local_frame"   value="$(arg odom_frame)"/>
       <param name="position_tol"  value="$(arg position_tol)" />
       <param name="heading_tol"   value="$(arg heading_tol)" />
     </node>
-
+    <!-- navigation nodes
+    <node pkg="intel_aero_navigation"
+          type="px4_nav_node"
+          name="px4_waypoint_navigation_nodelet"
+          output="screen">
+      <param name="debug"   value="true"/>
+      <param name="local_frame"   value="$(arg odom_frame)"/>
+      <param name="position_tol"  value="$(arg position_tol)" />
+      <param name="heading_tol"   value="$(arg heading_tol)" />
+    </node>
+    -->
   </group>
 
   <node pkg="mavros"
@@ -133,13 +144,14 @@
         output="screen"
         launch-prefix="bash -c 'sleep $(arg update_params_delay); $0 $@'"
 
-        args="-v -n aero$(arg id)/mavros load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
+        args="-v -n nuc$(arg id)/mavros load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
 
-   <node pkg="intel_aero_demos"
+  <node pkg="intel_aero_demos"
           type="line_demo"
           name="line_demo"
           launch-prefix="bash -c 'sleep $(arg launch_start_delay); $0 $@'"
           output="screen">
-   </node>
+  </node>
+
 
 </launch>

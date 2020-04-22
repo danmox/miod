@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   typedef intel_aero_navigation::WaypointNavigationAction NavAction;
   typedef actionlib::SimpleActionClient<NavAction> NavClient;
   std::stringstream ss;
-  ss << "/aero" << source_node << "/" << nav_nodelet;
+  ss << "/nuc" << source_node << "/" << nav_nodelet;
   std::string name = ss.str();
   NavClient nav_client(name, true);
   ROS_INFO("[line_demo] waiting for %s action server to start", name.c_str());

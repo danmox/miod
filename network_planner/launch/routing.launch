@@ -10,7 +10,7 @@
   <arg name="dest"                   default="4"/>
 
   <rosparam param="/task_agent_ids">[4,7]</rosparam>
-  <rosparam param="/comm_agent_ids">[]</rosparam>
+  <rosparam param="/comm_agent_ids">[6]</rosparam>
   <param name="/desired_altitude" value="8.0"/>
 
   <!-- channel rate model params -->

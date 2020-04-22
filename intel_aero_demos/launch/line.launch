@@ -9,7 +9,7 @@
   <arg name="network_agent_velocity" default="1.0"/>  <!-- m/s -->
   <arg name="sample_count"           default="5000"/>
   <arg name="sample_variance"        default="1.0"/>
-  <arg name="margin"                 default="0.1"/> <!-- [0 1] -->
+  <arg name="margin"                 default="0.0"/> <!-- [0 1] -->
   <arg name="confidence"             default="0.70"/> <!-- (0.5 1) -->
   <arg name="collision_distance"     default="2.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
