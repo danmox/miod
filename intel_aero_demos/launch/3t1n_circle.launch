@@ -8,7 +8,6 @@
   <!-- patrol demo args -->
   <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
-
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
@@ -61,7 +60,10 @@
   </node>
 
 <<<<<<< HEAD:intel_aero_demos/launch/3t1n_circle.launch
+<<<<<<< HEAD:intel_aero_demos/launch/3t1n_circle.launch
 =======
+=======
+>>>>>>> 48fd98a1d18d9ec7326f4a3ee5f141e71ca1d81b:intel_aero_demos/launch/3_task_1_network.launch
 
   <node pkg="socp"
         type="rr_socp_server.py"
