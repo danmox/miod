@@ -24,13 +24,13 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "line_demo_node");
   ros::NodeHandle nh, pnh("~");
 
-  double desired_altitude, start_x, start_y, end_x;
-  int source_node;
+  double desired_altitude;
+  std::vector<double> start_pos, end_pos;
+  int moving_agent;
   if (!nh.getParam("/desired_altitude", desired_altitude) ||
-      !nh.getParam("/start_x", start_x) ||
-      !nh.getParam("/start_y", start_y) ||
-      !nh.getParam("/end_x", end_x) ||
-      !nh.getParam("/source_node", source_node)) {
+      !nh.getParam("/start_pos", start_pos) ||
+      !nh.getParam("/end_pos", end_pos) ||
+      !nh.getParam("/moving_agent", moving_agent)) {
     ROS_FATAL("[line_demo] failed to fetch parameters from server");
     exit(EXIT_FAILURE);
   }
@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   typedef intel_aero_navigation::WaypointNavigationAction NavAction;
   typedef actionlib::SimpleActionClient<NavAction> NavClient;
   std::stringstream ss;
-  ss << "/nuc" << source_node << "/" << nav_nodelet;
+  ss << "/nuc" << moving_agent << "/" << nav_nodelet;
   std::string name = ss.str();
   NavClient nav_client(name, true);
   ROS_INFO("[line_demo] waiting for %s action server to start", name.c_str());
@@ -50,13 +50,13 @@ int main(int argc, char** argv)
   ROS_INFO("[line_demo] %s action server ready", name.c_str());
 
   geometry_msgs::Pose start;
-  start.position.x = start_x;
-  start.position.y = start_y;
+  start.position.x = start_pos[0];
+  start.position.y = start_pos[1];
   start.position.z = desired_altitude;
   start.orientation.w = 1.0;
   geometry_msgs::Pose end;
-  end.position.x = end_x;
-  end.position.y = start_y;
+  end.position.x = end_pos[0];
+  end.position.y = end_pos[1];
   end.position.z = desired_altitude;
   end.orientation.w = 1.0;
 

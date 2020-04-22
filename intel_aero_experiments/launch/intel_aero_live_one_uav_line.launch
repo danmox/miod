@@ -11,8 +11,8 @@
 
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.918110"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2: -34.918110  -56.167703  Fake GPS indoor test: 47.3783008 8.5387768; Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="-56.167703"/>
+  <arg name="datum_lat"  default="-34.918025"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768; Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="-56.167531"/>
   <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 Football field Uy: 0.296-->
 
   <!-- topics / frames args -->
@@ -60,17 +60,8 @@
               /$(arg robot_ns)/pose
               $(arg server_topics)"/>
 
-  <arg name="start_x"                default="5.0"/>
-  <arg name="start_y"                default="-15.0"/>
-  <arg name="end_x"                  default="20.0"/> <!-- distance agent should travel in a line -->
-
   <!-- line demo params -->
-  <param name="/desired_altitude" value="5.0"/>
-  <param name="/source_node"      value="$(arg id)"/>  <!-- TA that flies is a source node-->
-  <param name="/start_x"          value="$(arg start_x)"/>
-  <param name="/start_y"          value="$(arg start_y)"/>
-  <param name="/end_x"            value="$(arg end_x)"/>
-
+  <rosparam command="load" file="$(find intel_aero_experiments)/cfg/2t1n_line.yaml"/>
 
 
 
@@ -125,17 +116,6 @@
       <param name="position_tol"  value="$(arg position_tol)" />
       <param name="heading_tol"   value="$(arg heading_tol)" />
     </node>
-    <!-- navigation nodes
-    <node pkg="intel_aero_navigation"
-          type="px4_nav_node"
-          name="px4_waypoint_navigation_nodelet"
-          output="screen">
-      <param name="debug"   value="true"/>
-      <param name="local_frame"   value="$(arg odom_frame)"/>
-      <param name="position_tol"  value="$(arg position_tol)" />
-      <param name="heading_tol"   value="$(arg heading_tol)" />
-    </node>
-    -->
   </group>
 
   <node pkg="mavros"
