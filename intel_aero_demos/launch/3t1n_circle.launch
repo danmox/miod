@@ -8,6 +8,7 @@
   <!-- patrol demo args -->
   <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
   <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
+
   <arg name="collision_distance"     default="4.0"/>  <!-- m -->
   <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
   <arg name="minimum_update_rate"    default="5"/>   <!-- Hz -->
@@ -59,6 +60,15 @@
     <param name="print_routes"          value="$(arg print_routes)"/>
   </node>
 
+<<<<<<< HEAD:intel_aero_demos/launch/3t1n_circle.launch
+=======
+
+  <node pkg="socp"
+        type="rr_socp_server.py"
+        name="robust_routing_socp_server"
+        output="screen"/>
+
+>>>>>>> restructuring python-based roslaunch scripts:intel_aero_demos/launch/3_task_1_network.launch
   <!-- task (patrol) agents -->
 
   <group>
