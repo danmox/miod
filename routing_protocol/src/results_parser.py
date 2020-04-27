@@ -92,9 +92,9 @@ def moving_average(a, n=20) :
 
 
 save_archive = True
-load_from_archive=False
+load_from_archive=True
 load_local = False
-archive_name = 'results/RRarchive2020-03-05 15:45.npz'
+archive_name = 'results/RRarchive2020-04-27 11:28.npz'
 home = expanduser("~")
 cur_fold = os.path.dirname(__file__)
 local_results_folder = cur_fold+"/results/"
@@ -111,7 +111,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = [ '10.42.0.1']#, '10.42.0.2', '10.42.0.10']
+    hosts = [ '10.42.0.1', '10.42.0.4', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
@@ -218,6 +218,7 @@ for i in data:
 
 
     rt = dat.item()["rt"]
+    print(rt)
     pos = dat.item()["pos"]
     #print(rt)
     if len(rt)>0:

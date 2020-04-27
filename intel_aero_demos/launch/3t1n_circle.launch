@@ -59,18 +59,6 @@
     <param name="print_routes"          value="$(arg print_routes)"/>
   </node>
 
-<<<<<<< HEAD:intel_aero_demos/launch/3t1n_circle.launch
-<<<<<<< HEAD:intel_aero_demos/launch/3t1n_circle.launch
-=======
-=======
->>>>>>> 48fd98a1d18d9ec7326f4a3ee5f141e71ca1d81b:intel_aero_demos/launch/3_task_1_network.launch
-
-  <node pkg="socp"
-        type="rr_socp_server.py"
-        name="robust_routing_socp_server"
-        output="screen"/>
-
->>>>>>> restructuring python-based roslaunch scripts:intel_aero_demos/launch/3_task_1_network.launch
   <!-- task (patrol) agents -->
 
   <group>
