@@ -31,6 +31,7 @@ def rsync(server, path, password, local_results_folder, timeout=30):
 
 
     #ssh_cmd = "scp %s:%s" % (server, path)  +" ./results/"
+    print(local_results_folder)
     rsync = "rsync -avzh %s:%s" % (server, path)  + " " + local_results_folder
     print(rsync)
     child = pexpect.spawn(rsync, timeout=timeout)
@@ -95,7 +96,8 @@ load_from_archive=False
 load_local = False
 archive_name = 'results/RRarchive2020-03-05 15:45.npz'
 home = expanduser("~")
-local_results_folder = home+"/workspace_aero/src/infrastructure-on-demand/routing_protocol/src/results/"
+cur_fold = os.path.dirname(__file__)
+local_results_folder = cur_fold+"/results/"
 
 data = {}
 
@@ -109,7 +111,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.7', '10.42.0.4', '10.42.0.1']#, '10.42.0.2', '10.42.0.10']
+    hosts = [ '10.42.0.1']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
