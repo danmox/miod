@@ -58,7 +58,7 @@ class Params:
     TP_IP = None
 
     home = expanduser("~")
-    results_folder = home + '/ws_intel/src/intel_aero/routing_protocol/src/results/'
+    results_folder = home + '/ws_catkin/src/infrastructure-on-demand/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
     final_stats["delay"] = []

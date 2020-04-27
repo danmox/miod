@@ -8,8 +8,8 @@
   <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.918110"/>   <!-- University Uguguay 1: -34.919144  -56.167607; Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="-56.167703"/>
+  <arg name="datum_lat"  default="-34.918025 "/>   <!--  University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768 Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="-56.167531"/>
   <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 -->
 
   <!-- topics / frames args -->
@@ -22,6 +22,9 @@
   <!-- waypoint navigation args -->
   <arg name="position_tol" 	 default="0.5"/> <!-- meters -->
   <arg name="heading_tol"  	 default="0.5"/> <!-- ~28deg -->
+
+  <arg name="task_agent_velocity"    default="0.7"/>  <!-- m/s -->
+  <arg name="network_agent_velocity" default="0.7"/>  <!-- m/s -->
 
   <!-- mapping / costmap args -->
   <arg name="robot_radius"       default="1.0"/>
@@ -65,18 +68,7 @@
               /$(arg robot_ns)/mavros/setpoint_position/local
               /$(arg robot_ns)/pose
               $(arg server_topics)"/>
-  <!-- line demo params
-  <arg name="source_node"            default="7"/>
-  <arg name="destination_node"       default="4"/>
-  <arg name="start_x"                default="5.0"/>
-  <arg name="start_y"                default="-10.0"/>
-  <arg name="end_x"                  default="35.0"/>
-  <param name="/desired_altitude" value="8.0"/>
-  <param name="/source_node"      value="$(arg id)"/>
-  <param name="/start_x"          value="$(arg start_x)"/>
-  <param name="/start_y"          value="$(arg start_y)"/>
-  <param name="/end_x"            value="$(arg end_x)"/>
-  -->
+
   <group ns="$(arg robot_ns)" >
 
     <!-- MAVROS -->

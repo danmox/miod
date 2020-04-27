@@ -90,8 +90,8 @@ def moving_average(a, n=20) :
     return ret
 
 
-save_archive = False
-load_from_archive=True
+save_archive = True
+load_from_archive=False
 load_local = False
 archive_name = 'results/RRarchive2020-03-05 15:45.npz'
 home = expanduser("~")
@@ -109,14 +109,14 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.4', '10.42.0.6', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
+    hosts = ['10.42.0.7', '10.42.0.4', '10.42.0.1']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
         files[i] = file_name+"_"+str(i)+".npz"
         aero_id = i.split(".")[-1]
-        server = "aero{}@{}".format(aero_id,i)
-        path = "~/ws_intel/src/infrastructure-on-demand/routing_protocol/src/{}".format(files[i])
+        server = "nuc{}@{}".format(aero_id,i)
+        path = "~/ws_catkin/src/infrastructure-on-demand/routing_protocol/src/{}".format(files[i])
         if load_from_archive is not True:
             rsync(server,path,passwd,local_results_folder)
 

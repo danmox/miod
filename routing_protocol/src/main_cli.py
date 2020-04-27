@@ -28,7 +28,7 @@ import numpy as np
 #print(cur_wireless)
 
 class Params:
-    SERVER = '10.42.0.13'  # Standard loopback interface address (localhost)
+    SERVER = '10.42.0.21'  # Standard loopback interface address (localhost)
     BROADCAST = '10.42.0.255'
     SUBNET='10.42.0.0/24'
     PORT = 54545  # Port to listen on (non-privileged ports are > 1023)
@@ -57,7 +57,7 @@ class Params:
     traceroute_stats = []
 
     home = expanduser("~")
-    results_folder = home+'/ws_intel/src/intel_aero/routing_protocol/src/results/'
+    results_folder = home+'/ws_catkin/src/infrastructure-on-demand/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
     final_stats["delay"] = []
