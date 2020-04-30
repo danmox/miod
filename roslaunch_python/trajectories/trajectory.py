@@ -1,9 +1,8 @@
 import copy
-
 import actionlib
 import rospy
 import yaml
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Point, PoseStamped, Pose
 from intel_aero_navigation.msg import WaypointNavigationAction, WaypointNavigationGoal
 
 
@@ -34,7 +33,7 @@ def run_custom_trajectory(id, dname, node):
     # send goals (from /aero%id/params) to id quad
     #
 
-    rospy.init_node('trajectory_node')
+    #rospy.init_node('trajectory_node')
     client = actionlib.SimpleActionClient(name, WaypointNavigationAction)
     rospy.loginfo('waiting for %s to start' % (name))
     client.wait_for_server()
@@ -59,3 +58,37 @@ def run_custom_trajectory(id, dname, node):
 
     #    client.wait_for_result()
     return client
+
+def take_off(id, dname, node, altitud):
+    agent_Pose = Pose()
+    pose_rcv = 0
+    def pose_rcv(msg):
+        agent_Pose=msg.pose
+        pose_rcv=1
+
+    name = '/' + dname + str(id) + '/' + node
+
+    client = actionlib.SimpleActionClient(name, WaypointNavigationAction)
+    rospy.loginfo('waiting for %s to start' % (name))
+    client.wait_for_server()
+
+    topic ='dname'+ str(id) + '/pose'
+    pos_subscriber=rospy.Subscriber(topic, PoseStamped,pose_rcv)
+    while not pose_rcv and not rospy.is_shutdown():
+        systime.sleep(0.25)
+
+    goal = WaypointNavigationGoal()
+    goal.header.frame_id = 'world'
+    goal.header.stamp = rospy.get_rostime()
+    goal.end_action = WaypointNavigationGoal.HOVER
+    pose = agent_Pose
+    pose.position.z = altitud
+    goal.waypoints += [copy.deepcopy(pose)]
+    client.send_goal(goal)
+
+    rospy.loginfo('waiting for '+ dname +'%s to complete' % (id))
+#   pos_subscriber.unregister()
+#    client.wait_for_result()
+    return client
+
+

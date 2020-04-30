@@ -21,7 +21,10 @@ def numpy_to_ros(np_config, z=0.):
     geometry_msgs.Points
 
     """
-    ros_config = [Point(np_config[i,0], np_config[i,1], z) for i in range(np_config.shape[0])]
+    if isinstance(z, list):
+        ros_config = [Point(np_config[i, 0], np_config[i, 1], z[i]) for i in range(np_config.shape[0])]
+    else:
+        ros_config = [Point(np_config[i, 0], np_config[i, 1], z) for i in range(np_config.shape[0])]
     return ros_config
 
 def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=None):

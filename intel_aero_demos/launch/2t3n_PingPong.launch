@@ -1,0 +1,105 @@
+<launch>
+
+  <!-- simulation args -->
+  <arg name="gazebo_gui"  default="false" />
+  <arg name="rviz"        default="true" />
+  <arg name="network_viz" default="true"/>
+
+  <!-- patrol demo args -->
+  <arg name="task_agent_velocity"    default="1.0"/>  <!-- m/s -->
+  <arg name="network_agent_velocity" default="2.0"/>  <!-- m/s -->
+  <arg name="heading_tol"            default="3.5"/>  <!-- > pi : agents don't turn before moving -->
+
+  <rosparam command="load" file="$(find intel_aero_demos)/config/2t3n_PingPong_patrol.yaml"/>
+
+
+  <!-- gazebo and rviz -->
+  <include file="$(find intel_aero_gazebo)/launch/simulation.launch">
+    <arg name="gazebo_gui"       value="$(arg gazebo_gui)"/>
+    <arg name="world"            value="worlds/empty.world"/>
+    <arg name="rviz"             value="$(arg rviz)"/>
+    <arg name="rviz_config_file" value="$(find intel_aero_demos)/rviz/patrol.rviz"/>
+  </include>
+
+  <!-- load saved map -->
+  <node pkg="map_server"
+        type="map_server"
+        name="static_map_node"
+        args="$(find intel_aero_gazebo)/maps/empty.yaml">
+    <remap from="map"      to="/projected_map"/>
+    <param name="frame_id" value="world"/>
+  </node>
+
+  <!-- network topology visualization -->
+  <node pkg="network_status"
+        type="routing_visualization_node"
+        name="routing_visualization_node"
+        output="screen">
+    <param name="world_frame"       value="world"/>
+    <param name="pose_topic_prefix" value="/"/>
+    <param name="pose_topic_suffix" value="/pose"/>
+  </node>
+
+
+  <!-- task (patrol) agents -->
+
+  <group>
+    <arg name="id" value="1"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="5"/>
+      <arg name="y"              value="-5"/>
+      <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="2"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="-5"/>
+      <arg name="y"              value="5"/>
+      <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <!-- network agents -->
+
+  <arg name="rad" value="8.0"/>
+
+  <group>
+    <arg name="id" value="3"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="0.0"/>
+      <arg name="y"              value="0.0"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="4"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/3.0*(arg('id')-3)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/3.0*(arg('id')-3)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+  <group>
+    <arg name="id" value="5"/>
+    <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
+      <arg name="id"             value="$(arg id)"/>
+      <arg name="x"              value="$(eval arg('rad')*cos(2.0*3.141592/3.0*(arg('id')-3)))"/>
+      <arg name="y"              value="$(eval arg('rad')*sin(2.0*3.141592/3.0*(arg('id')-3)))"/>
+      <arg name="linear_vel_des" value="$(arg network_agent_velocity)"/>
+      <arg name="heading_tol"    value="$(arg heading_tol)"/>
+    </include>
+  </group>
+
+</launch>
