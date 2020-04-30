@@ -28,18 +28,18 @@ roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args1)
 launch.parent = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)#, is_core =True)
 launch.start()
 
-rospy.sleep(20)
+rospy.sleep(2)
 
 node = roslaunch.core.Node(cli_args2[0], cli_args2[1], namespace='/',name=cli_args2[2])
 process = launch.launch(node)
 rospy.init_node('trajectory_node')
-rospy.sleep(20)
+rospy.sleep(2)
 
 id_list= rospy.get_param('/task_agent_ids')
 
-for id in id_list:
-    client = take_off(id, dron_name, nav_node, 3.0)
-    client.wait_for_result()
+#for id in id_list:
+#    client = take_off(id, dron_name, nav_node, 3.0)
+#    client.wait_for_result()
 
 for j in range(ciclos):
     for id in id_list:
@@ -47,7 +47,7 @@ for j in range(ciclos):
         #client.wait_for_result()
 
 
-rospy.sleep(40)
+#rospy.sleep(80)
 
 
-launch.stop()
+#launch.stop()

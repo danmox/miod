@@ -5,12 +5,33 @@
   <arg name="minimum_update_rate"    default="2"/>    <!-- Hz -->
   <arg name="task_agent_velocity"    default="0.7"/>  <!-- m/s -->
   <arg name="print_routes"           default="false"/>
+  <arg name="param_file"             default="/cfg/2t1n_line.yaml"/>
+
+  <!-- machine config -->
+  <arg name="remote"             default="true" />
+  <arg name="machine_name"       if="$(arg remote)"  default="nuc1" />
+  <arg name="machine_name"       unless="$(arg remote)" default=""/>
+  <arg name="machine_ip"         default="10.42.0.1" />
+  <arg name="machine_log"        value="$(arg machine_name)" />
+  <arg name="machine_env"        value="~/source_env.sh" />
+
 
   <!-- line demo params -->
-  <rosparam command="load" file="$(find intel_aero_experiments)/cfg/2t1n_line.yaml"/>
+  <rosparam command="load" file="$(find intel_aero_experiments)$(arg param_file)"/>
+
+  <group if="$(arg remote)" >
+         <machine
+             name="$(arg machine_name)"
+             address="$(arg machine_ip)"
+             env-loader="$(arg machine_env)"
+             timeout="10"
+             user="$(arg machine_log)"/>
+  </group>
 
   <!-- network topology visualization -->
-  <node pkg="network_status"
+  <node
+        machine = "$(arg machine_name)"
+        pkg="network_status"
         type="routing_visualization_node"
         name="routing_visualization_node"
         output="screen">
@@ -21,7 +42,9 @@
 
   <!-- network planner nodes -->
 
-  <node pkg="intel_aero_demos"
+  <node
+        machine = "$(arg machine_name)"
+        pkg="intel_aero_demos"
         type="network_planner_node"
         name="connectivity_network_planner"
         output="screen">

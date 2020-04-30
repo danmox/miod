@@ -9,7 +9,7 @@ aero_sync agent_id(last number of ip)
 
 #One UAV:
 #on uav (change the appropriate IDs), wait for 20 seconds to initializw parameters
-roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch id:=4
+roslaunch intel_aero_experiments intel_aero_live_one_uav_line.launch
 
 
 -------------------------------------------------------------------------------
@@ -29,14 +29,14 @@ rosrun mavros mavparam -v -n aero7/mavros get MPC_XY_VEL_MAX
 #Robust routing line test
 
 #source ta (10.42.0.7):
-roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.1" server:=false srv:="10.42.0.1"
+roslaunch intel_aero_experiments intel_aero_live.launch dest_arg:="10.42.0.1" server:=false srv:="10.42.0.1" remote:="false"
 
 #network agents (10.42.0.4):
-roslaunch intel_aero_experiments intel_aero_live.launch server:=false srv:="10.42.0.1"
+roslaunch intel_aero_experiments intel_aero_live.launch server:=false srv:="10.42.0.1" remote:="false"
 
 #server aero (10.42.0.1):
-roslaunch intel_aero_experiments intel_aero_live.launch server:="true"
-roslaunch intel_aero_experiments line_server.launch
+roslaunch intel_aero_experiments intel_aero_live.launch server:="true" remote:="false"
+roslaunch intel_aero_experiments line_server.launch remote:="false"
 #OR, if testing in the office, instead on line_server.launch run (check the parameters first)
 roslaunch network_planner routing.launch
 
@@ -63,3 +63,11 @@ rosrun intel_aero_demos line_demo _nav_nodelet:=gazebo_vel_nav_nodelet
 
 #record rosbag in demo:
 line_rosbag #change the parameters inside the file accroding to ids in line_demo
+
+
+
+
+--------------------------------------------------------------------------------
+remote launch
+
+roslaunch intel_aero_experiments intel_aero_live.launch server:=false srv:="10.42.0.1" robot_ns:="nuc4" id:="4" remote:="true"

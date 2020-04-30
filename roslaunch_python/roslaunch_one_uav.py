@@ -7,22 +7,28 @@ import rospy
 package = 'intel_aero_demos'
 executable = 'line'
 
-master = roslaunch.core.Master()
 launch = roslaunch.scriptapi.ROSLaunch()
 
 uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
 # roslaunch.configure_logging(uuid)
-cli_args1 = ['intel_aero_demos', 'line.launch']
-roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args1)
-cli_args2 = ['intel_aero_demos', 'line_demo', '_nav_nodelet:=gazebo_vel_nav_nodelet']
+environment = ['intel_aero_experiments', 'intel_aero_live.launch', 'dest_arg:="10.42.0.1"', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc4',
+               'id:=4', 'remote:=true']
+roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(environment)[0]
+roslaunch_args = environment[2:]
+launches = [(roslaunch_file, roslaunch_args)]
 
-launch.parent = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
+
+trajectory = ['intel_aero_demos', 'line_demo', '_nav_nodelet:=px4_waypoint_navigation_nodelet']
+rosrun_file = roslaunch.rlutil.resolve_launch_arguments(trajectory)
+rosrun_args = trajectory[2:]
+
+launch.parent = roslaunch.parent.ROSLaunchParent(uuid, launches,is_core=False)
 
 launch.start()
 
 rospy.sleep(20)
 
-node = roslaunch.core.Node(cli_args2[0], cli_args2[1], args=cli_args2[2])
+node = roslaunch.core.Node(rosrun_file, args=rosrun_args)
 process = launch.launch(node)
 
 rospy.sleep(10)

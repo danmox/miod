@@ -10,7 +10,6 @@ import threading
 from time import sleep, time
 import re
 
-import getch
 import netifaces as ni
 import numpy
 

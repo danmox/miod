@@ -4,12 +4,19 @@
       ARGS
   -->
 
-  <arg name="id"                 default="1" />
-  <arg name="robot_ns"           value="$(optenv AGENT aero1)" />
+  <arg name="id"                 default="4" />
+  <arg name="robot_ns"           default="$(optenv AGENT)" />
+  <!--remote launch args-->
+  <arg name="remote"             default="true" />
+  <arg name="machine_name"       if="$(arg remote)"  value="$(arg robot_ns)" />
+  <arg name="machine_name"       unless="$(arg remote)" value=""/>
+  <arg name="machine_ip"         value="10.42.0.$(arg id)" />
+  <arg name="machine_log"        value="$(arg robot_ns)" />
+  <arg name="machine_env"        value="~/source_env.sh" />
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.918025 "/>   <!--  University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768 Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="-56.167531"/>
+  <arg name="datum_lat"  default="47.3783008 "/>   <!--  University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768 Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="8.5387768"/>
   <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 -->
 
   <!-- topics / frames args -->
@@ -58,7 +65,19 @@
   <!-- automatically record test data -->
   <arg name="server_topics" unless="$(arg server)" value=""/>
   <arg name="server_topics" if="$(arg server)"     value="/network_update /network_visualization /planner /tf /tf_static"/>
-  <node pkg="rosbag"
+
+  <group if="$(arg remote)" >
+         <machine
+             name="$(arg machine_name)"
+             address="$(arg machine_ip)"
+             env-loader="$(arg machine_env)"
+             timeout="10"
+             user="$(arg machine_log)"/>
+  </group>
+
+  <node
+        machine = "$(arg machine_name)"
+        pkg="rosbag"
         type="record"
         name="$(arg robot_ns)_bag_recorder"
         output="screen"
@@ -72,7 +91,10 @@
   <group ns="$(arg robot_ns)" >
 
     <!-- MAVROS -->
-    <node pkg="mavros"
+    <node
+
+            machine = "$(arg machine_name)"
+          pkg="mavros"
           type="mavros_node"
           name="mavros"
           clear_params="true"
@@ -90,7 +112,9 @@
 
     <!-- computes transformation between robot and datum and publishes the
          result as a pose message and transform in the tf tree -->
-    <node pkg="intel_aero_navigation"
+    <node
+          machine = "$(arg machine_name)"
+          pkg="intel_aero_navigation"
           type="gps_tf_node"
           name="gps_tf_node"
           output="screen">
@@ -107,7 +131,9 @@
     </node>
 
     <!-- routing script -->
-    <node if="$(arg networking)"
+    <node
+          machine = "$(arg machine_name)"
+          if="$(arg networking)"
           pkg="routing_protocol"
           type="$(arg routing_script)"
           name="$(arg routing_script)_node"
@@ -116,7 +142,9 @@
 
     <!-- navigation nodes -->
 
-    <node pkg="nodelet"
+    <node
+          machine = "$(arg machine_name)"
+          pkg="nodelet"
           type="nodelet"
           name="px4_waypoint_navigation_nodelet"
           args="standalone intel_aero_navigation/PX4NavNodelet"

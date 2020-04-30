@@ -41,7 +41,7 @@ class NetworkPlanner:
         # load required parameters and quit if any fail
 
         net_agents_list = rospy.get_param('/comm_agent_ids')
-        des_alt_list = ['/nuc'+str(NP_id)+'/desired_altitud' for NP_id in net_agents_list]
+        des_alt_list = ['/nuc'+str(NP_id)+'/desired_altitude' for NP_id in net_agents_list]
         required_params = ['~collision_distance', '~minimum_update_rate',
                            '~pose_topic', '~nav_nodelet', '~world_frame', '/task_agent_ids',
                            '/comm_agent_ids', '~planner_type', '/N0', '/n', '/L0','/a', '/b']
@@ -136,7 +136,7 @@ class NetworkPlanner:
         np_info('sending takeoff goals')
         for id, client in zip(self.params['comm_agent_ids'], self.nav_clients):
             point = self.team_config[self.id_to_idx[id]]
-            z=self.params['nuc'+str(id)+'/desired_altitud']
+            z=self.params['nuc'+str(id)+'/desired_altitude']
             goal = WaypointNavigationGoal()
             goal.header = Header(frame_id='world', stamp=rospy.get_rostime())
             goal.waypoints = [Pose(Point(point.x, point.y, z), Quaternion(w=1.))]
@@ -180,7 +180,7 @@ class NetworkPlanner:
 
 
             for id, client in zip(self.params['comm_agent_ids'], self.nav_clients):
-                target_config = numpy_to_ros(self.conn_opt.config, z=self.params['nuc'+str(id)+'/desired_altitud'])
+                target_config = numpy_to_ros(self.conn_opt.config, z=self.params['nuc'+str(id)+'/desired_altitude'])
                 goal = WaypointNavigationGoal()
                 goal.header = Header(frame_id='world', stamp=rospy.get_rostime())
                 goal.waypoints = [Pose(target_config[self.id_to_idx[id]], Quaternion(w=1.))]

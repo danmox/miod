@@ -11,8 +11,8 @@
 
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="-34.918025"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768; Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="-56.167531"/>
+  <arg name="datum_lat"  default="47.3783008"/>   <!-- Football field Uy: -34.813442  -56.264768   University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768; Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="8.5387768"/>
   <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 Football field Uy: 0.296-->
 
   <!-- topics / frames args -->
@@ -124,7 +124,7 @@
         output="screen"
         launch-prefix="bash -c 'sleep $(arg update_params_delay); $0 $@'"
 
-        args="-v -n nuc$(arg id)/mavros load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
+        args="-v -n $(arg robot_ns)/mavros load -mp $(find intel_aero_experiments)/cfg/px4_params.txt"/>
 
   <node pkg="intel_aero_demos"
           type="line_demo"
