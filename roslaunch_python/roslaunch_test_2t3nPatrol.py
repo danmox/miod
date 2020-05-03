@@ -32,20 +32,22 @@ rospy.sleep(2)
 
 node = roslaunch.core.Node(cli_args2[0], cli_args2[1], namespace='/',name=cli_args2[2])
 process = launch.launch(node)
+
 rospy.init_node('trajectory_node')
 rospy.sleep(2)
 
 id_list= rospy.get_param('/task_agent_ids')
 
-#for id in id_list:
-#    client = take_off(id, dron_name, nav_node, 3.0)
-#    client.wait_for_result()
-
+for id in id_list:
+    client = take_off(id, dron_name, nav_node, 3.0)
+    client.wait_for_result()
 for j in range(ciclos):
+    clients = []
     for id in id_list:
         client = run_custom_trajectory(id, dron_name, nav_node)
-        #client.wait_for_result()
-
+        clients.append(client)
+    for client in clients:
+        client.wait_for_result()
 
 #rospy.sleep(80)
 

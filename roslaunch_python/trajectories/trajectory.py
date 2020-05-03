@@ -4,7 +4,7 @@ import rospy
 import yaml
 from geometry_msgs.msg import Point, PoseStamped, Pose
 from intel_aero_navigation.msg import WaypointNavigationAction, WaypointNavigationGoal
-
+from functools import partial
 
 def get_data(file_name):
     with open(file_name, 'r') as stream:
@@ -61,34 +61,36 @@ def run_custom_trajectory(id, dname, node):
 
 def take_off(id, dname, node, altitud):
     agent_Pose = Pose()
-    pose_rcv = 0
-    def pose_rcv(msg):
-        agent_Pose=msg.pose
-        pose_rcv=1
-
+    pose_rcv_msg = [False]
     name = '/' + dname + str(id) + '/' + node
-
     client = actionlib.SimpleActionClient(name, WaypointNavigationAction)
     rospy.loginfo('waiting for %s to start' % (name))
     client.wait_for_server()
+    topic =dname+ str(id) + '/pose'
 
-    topic ='dname'+ str(id) + '/pose'
-    pos_subscriber=rospy.Subscriber(topic, PoseStamped,pose_rcv)
-    while not pose_rcv and not rospy.is_shutdown():
-        systime.sleep(0.25)
+    pos_subscriber=rospy.Subscriber(topic, PoseStamped, partial( pose_rcv, pose_rcv_msg, agent_Pose))
+
+    while not pose_rcv_msg[0] and not rospy.is_shutdown():
+        rospy.sleep(0.25)
 
     goal = WaypointNavigationGoal()
     goal.header.frame_id = 'world'
     goal.header.stamp = rospy.get_rostime()
     goal.end_action = WaypointNavigationGoal.HOVER
-    pose = agent_Pose
-    pose.position.z = altitud
-    goal.waypoints += [copy.deepcopy(pose)]
+
+    agent_Pose.position.z = altitud
+    goal.waypoints += [copy.deepcopy(agent_Pose)]
     client.send_goal(goal)
 
+
     rospy.loginfo('waiting for '+ dname +'%s to complete' % (id))
-#   pos_subscriber.unregister()
+
+    pos_subscriber.unregister()
 #    client.wait_for_result()
     return client
 
 
+def pose_rcv(rcv_msg, agent, msg):
+    rcv_msg[0] = True
+    agent.position = msg.pose.position
+    agent.orientation.w = msg.pose..orientation.w
