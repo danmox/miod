@@ -26,12 +26,12 @@ connectivity_network_planner/nav_nodelet: /aero#/gazebo_vel_nav_nodelet
 
 # communication requirements
 qos:
-  - margin: 0.15
-    confidence: 0.75
+  - margin: 0.
+    confidence: 0.7
     src: 1
     dest: [2]
-  - margin: 0.15
-    confidence: 0.75
+  - margin: 0.
+    confidence: 0.7
     src: 2
     dest: [1]
 
@@ -45,10 +45,10 @@ aero1/gazebo_vel_nav_nodelet/desired_trajectory:
     - 9.0
     - 3.0
 aero2/gazebo_vel_nav_nodelet/desired_trajectory:
-  - - -39.0
+  - - -109.0
     - 9.0
     - 3.0
-  - - -39.0
+  - - -109.0
     - -9.0
     - 3.0
 

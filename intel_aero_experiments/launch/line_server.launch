@@ -8,10 +8,10 @@
   <arg name="param_file"             default="/cfg/2t1n_line.yaml"/>
 
   <!-- machine config -->
-  <arg name="remote"             default="true" />
-  <arg name="machine_name"       if="$(arg remote)"  default="nuc1" />
+  <arg name="remote"             default="false" />
+  <arg name="machine_name"       if="$(arg remote)"  default="nuc4" />
   <arg name="machine_name"       unless="$(arg remote)" default=""/>
-  <arg name="machine_ip"         default="10.42.0.1" />
+  <arg name="machine_ip"         default="10.42.0.4" />
   <arg name="machine_log"        value="$(arg machine_name)" />
   <arg name="machine_env"        value="~/source_env.sh" />
 

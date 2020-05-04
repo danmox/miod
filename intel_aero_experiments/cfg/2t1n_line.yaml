@@ -2,7 +2,7 @@
 task_agent_ids:    [1, 7] # NOTE need to match IDs of agents spawned in launch file
 comm_agent_ids:    [4]    # NOTE need to match IDs of agents spawned in launch file
 desired_altitude:  3.0    # meters
-moving_agent:      4
+moving_agent:      3
 start_pos:         [0.0, 0.0]
 end_pos:           [10.0, 0.0]
 

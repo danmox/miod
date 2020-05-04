@@ -21,7 +21,7 @@ import pexpect
 
 
 
-def rsync(server, path, password, local_results_folder, timeout=30):
+def rsync(server, path, password, local_results_folder, timeout=5):
     """SSH'es to a host using the supplied credentials and executes a command.
     Throws an exception if the command doesn't return 0.
     bgrun: run command in the background"""
@@ -92,7 +92,7 @@ def moving_average(a, n=20) :
 
 
 save_archive = True
-load_from_archive=True
+load_from_archive=False
 load_local = False
 archive_name = 'results/RRarchive2020-04-27 11:28.npz'
 home = expanduser("~")
@@ -111,7 +111,7 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = [ '10.42.0.1', '10.42.0.4', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
+    hosts = [ '10.42.0.1', '10.42.0.3','10.42.0.4', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:

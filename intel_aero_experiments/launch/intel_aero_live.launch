@@ -15,9 +15,9 @@
   <arg name="machine_env"        value="~/source_env.sh" />
 
   <!-- global reference datum args -->
-  <arg name="datum_lat"  default="47.3783008 "/>   <!--  University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768 Philly net 39.941154 -75.198973-->
-  <arg name="datum_lon"  default="8.5387768"/>
-  <arg name="datum_yaw"  default="1.5708"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 -->
+  <arg name="datum_lat"  default="-34.813442"/>   <!--  Football field:  -34.813442  -56.264768 University Uguguay 2:-34.918025, -56.167531 Fake GPS indoor test: 47.3783008 8.5387768 Philly net 39.941154 -75.198973-->
+  <arg name="datum_lon"  default="-56.264768"/>
+  <arg name="datum_yaw"  default="-0.2705260"/> <!--0 = right handed (ccw, zero - x- points east, y - north), Philly net 0.4763 football field: -0.2705260 -->
 
   <!-- topics / frames args -->
   <arg name="static_map"         default="false"/> <!-- true: a static map will be provided -->

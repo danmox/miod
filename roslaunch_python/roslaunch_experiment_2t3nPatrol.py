@@ -23,9 +23,9 @@ environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'server:
 environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'dest_arg:="10.42.0.1"', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc3',
                'id:=3', 'remote:=true'])
 environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc4', 'id:=4', 'remote:=true'])
-environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc6', 'id:=6', 'remote:=true'])
+#   environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc6', 'id:=6', 'remote:=true'])
 environment.append(['intel_aero_experiments', 'intel_aero_live.launch', 'server:=false', 'srv:="10.42.0.1"', 'robot_ns:=nuc7', 'id:=7', 'remote:=true'])
-environment.append(['intel_aero_experiments', 'line_server.launch', 'param_file:=/cfg/2t3n_PingPong_patrol.yaml', 'remote:=true'])
+environment.append(['intel_aero_experiments', 'line_server.launch', 'param_file:=/cfg/2t3n_PingPong_patrol.yaml', 'remote:=false'])
 launches = []
 for i in environment:
     roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(i)[0]
@@ -35,26 +35,26 @@ for i in environment:
 launch.parent = roslaunch.parent.ROSLaunchParent(uuid, launches)#, is_core =True)
 launch.start()
 
-rospy.sleep(10)
+rospy.sleep(20)
 
 rospy.init_node('trajectory_node')
 
-rospy.sleep(2)
+rospy.sleep(30)
 
 id_list= rospy.get_param('/task_agent_ids')
 
+
 for id in id_list:
-    client = take_off(id, dron_name, nav_node, 3.0)
-    client.wait_for_result()
+     client = take_off(id, dron_name, nav_node, 3.0)
+     client.wait_for_result()
 for j in range(ciclos):
-    clients = []
-    for id in id_list:
-        client = run_custom_trajectory(id, dron_name, nav_node)
-        clients.append(client)
-    for client in clients:
-        client.wait_for_result()
-
-#rospy.sleep(80)
+     clients = []
+     for id in id_list:
+         client = run_custom_trajectory(id, dron_name, nav_node)
+         clients.append(client)
+     for client in clients:
+         client.wait_for_result()
 
 
-#launch.stop()
+
+launch.stop()

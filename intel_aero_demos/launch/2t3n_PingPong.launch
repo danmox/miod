@@ -58,7 +58,7 @@
     <arg name="id" value="2"/>
     <include file="$(find intel_aero_gazebo)/launch/intel_aero_spawn_only.launch">
       <arg name="id"             value="$(arg id)"/>
-      <arg name="x"              value="-35"/>
+      <arg name="x"              value="-105"/>
       <arg name="y"              value="5"/>
       <arg name="linear_vel_des" value="$(arg task_agent_velocity)"/>
       <arg name="heading_tol"    value="$(arg heading_tol)"/>

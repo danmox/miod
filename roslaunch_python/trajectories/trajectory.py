@@ -40,7 +40,7 @@ def run_custom_trajectory(id, dname, node):
     goal = WaypointNavigationGoal()
     goal.header.frame_id = 'world'
     goal.header.stamp = rospy.get_rostime()
-    goal.end_action = WaypointNavigationGoal.LAND
+    goal.end_action = WaypointNavigationGoal.HOVER
 
     for j in range(waypoint_count):
         pose = Pose()
@@ -54,9 +54,9 @@ def run_custom_trajectory(id, dname, node):
 
         client.send_goal(goal)
 
-    rospy.loginfo('waiting for aero%s to complete' % (id))
+    rospy.loginfo('waiting for nuc%s to complete' % (id))
 
-    #    client.wait_for_result()
+    #client.wait_for_result()
     return client
 
 def take_off(id, dname, node, altitud):
@@ -93,4 +93,4 @@ def take_off(id, dname, node, altitud):
 def pose_rcv(rcv_msg, agent, msg):
     rcv_msg[0] = True
     agent.position = msg.pose.position
-    agent.orientation.w = msg.pose..orientation.w
+    agent.orientation.w = msg.pose.orientation.w
