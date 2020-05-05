@@ -8,6 +8,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <routing_msgs/NetworkUpdate.h>
 #include <socp/RobustRoutingSOCP.h>
+#include <socp/Flow.h>
 #include <intel_aero_navigation/WaypointNavigationAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <armadillo>
@@ -19,19 +20,9 @@
 namespace network_planner {
 
 
-struct Flow
-{
-  public:
-    std::unordered_set<int> srcs;  // source node
-    std::unordered_set<int> dests; // destination node
-    double min_margin; // minimum bandwidth requirement
-    double confidence; // probability with which requirements are satisfied
-};
-
-
 typedef std::vector<arma::vec3> point_vec;
 typedef grid_mapping::Grid<int8_t> Costmap;
-typedef std::vector<Flow> CommReqs;
+typedef std::vector<socp::Flow> Flows;
 typedef std::vector<std::string> string_vec;
 
 
@@ -73,7 +64,7 @@ class NetworkPlanner
     channel_simulator::ChannelSimulator channel_sim;
     Costmap costmap;
     bool received_costmap;
-    CommReqs comm_reqs_id;
+    Flows flows;
 
     // navigation vars
     typedef intel_aero_navigation::WaypointNavigationAction NavAction;
@@ -123,7 +114,7 @@ class NetworkPlanner
     bool updateRouting();
     void poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg, int idx);
     void mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg);
-    void setCommReqs(const CommReqs& reqs);
+    void setCommReqs(const Flows& reqs);
     void runPlanningLoop();
     void runRoutingLoop();
 };

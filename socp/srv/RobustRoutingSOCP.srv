@@ -1,13 +1,12 @@
-# service to solve SOCP in CVX in python
+# service to solve routing optimization problem
 
 geometry_msgs/Point[] config # the location of task & network agents in a global frame
-socp/QoS[] qos               # the communication requirements
-int8[] idx_to_id             # communication requirements in qos are often specified in
+socp/Flow[] flows            # the communication requirements
+int8[] idx_to_id             # communication requirements in flows are often specified in
                              # terms of agent IDs (may not be contiguous or 0 indexed)
                              # while positions are 0 indexed; idx_to_id[i] is the ID of
                              # the agent at config[i]
 ---
 float64[] routes             # if feasible: the routing variables; if infeasible: empty
-float64 slack                # the slack variable of the resulting solution, if found
+float64 obj_fcn              # the value of the objective function at the solution, if found
 string status                # the status returned by cvxpy
-float64[] qos                # a list containing the rate and confidence bound for each flow

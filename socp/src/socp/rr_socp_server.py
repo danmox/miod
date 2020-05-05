@@ -22,7 +22,7 @@ class RRSOCPServer:
         res = RobustRoutingSOCPResponse()
 
         # check for valid request
-        if len(req.config) == 0 or len(req.qos) == 0:
+        if len(req.config) == 0 or len(req.flows) == 0:
             rospy.logwarn('[robust_routing_socp_server] invalid reqeust')
             return res
 
@@ -31,9 +31,9 @@ class RRSOCPServer:
             x[i, 0] = req.config[i].x
             x[i, 1] = req.config[i].y
 
-        slack, routes, status, qos = self.solver.solve_socp(req.qos, x, req.idx_to_id)
+        slack, routes, status = self.solver.solve_socp(req.flows, x, req.idx_to_id)
         if status == 'optimal':
-            res.slack = slack
+            res.obj_fcn = slack
             res.routes = routes
             res.qos = qos
 

@@ -25,6 +25,7 @@ SET(CBLAS_LIBRARIES "-lcblas")
 
 add_message_files(FILES
   QoS.msg
+  Flow.msg
 )
 
 add_service_files(FILES

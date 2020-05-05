@@ -181,29 +181,21 @@ void NetworkPlanner::mapCB(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 }
 
 
-void NetworkPlanner::setCommReqs(const CommReqs& reqs)
+void NetworkPlanner::setCommReqs(const Flows& reqs)
 {
-  comm_reqs_id = reqs;
-  num_flows = comm_reqs_id.size();
+  flows = reqs;
+  num_flows = flows.size();
 
-  num_dests = 0;
-  for (const auto& flow : comm_reqs_id)
-    num_dests += flow.dests.size();
+  // TODO remove num_dests?
+  num_dests = flows.size();
 
   NP_INFO("received new communication requirements:");
   for (int k = 0; k < reqs.size(); ++k) {
     NP_INFO("  flow %d:", k+1);
-    std::stringstream src_ss, dest_ss;
-    for (const int src : reqs[k].srcs)
-      src_ss << " " << src;
-    std::string src_str = src_ss.str();
-    NP_INFO("    sources:%s", src_str.c_str());
-    for (const int dest : reqs[k].dests)
-      dest_ss << " " << dest;
-    std::string dest_str = dest_ss.str();
-    NP_INFO("    destinations:%s", dest_str.c_str());
-    NP_INFO("    margin = %.2f", reqs[k].min_margin);
-    NP_INFO("    confidence = %.2f", reqs[k].confidence);
+    NP_INFO("    source: %ld", reqs[k].src);
+    NP_INFO("    destination: %ld", reqs[k].dest);
+    NP_INFO("    rate = %.2f", reqs[k].rate);
+    NP_INFO("    confidence = %.2f", reqs[k].qos);
   }
 
   // TODO ignore more variables
@@ -245,7 +237,7 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
   // probability constraints (second-order cones) ||Ay|| <= c^Ty + d
   for (int k = 0; k < num_flows; ++k) {
 
-    double psi_inv_eps = PsiInv(comm_reqs_id[k].confidence);
+    double psi_inv_eps = PsiInv(flows[k].qos);
     if (!divide_psi_inv_eps)
       psi_inv_eps = 1.0;
     if (debug)
@@ -257,23 +249,8 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
       c_vecs[idx].zeros(y_dim);
       d_vecs[idx].zeros(1);
 
-      // destination nodes only have incoming data constraints
-      if (comm_reqs_id[k].dests.count(idx_to_id.at(i)) > 0) {
-
-        for (int j = 0; j < agent_count; ++j) {
-          // incoming data (NOTE: destination rebroadcast routing variables are
-          // not included in ijk_to_idx/idx_to_ijk)
-          auto it_in = ijk_to_idx.find(std::make_tuple(j,i,k));
-          if (it_in != ijk_to_idx.end()) {
-            A_mats[idx](it_in->second,it_in->second) = sqrt(R_var(j,i));
-            c_vecs[idx](it_in->second) = R_mean(j,i) / psi_inv_eps;
-          }
-        }
-
-        // rate margin for the destination nodes
-        d_vecs[idx](0) = -comm_reqs_id[k].min_margin / psi_inv_eps;
-
-      } else { // source or network node
+      // only source and network nodes have constraints
+      if (idx_to_id.at(i) != flows[k].dest) {
 
         // components for \bar{b}_i^k and \tilde{b}_i^k
         for (int j = 0; j < agent_count; ++j) {
@@ -295,8 +272,8 @@ void NetworkPlanner::probConstraints(const arma::mat& R_mean,
         }
 
         // rate margin for the source node
-        if (comm_reqs_id[k].srcs.count(idx_to_id.at(i)) > 0)
-          d_vecs[idx](0) = -comm_reqs_id[k].min_margin / psi_inv_eps;
+        if (idx_to_id.at(i) == flows[k].src)
+          d_vecs[idx](0) = -flows[k].rate / psi_inv_eps;
 
       }
 
@@ -344,15 +321,9 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
     srv.request.config.push_back(point);
   }
 
-  for (const Flow& flow : comm_reqs_id) {
-    socp::QoS qos;
-    qos.src = id_to_idx.at(*flow.srcs.begin());
-    for (int dest : flow.dests)
-      qos.dest.push_back(id_to_idx.at(dest));
-    qos.margin = flow.min_margin;
-    qos.confidence = flow.confidence;
-    srv.request.qos.push_back(qos);
-  }
+  srv.request.flows = flows;
+  for (int i = 0; i < agent_count; ++i)
+    srv.request.idx_to_id.push_back(idx_to_id.at(i));
 
   //std::cout << "request:" << std::endl << srv.request << std::endl;
 
@@ -375,7 +346,7 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
 
   // unpack result
 
-  slack = srv.response.slack;
+  slack = srv.response.obj_fcn;
 
   alpha = std::vector<arma::mat>(num_flows);
   for (int k = 0; k < num_flows; ++k) {
@@ -417,14 +388,14 @@ bool NetworkPlanner::SOCPsrv(const point_vec& config,
 
     std_msgs::Float64MultiArray qos_msg; // qos for each node
     for (int k = 0; k < num_flows; ++k) {
-      int src_idx = id_to_idx.at(*comm_reqs_id[k].srcs.begin()) + k*agent_count;
+      int src_idx = id_to_idx.at(flows[k].src) + k*agent_count;
 
       arma::mat margin = arma::trans(c_vecs[src_idx]) * y;
       double var = pow(arma::norm(A_mats[src_idx] * y), 2.0);
 
-      qos_msg.data.push_back(comm_reqs_id[k].min_margin);
+      qos_msg.data.push_back(flows[k].rate);
       qos_msg.data.push_back(margin(0,0));
-      qos_msg.data.push_back(comm_reqs_id[k].confidence);
+      qos_msg.data.push_back(flows[k].qos);
       qos_msg.data.push_back(var);
     }
     if (qos_pub) qos_pub.publish(qos_msg);
@@ -597,15 +568,15 @@ bool NetworkPlanner::SOCP(const point_vec& config,
     arma::vec y_tmp = y_col;
     y_tmp(y_dim-1) = 0.0;
     for (int k = 0; k < num_flows; ++k) {
-      int src_idx = id_to_idx.at(*comm_reqs_id[k].srcs.begin()) + k*agent_count;
+      int src_idx = id_to_idx.at(flows[k].src) + k*agent_count;
 
-      double psi_inv_eps = PsiInv(comm_reqs_id[k].confidence);
+      double psi_inv_eps = PsiInv(flows[k].qos);
       arma::mat margin = psi_inv_eps * arma::trans(c_vecs[src_idx]) * y_tmp;
       double var = pow(arma::norm(A_mats[src_idx]*y_tmp), 2.0);
 
-      qos_msg.data.push_back(comm_reqs_id[k].min_margin);
+      qos_msg.data.push_back(flows[k].rate);
       qos_msg.data.push_back(margin(0,0));
-      qos_msg.data.push_back(comm_reqs_id[k].confidence);
+      qos_msg.data.push_back(flows[k].qos);
       qos_msg.data.push_back(var);
     }
     if (debug) {
@@ -710,7 +681,7 @@ double NetworkPlanner::computeSlack(const point_vec& config,
   arma::vec s_col(num_constraints);
   for (int k = 0; k < num_flows; ++k) {
 
-    double psi_inv_eps = PsiInv(comm_reqs_id[k].confidence);
+    double psi_inv_eps = PsiInv(flows[k].qos);
 
     for (int i = 0; i < agent_count; ++i) {
       double margin_avg = arma::as_scalar((c_vecs[idx].t()) * y + d_vecs[idx]);
@@ -758,7 +729,7 @@ double NetworkPlanner::computeV(const point_vec& config,
   arma::vec v_col(num_constraints);
   for (int k = 0; k < num_flows; ++k) {
 
-    double psi_inv_eps = PsiInv(comm_reqs_id[k].confidence);
+    double psi_inv_eps = PsiInv(flows[k].qos);
 
     for (int i = 0; i < agent_count; ++i) {
       v_col(idx) = arma::as_scalar((c_vecs[idx].t()) * y + d_vecs[idx]);
@@ -816,7 +787,7 @@ bool NetworkPlanner::updateNetworkConfig()
     NP_WARN("unable to plan: odometry not available for all agents");
     return false;
   }
-  if (comm_reqs_id.empty()) {
+  if (flows.empty()) {
     NP_WARN("unable to plan: no task specification set");
     return false;
   }
@@ -1134,7 +1105,7 @@ bool NetworkPlanner::updateRouting()
     return false;
   }
   */
-  if (comm_reqs_id.empty()) {
+  if (flows.empty()) {
     NP_WARN("unable to plan: no task specification set");
     return false;
   }
@@ -1176,9 +1147,9 @@ void NetworkPlanner::printRoutingTable(const std::vector<arma::mat>& alpha)
     printf("   flow %d routes:\n", k+1);
     printf("      |");
     for (int i = 0; i < agent_count; ++i) {
-      if (comm_reqs_id[k].srcs.count(idx_to_id.at(i)) > 0)
+      if (flows[k].src == idx_to_id.at(i))
         printf("  (s)%2d", idx_to_id.at(i));
-      else if (comm_reqs_id[k].dests.count(idx_to_id.at(i)) > 0)
+      else if (flows[k].dest == idx_to_id.at(i))
         printf("  (d)%2d", idx_to_id.at(i));
       else
         printf("   %4d", idx_to_id.at(i));
@@ -1215,11 +1186,8 @@ void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha, b
     //
 
     routing_msgs::PRTableEntry rt_entry;
-    rt_entry.src  = id_to_ip.at(*comm_reqs_id[k].srcs.begin());
-    // TODO this needs to be fixed!! For actually routing there can only be 1
-    // source and destination but for solving the SOCP it is advantageous for us
-    // to combine flows wherever possible
-    rt_entry.dest = id_to_ip.at(*comm_reqs_id[k].dests.begin());
+    rt_entry.src  = id_to_ip.at(flows[k].src);
+    rt_entry.dest = id_to_ip.at(flows[k].dest);
 
     for (int i = 0; i < agent_count; ++i) {
 
@@ -1254,8 +1222,8 @@ void NetworkPlanner::publishNetworkUpdate(const std::vector<arma::mat>& alpha, b
       continue;
 
     // opposite for bi-directional flow
-    rt_entry.src  = id_to_ip.at(*comm_reqs_id[k].dests.begin());
-    rt_entry.dest = id_to_ip.at(*comm_reqs_id[k].srcs.begin());
+    rt_entry.src  = id_to_ip.at(flows[k].dest);
+    rt_entry.dest = id_to_ip.at(flows[k].src);
 
     // back flow
     for (int i = 0; i < agent_count; ++i) {

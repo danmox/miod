@@ -15,11 +15,11 @@ def dbm2mw(dbm):
 
 class ChannelModel:
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
-        self.L0 = l0  # transmit power (dBm)
-        self.n = n  # decay rate
-        self.N0 = n0  # noise at receiver (dBm)
-        self.a = a  # sigmoid parameter 1
-        self.b = b  # sigmoid parameter 2
+        self.L0 = l0                # transmit power (dBm)
+        self.n = n                  # decay rate
+        self.N0 = n0                # noise at receiver (dBm)
+        self.a = a                  # sigmoid parameter 1
+        self.b = b                  # sigmoid parameter 2
         self.PL0 = dbm2mw(self.L0)  # transmit power (mW)
         self.PN0 = dbm2mw(self.N0)  # noise at receiver (mW)
         if print_values is True:
@@ -98,13 +98,13 @@ class RobustRoutingSolver:
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         self.cm = ChannelModel(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
 
-    def solve_socp(self, qos, x, idx_to_id=None, reshape_routes=False):
+    def solve_socp(self, flows, x, idx_to_id=None, reshape_routes=False):
         """
         solve the robust routing problem for the given network requirements and
         configuration
 
         Inputs:
-          qos: a list of socp.QoS messages
+          flows: a list of socp.Flow messages
           x: a Nx2 list of node positions [x y]
           reshape_routes: returns routing variables in NxNxK matrix form
 
@@ -115,7 +115,7 @@ class RobustRoutingSolver:
         """
 
         N = x.shape[0]
-        P = len(qos)
+        P = len(flows)
 
         assert x.shape[1] == 2
 
@@ -128,7 +128,7 @@ class RobustRoutingSolver:
         id_to_idx = {idx_to_id[i]: i for i in range(N)}
 
         # socp constraints
-        a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x, id_to_idx)
+        a_mat, b_mat, zero_vars, conf, m_ik = self.cone_constraints(flows, x, id_to_idx)
 
         # optimization variables
         slack, routes = cp.Variable((1)), cp.Variable((N*N*P))
@@ -141,8 +141,8 @@ class RobustRoutingSolver:
 
         # linear availability constraints
         routing_sum_mat = cp.reshape(routes[:N*N], (N,N))  # acts like np.reshape with 'F'
-        for i in range(1, P):  # summing over dim 3
-            routing_sum_mat += cp.reshape(routes[i*N*N:(i+1)*N*N], (N,N))
+        for k in range(1, P):  # summing over dim 3
+            routing_sum_mat += cp.reshape(routes[k*N*N:(k+1)*N*N], (N,N))
         lin_consts = [cp.sum(routing_sum_mat, 2) <= 1]
         lin_consts += [cp.sum(routing_sum_mat, 1) <= 1]
 
@@ -168,7 +168,7 @@ class RobustRoutingSolver:
 
         return None, None, socp.status, None
 
-    def socp_constraints(self, qos, x, id_to_idx):
+    def cone_constraints(self, flows, x, id_to_idx):
         """
         compute the coefficient matrices and vectors of the 2nd order
         constraints of the robust routing problem.
@@ -181,9 +181,9 @@ class RobustRoutingSolver:
         inverse normal cumulative distribution function.
 
         Inputs:
-          qos: a list of socp.QoS messages
+          flows: a list of socp.Flow messages
           x: a Nx2 list of node positions [x y]
-          id_to_idx: a map between IDs in qos and indices in x
+          id_to_idx: a map between IDs in flows and indices in x
 
         Outputs:
           a_mat: variance coefficient matrix
@@ -196,7 +196,7 @@ class RobustRoutingSolver:
         assert x.shape[1] == 2
 
         N = x.shape[0]
-        P = len(qos)
+        P = len(flows)
 
         # predicted channel rates
         rate_mean, rate_var = self.cm.predict(x)
@@ -207,35 +207,29 @@ class RobustRoutingSolver:
 
         # node margin constraints
 
-        a_mat = np.zeros((N*P, N*N*P+1))
-        b_mat = np.zeros((N*P, N*N*P+1))
+        a_mat = np.zeros(((N-1)*P, N*N*P+1))
+        b_mat = np.zeros(((N-1)*P, N*N*P+1))
+        m_ik = np.zeros(((N-1)*P))
 
         idx = 0
         for k in range(P):
             for i in range(N):
+                if i == id_to_idx[flows[k].dest]:
+                    continue
+
+                if i == id_to_idx[flows[k].src]:
+                    m_ik[idx] = flows[k].rate
+
                 aki = np.zeros((N,N))
                 bki = np.zeros((N,N))
 
-                # source, network nodes
-                dest_node_idcs = [id_to_idx[id] for id in qos[k].dest]
-                if not np.any(np.asarray(dest_node_idcs) == i):
-                    aki[:,i] = np.sqrt(rate_var[:,i]) # incoming
-                    aki[i,:] = np.sqrt(rate_var[i,:]) # outgoing
-                    aki[zero_vars[:, :, k]] = 0.0
+                aki[:,i] = np.sqrt(rate_var[:,i]) # incoming
+                aki[i,:] = np.sqrt(rate_var[i,:]) # outgoing
+                aki[zero_vars[:,:,k]] = 0.0
 
-                    bki[:,i] = -rate_mean[:,i] # incoming
-                    bki[i,:] = rate_mean[i,:]  # outgoing
-                    bki[zero_vars[:,:,k]] = 0.0
-
-                # destination node
-                else:
-                    aki[:,i] = np.sqrt(rate_var[:,i]) # incoming
-                    # aki[i, :] = np.sqrt(rate_var[i, :])
-                    aki[zero_vars[:,:,k]] = 0.0
-
-                    bki[:,i] = rate_mean[:,i]  # incoming
-                    # bki[i,:] = -rate_mean[i,:]
-                    bki[zero_vars[:,:,k]] = 0.0
+                bki[:,i] = -rate_mean[:,i] # incoming
+                bki[i,:] =  rate_mean[i,:]  # outgoing
+                bki[zero_vars[:,:,k]] = 0.0
 
                 a_mat[idx, k*N*N:(k+1)*N*N] = np.reshape(aki, (1,-1), 'F')
                 b_mat[idx, k*N*N:(k+1)*N*N] = np.reshape(bki, (1,-1), 'F')
@@ -245,50 +239,6 @@ class RobustRoutingSolver:
 
         # probabilistic confidence requirements
 
-        conf = stats.norm.ppf(np.repeat([q.confidence for q in qos], N))
-
-        # node margin requirements
-
-        m_ik = np.zeros((N,P))
-        for i in range(P):
-            node_indices = np.array([id_to_idx[id] for id in [qos[i].src] + qos[i].dest])
-            m_ik[node_indices, i] = qos[i].margin
-        m_ik = np.reshape(m_ik, (N*P), 'F')
+        conf = stats.norm.ppf(np.repeat([f.qos for f in flows], N-1))
 
         return a_mat, b_mat, zero_vars, conf, m_ik
-
-    def compute_slack(self, qos, x, routes):
-        """
-        compute the slack of each SOC constrain of a robust routing problem
-        given a team configuration, qos, and routing variables
-
-        Input:
-          qos: a list of socp.QoS messages
-          x: a Nx2 list of node positions [x y]
-          config: Nx2 list of node positions in [x y] form
-          routes: NxNxK matrix of routing variables
-
-        Output:
-          slack_vec: slack in each SOC constraint
-
-        """
-
-        assert x.shape[1] == 2
-        n = x.shape[0]
-        k = len(qos)
-
-        # form solution vector from routing matrix
-        y = np.zeros((n*n*k+1))
-        if routes.shape[0] is n:
-            y[:-1] = np.reshape(routes, (n*n*k), 'F')
-        else:
-            y[:-1] = routes
-
-        a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x)
-        slack_vec = np.zeros_like(m_ik)
-        for i in range(m_ik.shape[0]):
-            b_exp = np.matmul(b_mat[i,:], y)
-            b_var = np.linalg.norm(np.matmul(np.diag(a_mat[i,:]), y))
-            slack_vec[i] = b_exp - m_ik[i] - conf[i]*b_var
-
-        return slack_vec

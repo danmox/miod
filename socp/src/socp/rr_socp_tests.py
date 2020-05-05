@@ -7,10 +7,11 @@ import rr_socp
 import rr_socp_server
 import time
 from socp.srv import RobustRoutingSOCPRequest
-from socp.msg import QoS
+from socp.msg import Flow
 from geometry_msgs.msg import Point
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib import cm, colors
 
 # helps the figures to be readable on hidpi screens
 mpl.rcParams['figure.dpi'] = 200
@@ -24,23 +25,29 @@ def numpy_to_ros(np_config, z=0.):
     ros_config = [Point(np_config[i,0], np_config[i,1], z) for i in range(np_config.shape[0])]
     return ros_config
 
-def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=None):
+def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
+                title=None, ids=None, task_ids=None, routes=None):
     """
     plot the 2D spatial configuration of the network
 
     Input:
-      config: a list of geometry_msgs.Point msgs
-      ax (optional): axes to plot on
-      pause (optional): avoids blocking by continuing after a short pause
-      clear_axes: clear ax before plotting
-      show: call plt.show()
-
+      config - a list of geometry_msgs.Point msgs
+      Optional Args:
+        ax - axes to plot on
+        pause - avoids blocking by continuing after a short pause
+        clear_axes - clear ax before plotting
+        show - call plt.show()
+        title - string of text to set as title of figure
+        ids - as list of ids to use for agent labels
+        task_ids - ids of task agents
+        routes - draw lines denoting route usage between nodes
     """
-    x = []
-    y = []
-    for pt in config:
-        x += [pt.x]
-        y += [pt.y]
+    if type(config) is list:
+        x = np.asarray([pt.x for pt in config])
+        y = np.asarray([pt.y for pt in config])
+    else:
+        x = config[:,0]
+        y = config[:,1]
 
     if ax is None:
         fig, ax = plt.subplots()
@@ -48,11 +55,74 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=
     if clear_axes:
         ax.cla()
 
-    ax.plot(x, y, 'ro', markersize=10)
+    if ids is None:
+        ids = range(len(x))
+    elif type(ids) is not list:
+        ids = list(ids)
+
+    if task_ids is None:
+        id_mask = np.asarray(len(ids)*[True], dtype=bool)
+    else:
+        id_mask = np.asarray([True if id in task_ids else False for id in ids], dtype=bool)
+
+    # plot agent positions as circles
+
+    ax.plot(x[id_mask], y[id_mask], 'ro', markersize=16, fillstyle='none', markeredgewidth=2)
+    ax.plot(x[~id_mask], y[~id_mask], 'bo', markersize=16, fillstyle='none', markeredgewidth=2)
+    ax.legend(('task', 'network'), markerscale=0.6)
     ax.axis('scaled')
-    ax.axis([min(x) - 2.0, max(x) + 2.0, min(y) - 2.0, max(y) + 2.0])
+    bbx = np.asarray([min(x), max(x), min(y), max(y)])
+    window_scale = np.max(bbx[1::2] - bbx[0::2])
+    ax.axis(bbx + np.asarray([-1, 1, -1, 1])*0.1*window_scale)
+
+    # add agent ID in middle of circle
+
     for i in range(len(x)):
-        ax.annotate(str(i + 1), (x[i] + 0.6, y[i] + 0.6), fontweight='bold')
+        color= 'r' if id_mask[i] == True else 'b'
+        ax.annotate(str(ids[i]), (x[i], y[i]-0.05), color=color,
+                    horizontalalignment='center', verticalalignment='center')
+
+    # draw routes between each agent
+
+    if routes is not None:
+        cumulative_routes = np.sum(routes, 2)
+        cmap = cm.ScalarMappable(norm=colors.Normalize(vmin=0.0, vmax=1.0, clip=True),
+                                 cmap='Greens')
+        for i in range(len(x)):
+            for j in range(i+1,len(x)):
+                pi = config[i,:]
+                pj = config[j,:]
+                Aij = cumulative_routes[i,j]
+                Aji = cumulative_routes[j,i]
+
+                if pj[0] < pi[0] or pj[1] < pi[1]:
+                    pi, pj = pj, pi
+                    Aij, Aji = Aji, Aij
+
+                a1 = np.arctan2(pj[1]-pi[1], pj[0]-pi[0])
+                a2  = np.arctan2(pi[1]-pj[1], pi[0]-pj[0])
+
+                ds = np.pi / 16.0
+                offset_scale = 0.03 * window_scale
+                l1p1 = pi + offset_scale*np.asarray([np.cos(a1+ds), np.sin(a1+ds)])
+                l2p1 = pi + offset_scale*np.asarray([np.cos(a1-ds), np.sin(a1-ds)])
+                l1p2 = pj + offset_scale*np.asarray([np.cos(a2-ds), np.sin(a2-ds)])
+                l2p2 = pj + offset_scale*np.asarray([np.cos(a2+ds), np.sin(a2+ds)])
+
+                arrowhead_scale = 0.04 * window_scale
+                ds = np.pi / 8.0
+                l1head = l1p1 + arrowhead_scale*np.asarray([np.cos(a1+ds), np.sin(a1+ds)])
+                l2head = l2p2 + arrowhead_scale*np.asarray([np.cos(a2+ds), np.sin(a2+ds)])
+
+                lw = 2
+                if Aji > 0.01:
+                    c = cmap.to_rgba(Aji)
+                    ax.plot([l1p1[0], l1p2[0]],   [l1p1[1], l1p2[1]],   lw=lw, c=c)
+                    ax.plot([l1p1[0], l1head[0]], [l1p1[1], l1head[1]], lw=lw, c=c)
+                if Aij > 0.01:
+                    c = cmap.to_rgba(Aij)
+                    ax.plot([l2p1[0], l2p2[0]],   [l2p1[1], l2p2[1]],   lw=lw, c=c)
+                    ax.plot([l2p2[0], l2head[0]], [l2p2[1], l2head[1]], lw=lw, c=c)
 
     if title is not None:
         ax.set_title(title)
@@ -64,48 +134,47 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True, title=
             plt.pause(pause)
 
 
-def socp_info(routes, qos, config=None, solver=None, ids=None):
+def socp_info(routes, flow, config=None, solver=None, ids=None):
     """
     print information about the robust routing solution
 
     Input:
       routes: an NxNxK array of routing variables
-      qos: an array of flow requirements with length(qos) == K
+      flow: an array of flow requirements with length(flow) == K
       config: (optional) the configuration of the team to plot
       solver: (optional) will print the channel rate, var if the config is provided
       ids: (optional) node ids to use instead of 1,...,n
 
     """
-    assert len(qos) == routes.shape[2]
+    assert len(flow) == routes.shape[2]
     n = routes.shape[0]
     if ids is not None:
         assert len(ids) == n
     else:
-        ids = range(1,n+1)
+        ids = range(n)
     id_to_idx = {id: idx for id, idx in zip(ids, range(n))}
     idx_to_id = {idx: id for id, idx in zip(ids, range(n))}
 
-    for k in range(len(qos)):
+    for k in range(len(flow)):
         # flow info
-        print "flow %d: %d -> %s, margin = %.2f, confidence = %.2f:"\
-              % (k+1, qos[k].src, ", ".join(map(str, qos[k].dest)), qos[k].margin, qos[k].confidence)
+        print 'flow %d: %d -> %d, rate = %.2f, qos = %.2f:'\
+              % (k+1, flow[k].src, flow[k].dest, flow[k].rate, flow[k].qos)
         # column header
-        node_names = ["%6s" % i for i in ids]
-        node_names[id_to_idx[qos[k].src]] = "%6s" % ("(s) " + str(qos[k].src))
-        for d in qos[k].dest:
-            node_names[id_to_idx[d]] = "%6s" % ("(d) " + str(d))
-        print "   %6s|%s|%5s" % (" ", "".join(map(str, node_names)), "Tx")
-        print "   %s" % ("-" * (6 * (n+2) + 1))
+        node_names = ['%6s' % i for i in ids]
+        node_names[id_to_idx[flow[k].src]] = '%6s' % ('(s) ' + str(flow[k].src))
+        node_names[id_to_idx[flow[k].dest]] = '%6s' % ('(d) ' + str(flow[k].dest))
+        print '   %6s|%s|%5s' % (' ', ''.join(map(str, node_names)), 'Tx')
+        print '   %s' % ('-' * (6 * (n+2) + 1))
         for i in range(n):
-            num_str = ["%6.2f" % a if a > 0.01 else "%6s" % '-' for a in routes[i, :, k]]
+            num_str = ['%6.2f' % a if a > 0.01 else '%6s' % '-' for a in routes[i, :, k]]
             if sum(routes[i, :, k]) > 0.01:
-                num_str += ["|%5.2f" % sum(routes[i, :, k])]
+                num_str += ['|%5.2f' % sum(routes[i, :, k])]
             else:
-                num_str += ["|%5s" % "-"]
-            print "   %6s|%s" % (node_names[i], "".join(num_str))
-        print "   %6s|%s|" % ("", "-" * (6*n))
-        rx_str = ["%6.2f" % sum(routes[:, i, k]) if sum(routes[:, i, k]) > 0.01 else "%6s" % "-" for i in range(n)]
-        print "   %6s|%s" % ("Rx", "".join(rx_str))
+                num_str += ['|%5s' % '-']
+            print '   %6s|%s' % (node_names[i], ''.join(num_str))
+        print '   %6s|%s|' % ('', '-' * (6*n))
+        rx_str = ['%6.2f' % sum(routes[:, i, k]) if sum(routes[:, i, k]) > 0.01 else '%6s' % '-' for i in range(n)]
+        print '   %6s|%s' % ('Rx', ''.join(rx_str))
 
     if config is not None and solver is not None:
         rate_mean, rate_var = solver.cm.predict(config)
@@ -116,70 +185,27 @@ def socp_info(routes, qos, config=None, solver=None, ids=None):
             print(rate_var)
 
 
-# Test 1
-def multiple_dest_test():
-    print "running multiple_dest_test()\n"
-    msg = RobustRoutingSOCPRequest()
-
-    x = [20.0, -10.0, -10.0, 5.0]
-    y = [0.0, 17.32, -17.32, 5.0]
-    n = len(x)
-    for i in range(n):
-        pt = Point()
-        pt.x = x[i]
-        pt.y = y[i]
-        msg.config += [copy.deepcopy(pt)]
-
-    qos = QoS()
-    qos.margin = 0.02
-    qos.confidence = 0.7
-    src = [0, 1, 2]
-    dest = [[2, 1], [2, 0], [1, 0]]
-    k = len(src)
-    for i in range(k):
-        qos.src = src[i]
-        qos.dest = dest[i]
-        msg.qos += [copy.deepcopy(qos)]
-
-    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
-    res = rrserver.solve_socp(msg)
-    if res.status != 'optimal':
-        print("solve_socp returned with status: %s" % res.status)
-        return
-
-    routes = np.reshape(res.routes, (n, n, k), 'F')
-    print("slack = %f" % res.slack)
-    socp_info(routes, msg.qos, msg.config)
-
-
-# Test 2
 def speed_test():
-    print "running speed test\n"
+    print('running speed test\n')
 
     patrol_rad = 20
     comm_rad = 8
-    task_agent_count = 3
-    comm_agent_count = 6
+    task_count = 3
+    comm_count = 6
 
-    qos_list = []
-    src = [0, 1, 2]
-    dest = [[1, 2], [0, 2], [0, 1]]
-    qos = QoS()
-    qos.margin = 0.10
-    qos.confidence = 0.70
-    for i in range(len(src)):
-        qos.src = src[i]
-        qos.dest = dest[i]
-        qos_list += [copy.deepcopy(qos)]
+    rate = 0.10
+    conf = 0.70
+    ids = [0, 1, 2]
+    flows = [Flow(rate, s, d, Flow.CONFIDENCE, conf) for s in ids for d in ids if d != s]
 
     # build team structure
 
-    x_task = np.zeros((task_agent_count, 2))
-    x_task[:, 0] = patrol_rad * np.cos(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
-    x_task[:, 1] = patrol_rad * np.sin(2.0 * np.pi / task_agent_count * np.arange(0, task_agent_count))
-    x_comm = np.zeros((comm_agent_count, 2))
-    x_comm[1:, 0] = comm_rad * np.cos(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
-    x_comm[1:, 1] = comm_rad * np.sin(2.0 * np.pi / (comm_agent_count - 1) * np.arange(0, comm_agent_count - 1))
+    x_task = np.zeros((task_count, 2))
+    x_task[:,0] = patrol_rad * np.cos(2.0*np.pi/task_count * np.arange(0,task_count))
+    x_task[:,1] = patrol_rad * np.sin(2.0*np.pi/task_count * np.arange(0,task_count))
+    x_comm = np.zeros((comm_count, 2))
+    x_comm[1:,0] = comm_rad * np.cos(2.0*np.pi/(comm_count - 1) * np.arange(0,comm_count-1))
+    x_comm[1:,1] = comm_rad * np.sin(2.0*np.pi/(comm_count - 1) * np.arange(0,comm_count-1))
     x = np.vstack([x_task, x_comm])
 
     # solve SOCP
@@ -187,142 +213,73 @@ def speed_test():
     rrsolver = rr_socp.RobustRoutingSolver(print_values=True)
     for i in range(10):
         start = time.time()
-        slack, routes, status = rrsolver.solve_socp(qos_list, x)
-        print("found solution in %.4f second" % (time.time() - start))
+        slack, routes, status = rrsolver.solve_socp(flows, x)
+        print('found solution in {:.4f} second'.format(time.time() - start))
 
 
-# Test 3
-def simple_routing_test(margin=0.1, confidence=0.7):
-    print "running simple_routing_test()\n"
+def simple_routing_test(rate=0.1, conf=0.7):
+    print('running simple_routing_test()\n')
     msg = RobustRoutingSOCPRequest()
 
-    dist = 30
-    x = [0.0, dist, 1.0/3.0 * dist, 2.0/3.0 * dist]
+    x = [0.0, 30.0, 10.0, 20.0]
     y = [0.0, 0.0, 3.0, -3.0]
-    n = len(x)
-    for i in range(n):
-        pt = Point()
-        pt.x = x[i]
-        pt.y = y[i]
-        msg.config += [copy.deepcopy(pt)]
+    msg.config = [Point(x[i], y[i], 0.0) for i in range(len(x))]
 
-    print("margin = %.3f, confidence = %.3f" % (margin, confidence))
-    qos = QoS()
-    qos.margin = margin
-    qos.confidence = confidence
-    qos.src = 1
-    qos.dest = [0]
-    msg.qos += [copy.deepcopy(qos)]
-    k = len(msg.qos)
+    print('rate = {:.3f}, confidence = {:.3f}'.format(rate, conf))
+    msg.flows = [Flow(rate, 1, 0, Flow.CONFIDENCE, conf)]
 
     rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
     res = rrserver.solve_socp(msg)
     if res.status != 'optimal':
-        print("solve_socp returned with status: %s" % res.status)
+        print('solve_socp returned with status: {}'.format(res.status))
         return
 
-    routes = np.reshape(res.routes, (n, n, k), 'F')
-    print("slack = %.4f" % res.slack)
-    socp_info(routes, msg.qos, msg.config)
+    N = len(x)
+    K = len(msg.flows)
+    routes = np.reshape(res.routes, (N,N,K), 'F')
+    print('slack = {:.4f}'.format(res.obj_fcn))
+    socp_info(routes, msg.flows, msg.config)
 
 
-# Test 4
-# TODO these results are inconsistent with MATLAB
-def matlab_match_test(margin=0.05, confidence=0.7):
-    print "running matlab_match_test()\n"
-
-    x = [20.0, -10.0, -10.0, 5.0]
-    y = [0.0, 17.32, -17.32, 5.0]
-    z = [0.05, 0.05, 0.05, 1.83]
-    n = len(x)
-    msg = RobustRoutingSOCPRequest()
-    for i in range(n):
-        pt = Point()
-        pt.x = x[i]
-        pt.y = y[i]
-        pt.z = z[i]
-        msg.config += [copy.deepcopy(pt)]
-
-    src = [0, 1, 2]
-    dest = [[1, 2], [0, 2], [0, 1]]
-    k = len(src)
-    qos = QoS()
-    qos.margin = margin
-    qos.confidence = confidence
-    for i in range(k):
-        qos.src = src[i]
-        qos.dest = dest[i]
-        msg.qos += [copy.deepcopy(qos)]
-
-    rrserver = rr_socp_server.RRSOCPServer(fetch_params=False, l0=-48.0)
-    res = rrserver.solve_socp(msg)
-    if res.status != 'optimal':
-        print("solve_socp returned with status: %s" % res.status)
-        return
-
-    routes = np.reshape(res.routes, (n, n, k), 'F')
-    print("slack = %.4f" % res.slack)
-    socp_info(routes, msg.qos, msg.config)
-
-
-# Test 5
-def infeasible_test(margin=0.5, confidence=0.9):
-    print "running simple_routing_test()\n"
+def infeasible_test(rate=0.5, confidence=0.9):
+    print('running simple_routing_test()\n')
     msg = RobustRoutingSOCPRequest()
 
-    dist = 30
-    x = [0.0, dist, 1.0/3.0 * dist, 2.0/3.0 * dist]
+    x = [0.0, 30.0, 10.0, 20.0]
     y = [0.0, 0.0, 3.0, -3.0]
-    n = len(x)
-    for i in range(n):
-        pt = Point()
-        pt.x = x[i]
-        pt.y = y[i]
-        msg.config += [copy.deepcopy(pt)]
+    msg.config = [Point(x[i], y[i], 0.0) for i in range(len(x))]
 
-    print("margin = %.3f, confidence = %.3f" % (margin, confidence))
-    qos = QoS()
-    qos.margin = margin
-    qos.confidence = confidence
-    qos.src = 1
-    qos.dest = [0]
-    msg.qos += [copy.deepcopy(qos)]
-    k = len(msg.qos)
+    print('rate = {:.3f}, confidence = {:.3f}'.format(rate, confidence))
+    msg.flows = [Flow(rate, 1, 0, Flow.CONFIDENCE, confidence)]
 
     rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
     res = rrserver.solve_socp(msg)
     if res.status != 'optimal':
-        print("solve_socp returned with status: %s" % res.status)
+        print('solve_socp returned with status: {}'.format(res.status))
         return
 
-    routes = np.reshape(res.routes, (n, n, k), 'F')
-    print("slack = %.4f" % res.slack)
-    socp_info(routes, msg.qos, msg.config)
+    N = len(x)
+    K = len(msg.flows)
+    routes = np.reshape(res.routes, (N,N,K), 'F')
+    print('slack = {:.4f}'.format(res.obj_fcn))
+    socp_info(routes, msg.flows, msg.config)
 
 
 if __name__ == "__main__":
     if len(sys.argv) is not 2:
-        print "running all tests\n"
-        multiple_dest_test()
-        print "\n"
+        print('running all tests\n')
         speed_test()
-        print "\n"
+        print('\n')
         simple_routing_test()
-        print "\n"
-        matlab_match_test()
-        print "\n"
+        print('\n')
         infeasible_test()
     else:
         arg = int(sys.argv[1])
         if arg == 1:
-            multiple_dest_test()
-        elif arg == 2:
             speed_test()
-        elif arg == 3:
+        elif arg == 2:
             simple_routing_test()
-        elif arg == 4:
-            matlab_match_test()
-        elif arg == 5:
+        elif arg == 3:
             infeasible_test()
         else:
-            print "unkown argument %d" % arg
+            print('unkown argument {}'.format(arg))
