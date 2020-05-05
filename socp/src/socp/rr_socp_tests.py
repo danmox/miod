@@ -11,7 +11,9 @@ from socp.msg import Flow
 from geometry_msgs.msg import Point
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib import cm, colors
+from matplotlib import cm
+from matplotlib.colors import Normalize
+from operator import attrgetter
 
 # helps the figures to be readable on hidpi screens
 mpl.rcParams['figure.dpi'] = 200
@@ -73,22 +75,21 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
     ax.axis(bbx + np.asarray([-1, 1, -1, 1])*0.1*window_scale)
 
     if routes is not None:
+
+        # form dict of all route lines
         cumulative_routes = np.sum(routes, 2)
-        cmap = cm.ScalarMappable(norm=colors.Normalize(vmin=0.0, vmax=1.0, clip=True),
-                                 cmap='Greens')
+        route_lines = []
         for i in range(len(x)):
             for j in range(i+1,len(x)):
-                Pi = np.asarray([x[i], y[i]])
-                Pj = np.asarray([x[j], y[j]])
-                Aij = cumulative_routes[i,j]
-                Aji = cumulative_routes[j,i]
+                Pi, Pj = np.asarray([x[i], y[i]]), np.asarray([x[j], y[j]])
+                Aij, Aji = cumulative_routes[i,j], cumulative_routes[j,i]
 
                 if Pj[0] < Pi[0] or Pj[1] < Pi[1]:
                     Pi, Pj = Pj, Pi
                     Aij, Aji = Aji, Aij
 
                 a1 = np.arctan2(Pj[1]-Pi[1], Pj[0]-Pi[0])
-                a2  = np.arctan2(Pi[1]-Pj[1], Pi[0]-Pj[0])
+                a2 = np.arctan2(Pi[1]-Pj[1], Pi[0]-Pj[0])
 
                 ds = np.pi / 16.0
                 offset_scale = 0.03 * window_scale
@@ -102,15 +103,26 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
                 l1head = l1p1 + arrowhead_scale*np.asarray([np.cos(a1+ds), np.sin(a1+ds)])
                 l2head = l2p2 + arrowhead_scale*np.asarray([np.cos(a2+ds), np.sin(a2+ds)])
 
-                lw = 2
                 if Aji > 0.01:
-                    c = cmap.to_rgba(Aji)
-                    ax.plot([l1p1[0], l1p2[0]],   [l1p1[1], l1p2[1]],   lw=lw, c=c)
-                    ax.plot([l1p1[0], l1head[0]], [l1p1[1], l1head[1]], lw=lw, c=c)
+                    route_lines.append({'rate': Aji,
+                                        'line_x': [l1p1[0], l1p2[0]],
+                                        'line_y': [l1p1[1], l1p2[1]],
+                                        'arrow_x': [l1p1[0], l1head[0]],
+                                        'arrow_y': [l1p1[1], l1head[1]]})
                 if Aij > 0.01:
-                    c = cmap.to_rgba(Aij)
-                    ax.plot([l2p1[0], l2p2[0]],   [l2p1[1], l2p2[1]],   lw=lw, c=c)
-                    ax.plot([l2p2[0], l2head[0]], [l2p2[1], l2head[1]], lw=lw, c=c)
+                    route_lines.append({'rate': Aij,
+                                        'line_x': [l2p1[0], l2p2[0]],
+                                        'line_y': [l2p1[1], l2p2[1]],
+                                        'arrow_x': [l2p2[0], l2head[0]],
+                                        'arrow_y': [l2p2[1], l2head[1]]})
+
+        # plot lines by line weight: faintest on the bottom, boldest on top
+        lw = 2
+        cmap = cm.ScalarMappable(norm=Normalize(vmin=0.0, vmax=1.0, clip=True), cmap='YlOrBr')
+        route_lines.sort(key=lambda line_dict: line_dict['rate'])
+        for d in route_lines:
+            ax.plot(d['line_x'], d['line_y'], lw=lw, c=cmap.to_rgba(d['rate']))
+            ax.plot(d['arrow_x'], d['arrow_y'], lw=lw, c=cmap.to_rgba(d['rate']))
 
     # plot agent positions as circles
 
