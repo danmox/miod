@@ -4,6 +4,7 @@ import rr_socp
 import numpy as np
 from socp.srv import RobustRoutingSOCP, RobustRoutingSOCPResponse
 import rospy
+from rr_socp import ChannelModel
 
 
 class RRSOCPServer:
@@ -14,9 +15,11 @@ class RRSOCPServer:
             l0 = rospy.get_param("/L0")
             a = rospy.get_param("/a")
             b = rospy.get_param("/b")
-            self.solver = rr_socp.RobustRoutingSolver(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+            channel_model = ChannelModel(print_values, n0, n, l0, a, b)
+            self.solver = rr_socp.RobustRoutingSolver(channel_model)
         else:
-            self.solver = rr_socp.RobustRoutingSolver(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+            channel_model = ChannelModel(print_values, n0, n, l0, a, b)
+            self.solver = rr_socp.RobustRoutingSolver(channel_model)
 
     def solve_socp(self, req):
         res = RobustRoutingSOCPResponse()

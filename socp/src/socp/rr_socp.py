@@ -95,8 +95,8 @@ class ChannelModel:
 
 
 class RobustRoutingSolver:
-    def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
-        self.cm = ChannelModel(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+    def __init__(self, channel_model):
+        self.cm = channel_model
 
     def solve_socp(self, flows, x, idx_to_id=None, reshape_routes=False):
         """

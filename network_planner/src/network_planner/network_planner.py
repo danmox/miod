@@ -2,6 +2,7 @@ import numpy as np
 import time as systime
 from functools import partial
 from connectivity_optimization import ConnectivityOpt
+from socp.rr_socp import ChannelModel
 
 import rospy
 import actionlib
@@ -43,7 +44,8 @@ class NetworkPlanner:
 
         required_params = ['/desired_altitude', '~collision_distance', '~minimum_update_rate',
                            '~pose_topic', '~nav_nodelet', '~world_frame', '/task_agent_ids',
-                           '/comm_agent_ids', '~planner_type', '/N0', '/n', '/L0','/a', '/b']
+                           '/comm_agent_ids', '~planner_type', '/N0', '/n', '/L0','/a', '/b',
+                           '~step_size']
         self.params = {}
         for param in required_params:
             if rospy.has_param(param):
@@ -55,8 +57,9 @@ class NetworkPlanner:
 
         # initialize connectivity optimization planner and robust routing solver
 
-        self.conn_opt = ConnectivityOpt(print_values=False, n0=self.params['N0'], n=self.params['n'],
-                                        l0=self.params['L0'], a=self.params['a'], b=self.params['b'])
+        self.channel_model = ChannelModel(print_values=False, n0=self.params['N0'],
+                                          n=self.params['n'], l0=self.params['L0'],
+                                          a=self.params['a'], b=self.params['b'])
         np_info('N0 = {}'.format(self.params['N0']))
         np_info('n = {}'.format(self.params['n']))
         np_info('L0 = {}'.format(self.params['L0']))
@@ -163,21 +166,21 @@ class NetworkPlanner:
                 pt = self.team_config[self.id_to_idx[id]]
                 x_comm[idx,:] = np.asarray([pt.x, pt.y])
 
-            self.conn_opt.set_team_config(x_task, x_comm)
+            conn_opt = ConnectivityOpt(self.channel_model, x_task, x_comm)
 
             # compute target network team config
 
             t_start = systime.time()
             updates = 0
             while systime.time() - t_start < 1.0/self.params['minimum_update_rate']:
-                lambda2 = self.conn_opt.update_network_config(step_size=0.2)
+                lambda2 = conn_opt.update_network_config(self.params['step_size'])
                 updates += 1
 
             self.con_pub.publish(Float64(lambda2))
 
             # send network team update
 
-            target_config = numpy_to_ros(self.conn_opt.config, z=self.params['desired_altitude'])
+            target_config = numpy_to_ros(conn_opt.config, z=self.params['desired_altitude'])
             for id, client in zip(self.params['comm_agent_ids'], self.nav_clients):
                 goal = WaypointNavigationGoal()
                 goal.header = Header(frame_id='world', stamp=rospy.get_rostime())

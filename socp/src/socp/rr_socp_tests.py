@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import cm
 from matplotlib.colors import Normalize
-from operator import attrgetter
+
 
 # helps the figures to be readable on hidpi screens
 mpl.rcParams['figure.dpi'] = 200
@@ -227,7 +227,8 @@ def speed_test():
 
     # solve SOCP
 
-    rrsolver = rr_socp.RobustRoutingSolver(print_values=True)
+    channel_model = rr_socp.ChannelModel(print_values=True)
+    rrsolver = rr_socp.RobustRoutingSolver(channel_model)
     for i in range(10):
         start = time.time()
         slack, routes, status = rrsolver.solve_socp(flows, x)

@@ -7,32 +7,23 @@ from socp.rr_socp import ChannelModel
 
 
 class ConnectivityOpt:
-    def __init__(self, x_task=None, x_comm=None,
-                 print_values=False, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
-        self.cm = ChannelModel(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+    def __init__(self, channel_model, x_task, x_comm):
+        self.cm = channel_model
         self.x_task = x_task
         self.x_comm = x_comm
-        if x_task is not None and x_comm is not None:
-            self.config = np.vstack((self.x_task, self.x_comm))
-            self.agent_count = self.config.shape[0]
-            self.comm_count = self.x_comm.shape[0]
-            self.comm_idcs = range(self.x_task.shape[0], self.agent_count)
+        self.config = np.vstack((self.x_task, self.x_comm))
+        self.comm_count = self.x_comm.shape[0]
+        self.agent_count = self.config.shape[0]
+        self.comm_idcs = range(self.x_task.shape[0], self.agent_count)
 
-    def connectivity(self):
-        rate, _ = self.cm.predict(self.config)
+    @classmethod
+    def connectivity(cls, channel_model, x_task, x_comm):
+        config = np.vstack((x_task, x_comm))
+        rate, _ = channel_model.predict(config)
         lap = np.diag(np.sum(rate, axis=1)) - rate
         v, _ = np.linalg.eigh(lap)
         return v[1]
 
-    def set_team_config(self, x_task, x_comm):
-        self.x_task = x_task
-        self.x_comm = x_comm
-        self.config = np.vstack((self.x_task, self.x_comm))
-        self.agent_count = self.config.shape[0]
-        self.comm_count = self.x_comm.shape[0]
-        self.comm_idcs = range(self.x_task.shape[0], self.agent_count)
-
-    # TODO use cp.parameter?
     def update_network_config(self, step_size):
 
         gamma = cp.Variable((1))
@@ -91,4 +82,18 @@ class ConnectivityOpt:
 
         self.x_comm = x.value
         self.config[self.comm_idcs] = self.x_comm
-        return self.connectivity()
+        return ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+
+    # for use on a static task team only
+    def maximize_connectivity(self, step_size=0.2, tol=1e-10, max_its=1000):
+
+        update = 1.0
+        lambda2_prev = 0.0
+        it = 0
+        while update > tol and it < 1000:
+            lambda2 = self.update_network_config(step_size)
+            update = lambda2 - lambda2_prev
+            lambda2_prev = lambda2
+            it += 1
+
+        return lambda2
