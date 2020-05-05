@@ -65,24 +65,12 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
     else:
         id_mask = np.asarray([True if id in task_ids else False for id in ids], dtype=bool)
 
-    # plot agent positions as circles
+    # draw routes between each agent
 
-    ax.plot(x[id_mask], y[id_mask], 'ro', markersize=16, fillstyle='none', markeredgewidth=2)
-    ax.plot(x[~id_mask], y[~id_mask], 'bo', markersize=16, fillstyle='none', markeredgewidth=2)
-    ax.legend(('task', 'network'), markerscale=0.6)
     ax.axis('scaled')
     bbx = np.asarray([min(x), max(x), min(y), max(y)])
     window_scale = np.max(bbx[1::2] - bbx[0::2])
     ax.axis(bbx + np.asarray([-1, 1, -1, 1])*0.1*window_scale)
-
-    # add agent ID in middle of circle
-
-    for i in range(len(x)):
-        color= 'r' if id_mask[i] == True else 'b'
-        ax.annotate(str(ids[i]), (x[i], y[i]-0.05), color=color,
-                    horizontalalignment='center', verticalalignment='center')
-
-    # draw routes between each agent
 
     if routes is not None:
         cumulative_routes = np.sum(routes, 2)
@@ -90,24 +78,24 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
                                  cmap='Greens')
         for i in range(len(x)):
             for j in range(i+1,len(x)):
-                pi = config[i,:]
-                pj = config[j,:]
+                Pi = np.asarray([x[i], y[i]])
+                Pj = np.asarray([x[j], y[j]])
                 Aij = cumulative_routes[i,j]
                 Aji = cumulative_routes[j,i]
 
-                if pj[0] < pi[0] or pj[1] < pi[1]:
-                    pi, pj = pj, pi
+                if Pj[0] < Pi[0] or Pj[1] < Pi[1]:
+                    Pi, Pj = Pj, Pi
                     Aij, Aji = Aji, Aij
 
-                a1 = np.arctan2(pj[1]-pi[1], pj[0]-pi[0])
-                a2  = np.arctan2(pi[1]-pj[1], pi[0]-pj[0])
+                a1 = np.arctan2(Pj[1]-Pi[1], Pj[0]-Pi[0])
+                a2  = np.arctan2(Pi[1]-Pj[1], Pi[0]-Pj[0])
 
                 ds = np.pi / 16.0
                 offset_scale = 0.03 * window_scale
-                l1p1 = pi + offset_scale*np.asarray([np.cos(a1+ds), np.sin(a1+ds)])
-                l2p1 = pi + offset_scale*np.asarray([np.cos(a1-ds), np.sin(a1-ds)])
-                l1p2 = pj + offset_scale*np.asarray([np.cos(a2-ds), np.sin(a2-ds)])
-                l2p2 = pj + offset_scale*np.asarray([np.cos(a2+ds), np.sin(a2+ds)])
+                l1p1 = Pi + offset_scale*np.asarray([np.cos(a1+ds), np.sin(a1+ds)])
+                l2p1 = Pi + offset_scale*np.asarray([np.cos(a1-ds), np.sin(a1-ds)])
+                l1p2 = Pj + offset_scale*np.asarray([np.cos(a2-ds), np.sin(a2-ds)])
+                l2p2 = Pj + offset_scale*np.asarray([np.cos(a2+ds), np.sin(a2+ds)])
 
                 arrowhead_scale = 0.04 * window_scale
                 ds = np.pi / 8.0
@@ -123,6 +111,23 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
                     c = cmap.to_rgba(Aij)
                     ax.plot([l2p1[0], l2p2[0]],   [l2p1[1], l2p2[1]],   lw=lw, c=c)
                     ax.plot([l2p2[0], l2head[0]], [l2p2[1], l2head[1]], lw=lw, c=c)
+
+    # plot agent positions as circles
+
+    if len(x) != len(id_mask):
+        import pdb;pdb.set_trace()
+    ax.plot(x[id_mask], y[id_mask], 'ro', ms=16, fillstyle='none',
+            markeredgewidth=2, label='task')
+    ax.plot(x[~id_mask], y[~id_mask], 'bo', ms=16, fillstyle='none',
+            markeredgewidth=2, label='network')
+    ax.legend(markerscale=0.6)
+
+    # add agent ID in middle of circle
+
+    for i in range(len(x)):
+        color= 'r' if id_mask[i] == True else 'b'
+        ax.annotate(str(ids[i]), (x[i], y[i]-0.05), color=color,
+                    horizontalalignment='center', verticalalignment='center')
 
     if title is not None:
         ax.set_title(title)
@@ -223,10 +228,12 @@ def simple_routing_test(rate=0.1, conf=0.7):
 
     x = [0.0, 30.0, 10.0, 20.0]
     y = [0.0, 0.0, 3.0, -3.0]
+    task_ids = [0, 1]
     msg.config = [Point(x[i], y[i], 0.0) for i in range(len(x))]
 
     print('rate = {:.3f}, confidence = {:.3f}'.format(rate, conf))
     msg.flows = [Flow(rate, 1, 0, Flow.CONFIDENCE, conf)]
+    msg.flows += [Flow(rate, 0, 1, Flow.CONFIDENCE, conf)]
 
     rrserver = rr_socp_server.RRSOCPServer(fetch_params=False)
     res = rrserver.solve_socp(msg)
@@ -239,6 +246,7 @@ def simple_routing_test(rate=0.1, conf=0.7):
     routes = np.reshape(res.routes, (N,N,K), 'F')
     print('slack = {:.4f}'.format(res.obj_fcn))
     socp_info(routes, msg.flows, msg.config)
+    plot_config(msg.config, task_ids=task_ids, routes=routes)
 
 
 def infeasible_test(rate=0.5, confidence=0.9):
