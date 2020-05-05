@@ -93,4 +93,4 @@ def take_off(id, dname, node, altitud):
 def pose_rcv(rcv_msg, agent, msg):
     rcv_msg[0] = True
     agent.position = msg.pose.position
-    agent.orientation.w = msg.pose.orientation.w
+    agent.orientation = msg.pose.orientation

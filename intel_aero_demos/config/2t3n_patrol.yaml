@@ -1,0 +1,67 @@
+# demo parameters
+task_agent_ids:    [1, 2]
+comm_agent_ids:    [3, 4]
+#comm_agent_ids:    [3, 4, 5]
+nuc1/desired_altitude:  3.0
+nuc2/desired_altitude:  3.0
+nuc3/desired_altitude:  3.0    # meters
+nuc4/desired_altitude:  5.0    # meters
+nuc5/desired_altitude:  7.0    # meters
+
+# channel model
+N0: -70.0  # -85.0  receiver noise (dBm)
+n:    2.52 #   2.52 decay exponent
+L0: -48.0  # -53.0  transmit power (dBm)
+a:    0.2  #   0.2  variance sigmoid param 1
+b:    0.6  #   0.6  variance sigmoid param 2
+
+#Network Planner Parameters
+connectivity_network_planner/collision_distance: 4.0
+connectivity_network_planner/minimum_update_rate: 5
+connectivity_network_planner/world_frame: world
+connectivity_network_planner/planner_type: moving
+connectivity_network_planner/print_routes: false
+connectivity_network_planner/pose_topic: aero#/pose
+connectivity_network_planner/nav_nodelet: /aero#/gazebo_vel_nav_nodelet
+
+#network topology visualization
+routing_visualization_node/world_frame: world
+routing_visualization_node/pose_topic_prefix: /
+routing_visualization_node/pose_topic_suffix: /pose
+
+# communication requirements
+qos:
+  - margin: 0.
+    confidence: 0.7
+    src: 1
+    dest: [2]
+  - margin: 0.
+    confidence: 0.7
+    src: 2
+    dest: [1]
+
+# Way Points for Task Agents
+
+aero1/gazebo_vel_nav_nodelet/desired_trajectory:
+  - - 15.0
+    - -10.0
+    - 3.0
+  - - 15.0
+    - 10.0
+    - 3.0
+aero2/gazebo_vel_nav_nodelet/desired_trajectory:
+  - - -15.0
+    - 10.0
+    - 3.0
+  - - -15.0
+    - -10.0
+    - 3.0
+
+
+aero4/gazebo_vel_nav_nodelet/desired_trajectory:
+  - - -0.0
+    - -15.0
+    - 5.0
+  - - -0.0
+    - -15.0
+    - 0.0
