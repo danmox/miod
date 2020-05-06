@@ -2,8 +2,10 @@ import numpy as np
 from math import pi
 import random
 import cvxpy as cp
+import matplotlib.pyplot as plt
 from scipy.linalg import null_space
 from socp.rr_socp import ChannelModel
+from socp.rr_socp_tests import plot_config
 
 
 class ConnectivityOpt:
@@ -33,7 +35,8 @@ class ConnectivityOpt:
 
         # relative closeness
 
-        constraints = [cp.norm(x - self.config[self.comm_idcs], 1) <= step_size * self.comm_count]
+        x_dist = x - self.config[self.comm_idcs]
+        constraints = [-step_size <= x_dist, x_dist <= step_size]
 
         # linearized rate model
 
@@ -85,15 +88,39 @@ class ConnectivityOpt:
         return ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
 
     # for use on a static task team only
-    def maximize_connectivity(self, step_size=0.2, tol=1e-10, max_its=1000):
+    def maximize_connectivity(self, step_size=0.2, tol=1e-10, max_its=1000, viz=False):
+
+        if viz:
+            fig, axes = plt.subplots(1,2)
+            l2_hist = np.zeros((1,))
+            l2_hist[0] = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+            task_ids = set(range(self.agent_count)) - set(self.comm_idcs)
 
         update = 1.0
         lambda2_prev = 0.0
         it = 0
         while update > tol and it < 1000:
             lambda2 = self.update_network_config(step_size)
+            if viz:
+                l2_hist = np.append(l2_hist, [lambda2])
+                plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
+                            task_ids=task_ids, title="it: {:3d}, l2 = {:.3f}".format(it, lambda2))
+                axes[1].cla()
+                axes[1].plot(range(0,it+2), l2_hist, 'r', linewidth=2)
+                axes[1].set_title("update = {:.4e}".format(lambda2-lambda2_prev))
+                plt.tight_layout()
+                plt.pause(0.01)
             update = lambda2 - lambda2_prev
             lambda2_prev = lambda2
             it += 1
+
+        if viz:
+            plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
+                        task_ids=task_ids, title="total its: {:3d}".format(it-1))
+            axes[1].cla()
+            axes[1].plot(range(0,it+1), l2_hist, 'r', linewidth=2)
+            axes[1].set_title("l2 = {:.3f}".format(lambda2))
+            plt.tight_layout()
+            plt.show()
 
         return lambda2
