@@ -68,7 +68,7 @@
           output="screen"
           args="standalone intel_aero_navigation/VelNavNodelet">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <remap from="pose"    to="/unity_ros/$(arg name)/TrueState/pose"/>
+      <remap from="pose"    to="/unity_command/$(arg name)/TrueState/pose"/>
       <param name="local_frame"     value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>
@@ -84,7 +84,7 @@
           output="screen"
           launch-prefix="gdb --args">
       <remap from="costmap" to="costmap_2d/costmap/costmap"/>
-      <remap from="pose"    to="/unity_ros/$(arg name)/TrueState/pose"/>
+      <remap from="pose"    to="/unity_command/$(arg name)/TrueState/pose"/>
       <param name="local_frame"     value="$(arg map_frame)"/>
       <param name="position_tol"    value="$(arg position_tol)"/>
       <param name="heading_tol"     value="$(arg heading_tol)"/>

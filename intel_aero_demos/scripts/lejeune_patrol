@@ -18,6 +18,13 @@ def fetch_param_warn(name, default_value):
     return value
 
 
+def circle(rad, theta):
+    pts = np.zeros((theta.size,2))
+    pts[:,0] = rad*np.cos(theta)
+    pts[:,1] = rad*np.sin(theta)
+    return pts
+
+
 def ellipse(a, b, phi, trans, theta):
     pts = np.zeros((theta.size,2))
     pts[:,0] =  a*cos(phi)*np.cos(theta) + b*sin(phi)*np.sin(theta) + trans[0]
