@@ -11,6 +11,7 @@ from socp.rr_socp_server import RRSOCPServer
 from socp.rr_socp_tests import numpy_to_ros, socp_info
 from socp.msg import QoS
 from socp.srv import RobustRoutingSOCPRequest
+from std_msgs.msg import Float64MultiArray, Float64
 from routing_msgs.msg import NetworkUpdate, PRTableEntry, ProbGateway
 from visualization_msgs.msg import Marker, MarkerArray
 from routing_msgs.msg import NetworkUpdate
@@ -110,6 +111,7 @@ class NetworkPlanner:
         self.viz_pub = rospy.Publisher('planner', MarkerArray, queue_size=2)
         self.net_pub = rospy.Publisher('network_update', NetworkUpdate, queue_size=2)
         self.qos_pub = rospy.Publisher('qos', Float64MultiArray, queue_size=2)
+        self.con_pub = rospy.Publisher('connectivity', Float64, queue_size=2)
 
     def pose_cb(self, id, msg):
         self.team_config[self.id_to_idx[id]] = msg.pose.position
@@ -170,6 +172,8 @@ class NetworkPlanner:
             while systime.time() - t_start < 1.0/self.params['minimum_update_rate']:
                 lambda2 = self.conn_opt.update_network_config(step_size=0.2)
                 updates += 1
+
+            self.con_pub.publish(Float64(lambda2))
 
             # send network team update
 
@@ -264,6 +268,9 @@ class NetworkPlanner:
         self.slack = res.slack
         self.routing_vars = np.reshape(np.asarray(res.routes),
                                        (self.agent_count, self.agent_count, len(self.comm_reqs)), 'F')
+        qos_msg = Float64MultiArray()
+        qos_msg.data = res.qos
+        self.qos_pub.publish(qos_msg)
 
         # pack and publish routing update message
 
