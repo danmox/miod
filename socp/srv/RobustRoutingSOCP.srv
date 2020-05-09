@@ -10,3 +10,4 @@ int8[] idx_to_id             # communication requirements in qos are often speci
 float64[] routes             # if feasible: the routing variables; if infeasible: empty
 float64 slack                # the slack variable of the resulting solution, if found
 string status                # the status returned by cvxpy
+float64[] qos                # a list containing the rate and confidence bound for each flow

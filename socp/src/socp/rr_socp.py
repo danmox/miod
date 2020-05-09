@@ -114,53 +114,59 @@ class RobustRoutingSolver:
           status: 'optimal' if a soln was found
         """
 
-
-        n = x.shape[0]
-        k = len(qos)
+        N = x.shape[0]
+        P = len(qos)
 
         assert x.shape[1] == 2
 
         # if no idx_to_id list is provided it is assumed idx == id
         # if idx_to_id is provided there must be a entry for each index
         if idx_to_id is None or len(idx_to_id) == 0:
-            idx_to_id = range(n)
+            idx_to_id = range(N)
         else:
-            assert len(idx_to_id) == n
-        id_to_idx = {idx_to_id[i]: i for i in range(n)}
+            assert len(idx_to_id) == N
+        id_to_idx = {idx_to_id[i]: i for i in range(N)}
 
         # socp constraints
         a_mat, b_mat, zero_vars, conf, m_ik = self.socp_constraints(qos, x, id_to_idx)
 
         # optimization variables
-        slack, routes = cp.Variable((1)), cp.Variable((n * n * k))
+        slack, routes = cp.Variable((1)), cp.Variable((N*N*P))
         y = cp.hstack([routes, slack])
 
         # cone constraints
         cone_consts = []
         for i in range(a_mat.shape[0]):
-            cone_consts += [cp.SOC((cp.matmul(b_mat[i, :], y) - m_ik[i]) / conf[i], cp.matmul(cp.diag(a_mat[i, :]), y))]
+            cone_consts += [cp.SOC((cp.matmul(b_mat[i,:], y) - m_ik[i]) / conf[i], cp.matmul(cp.diag(a_mat[i,:]), y))]
 
         # linear availability constraints
-        routing_sum_mat = cp.reshape(routes[:n * n], (n, n))  # acts like np.reshape with 'F'
-        for i in range(1, k):  # summing over dim 3
-            routing_sum_mat += cp.reshape(routes[i * n * n:(i + 1) * n * n], (n, n))
+        routing_sum_mat = cp.reshape(routes[:N*N], (N,N))  # acts like np.reshape with 'F'
+        for i in range(1, P):  # summing over dim 3
+            routing_sum_mat += cp.reshape(routes[i*N*N:(i+1)*N*N], (N,N))
         lin_consts = [cp.sum(routing_sum_mat, 2) <= 1]
         lin_consts += [cp.sum(routing_sum_mat, 1) <= 1]
 
         # solve program with CVX
         sign_consts = [0 <= routes, routes <= 1, 0 <= slack]
-        zero_var_consts = [routes[np.reshape(zero_vars, (n * n * k), 'F')] == 0]
+        zero_var_consts = [routes[np.reshape(zero_vars, (N*N*P), 'F')] == 0]
         constraints = cone_consts + lin_consts + sign_consts + zero_var_consts
         socp = cp.Problem(cp.Maximize(slack), constraints)
         socp.solve()
 
         if socp.status is 'optimal':
+            qos_delivered = np.zeros((2*P))
+            for k in range(P):
+                idx = N*k + id_to_idx[qos[k].src]
+                qos_delivered[2*k] = np.dot(b_mat[idx, :-1], routes.value)
+                qos_delivered[2*k+1] = np.linalg.norm(a_mat[idx, :-1] * routes.value) * conf[idx]
+
             if reshape_routes:
-                routing_vars = np.reshape(routes.value, (n, n, k), 'F')
+                routing_vars = np.reshape(routes.value, (N,N,P), 'F')
             else:
                 routing_vars = routes.value
-            return slack.value[0], routing_vars, socp.status
-        return None, None, socp.status
+            return slack.value[0], routing_vars, socp.status, qos_delivered
+
+        return None, None, socp.status, None
 
     def socp_constraints(self, qos, x, id_to_idx):
         """
@@ -170,7 +176,7 @@ class RobustRoutingSolver:
         2nd order cone constraints of the form:
         ||A*y + b|| <= c^T*y + d
         are equivalent to the node margin constraints:
-        B*y - m_ik / ||A*y|| >= I(eps)
+        (B*y - m_ik) / ||A*y|| >= I(eps)
         where y is the vector of optimization variables and I(eps) is the
         inverse normal cumulative distribution function.
 
@@ -189,67 +195,65 @@ class RobustRoutingSolver:
 
         assert x.shape[1] == 2
 
-        n = x.shape[0]
-        k = len(qos)
+        N = x.shape[0]
+        P = len(qos)
 
         # predicted channel rates
         rate_mean, rate_var = self.cm.predict(x)
 
         # variables that should be zero
-        zero_vars = np.reshape(np.eye(n, dtype=bool), (n, n, 1), 'F')
-        zero_vars = np.repeat(zero_vars, k, axis=2)
+        zero_vars = np.reshape(np.eye(N, dtype=bool), (N,N,1), 'F')
+        zero_vars = np.repeat(zero_vars, P, axis=2)
 
         # node margin constraints
 
-        a_mat = np.zeros([n * k, n * n * k + 1])
-        b_mat = np.zeros([n * k, n * n * k + 1])
+        a_mat = np.zeros((N*P, N*N*P+1))
+        b_mat = np.zeros((N*P, N*N*P+1))
 
         idx = 0
-        for flow_idx in range(k):
-            for i in range(n):
-                aki = np.zeros([n, n])
-                bki = np.zeros([n, n])
+        for k in range(P):
+            for i in range(N):
+                aki = np.zeros((N,N))
+                bki = np.zeros((N,N))
 
                 # source, network nodes
-                dest_node_idcs = [id_to_idx[id] for id in qos[flow_idx].dest]
+                dest_node_idcs = [id_to_idx[id] for id in qos[k].dest]
                 if not np.any(np.asarray(dest_node_idcs) == i):
-                    aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
-                    aki[i, :] = np.sqrt(rate_var[i, :]) # outgoing
-                    aki[zero_vars[:, :, flow_idx]] = 0.0
+                    aki[:,i] = np.sqrt(rate_var[:,i]) # incoming
+                    aki[i,:] = np.sqrt(rate_var[i,:]) # outgoing
+                    aki[zero_vars[:, :, k]] = 0.0
 
-                    bki[:, i] = -rate_mean[:, i] # incoming
-                    bki[i, :] = rate_mean[i, :]  # outgoing
-                    bki[zero_vars[:, :, flow_idx]] = 0.0
+                    bki[:,i] = -rate_mean[:,i] # incoming
+                    bki[i,:] = rate_mean[i,:]  # outgoing
+                    bki[zero_vars[:,:,k]] = 0.0
 
                 # destination node
                 else:
-                    aki[:, i] = np.sqrt(rate_var[:, i]) # incoming
+                    aki[:,i] = np.sqrt(rate_var[:,i]) # incoming
                     # aki[i, :] = np.sqrt(rate_var[i, :])
-                    aki[zero_vars[:, :, flow_idx]] = 0.0
+                    aki[zero_vars[:,:,k]] = 0.0
 
-                    bki[:, i] = rate_mean[:, i]  # incoming
+                    bki[:,i] = rate_mean[:,i]  # incoming
                     # bki[i,:] = -rate_mean[i,:]
-                    bki[zero_vars[:, :, flow_idx]] = 0.0
+                    bki[zero_vars[:,:,k]] = 0.0
 
-                a_mat[idx, flow_idx * n * n:(flow_idx + 1) * n * n] = np.reshape(aki, (1, -1), 'F')
-                b_mat[idx, flow_idx * n * n:(flow_idx + 1) * n * n] = np.reshape(bki, (1, -1), 'F')
-                b_mat[idx, n * n * k] = -1
+                a_mat[idx, k*N*N:(k+1)*N*N] = np.reshape(aki, (1,-1), 'F')
+                b_mat[idx, k*N*N:(k+1)*N*N] = np.reshape(bki, (1,-1), 'F')
+                b_mat[idx, N*N*P] = -1
 
                 idx += 1
 
         # probabilistic confidence requirements
 
-        conf = np.ones([n, k]) * np.asarray([q.confidence for q in qos])
-        conf = np.reshape(conf, [-1, 1], 'F')
-        conf = stats.norm.ppf(conf)
+        conf = stats.norm.ppf(np.repeat([q.confidence for q in qos], N))
 
         # node margin requirements
 
-        m_ik = np.zeros([n, k])
-        for i in range(k):
+        m_ik = np.zeros((N,P))
+        for i in range(P):
             node_indices = np.array([id_to_idx[id] for id in [qos[i].src] + qos[i].dest])
             m_ik[node_indices, i] = qos[i].margin
-        m_ik = np.reshape(m_ik, (n * k), 'F')
+        m_ik = np.reshape(m_ik, (N*P), 'F')
 
         return a_mat, b_mat, zero_vars, conf, m_ik
 
