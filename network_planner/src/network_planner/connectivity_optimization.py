@@ -80,7 +80,7 @@ class ConnectivityOpt:
         prob = cp.Problem(cp.Maximize(gamma), constraints)
         prob.solve()
 
-        if prob.status is not 'optimal':
+        if prob.status != 'optimal':
             print(prob.status)
 
         self.x_comm = x.value

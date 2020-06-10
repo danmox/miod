@@ -4,7 +4,7 @@ import rr_socp
 import numpy as np
 from socp.srv import RobustRoutingSOCP, RobustRoutingSOCPResponse
 import rospy
-from rr_socp import ChannelModel
+from channel_model import ChannelModel
 
 
 class RRSOCPServer:

@@ -1,9 +1,7 @@
-#!/usr/bin/env python
-
 import numpy as np
 from scipy import special, spatial, stats
 import cvxpy as cp
-
+from channel_model import ChannelModel
 
 #
 # Robust Routing SOCP functions
@@ -153,13 +151,7 @@ class RobustRoutingSolver:
         socp = cp.Problem(cp.Maximize(slack), constraints)
         socp.solve()
 
-        if socp.status is 'optimal':
-            qos_delivered = np.zeros((2*P))
-            for k in range(P):
-                idx = N*k + id_to_idx[qos[k].src]
-                qos_delivered[2*k] = np.dot(b_mat[idx, :-1], routes.value)
-                qos_delivered[2*k+1] = np.linalg.norm(a_mat[idx, :-1] * routes.value) * conf[idx]
-
+        if socp.status == 'optimal':
             if reshape_routes:
                 routing_vars = np.reshape(routes.value, (N,N,P), 'F')
             else:

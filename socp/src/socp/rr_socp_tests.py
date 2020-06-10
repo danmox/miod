@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-
 import copy
 import sys
 import numpy as np
+import channel_model
 import rr_socp
 import rr_socp_server
 import time
@@ -172,26 +171,27 @@ def socp_info(routes, flow, config=None, solver=None, ids=None):
     id_to_idx = {id: idx for id, idx in zip(ids, range(n))}
     idx_to_id = {idx: id for id, idx in zip(ids, range(n))}
 
+    # TODO clean up printing
     for k in range(len(flow)):
         # flow info
-        print 'flow %d: %d -> %d, rate = %.2f, qos = %.2f:'\
-              % (k+1, flow[k].src, flow[k].dest, flow[k].rate, flow[k].qos)
+        print('flow %d: %d -> %d, rate = %.2f, qos = %.2f:'\
+              % (k+1, flow[k].src, flow[k].dest, flow[k].rate, flow[k].qos))
         # column header
         node_names = ['%6s' % i for i in ids]
         node_names[id_to_idx[flow[k].src]] = '%6s' % ('(s) ' + str(flow[k].src))
         node_names[id_to_idx[flow[k].dest]] = '%6s' % ('(d) ' + str(flow[k].dest))
-        print '   %6s|%s|%5s' % (' ', ''.join(map(str, node_names)), 'Tx')
-        print '   %s' % ('-' * (6 * (n+2) + 1))
+        print('   %6s|%s|%5s' % (' ', ''.join(map(str, node_names)), 'Tx'))
+        print('   %s' % ('-' * (6 * (n+2) + 1)))
         for i in range(n):
             num_str = ['%6.2f' % a if a > 0.01 else '%6s' % '-' for a in routes[i, :, k]]
             if sum(routes[i, :, k]) > 0.01:
                 num_str += ['|%5.2f' % sum(routes[i, :, k])]
             else:
                 num_str += ['|%5s' % '-']
-            print '   %6s|%s' % (node_names[i], ''.join(num_str))
-        print '   %6s|%s|' % ('', '-' * (6*n))
+            print('   %6s|%s' % (node_names[i], ''.join(num_str)))
+        print('   %6s|%s|' % ('', '-' * (6*n)))
         rx_str = ['%6.2f' % sum(routes[:, i, k]) if sum(routes[:, i, k]) > 0.01 else '%6s' % '-' for i in range(n)]
-        print '   %6s|%s' % ('Rx', ''.join(rx_str))
+        print('   %6s|%s' % ('Rx', ''.join(rx_str)))
 
     if config is not None and solver is not None:
         rate_mean, rate_var = solver.cm.predict(config)
@@ -227,8 +227,8 @@ def speed_test():
 
     # solve SOCP
 
-    channel_model = rr_socp.ChannelModel(print_values=True)
-    rrsolver = rr_socp.RobustRoutingSolver(channel_model)
+    cm = channel_model.ChannelModel(print_values=True)
+    rrsolver = rr_socp.RobustRoutingSolver(cm)
     for i in range(10):
         start = time.time()
         slack, routes, status = rrsolver.solve_socp(flows, x)
@@ -287,7 +287,7 @@ def infeasible_test(rate=0.5, confidence=0.9):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) is not 2:
+    if len(sys.argv) != 2:
         print('running all tests\n')
         speed_test()
         print('\n')
