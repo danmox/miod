@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rr_socp
+from . import rr_socp
 import numpy as np
 from socp.srv import RobustRoutingSOCP, RobustRoutingSOCPResponse
 import rospy
-from channel_model import ChannelModel
+from .channel_model import ChannelModel
 
 
 class RRSOCPServer:
@@ -38,7 +38,6 @@ class RRSOCPServer:
         if status == 'optimal':
             res.obj_fcn = slack
             res.routes = routes
-            res.qos = qos
 
         res.status = status
 

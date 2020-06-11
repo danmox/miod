@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import special, spatial, stats
 import cvxpy as cp
-from channel_model import ChannelModel
+from .channel_model import ChannelModel
 
 #
 # Robust Routing SOCP functions
@@ -156,9 +156,9 @@ class RobustRoutingSolver:
                 routing_vars = np.reshape(routes.value, (N,N,P), 'F')
             else:
                 routing_vars = routes.value
-            return slack.value[0], routing_vars, socp.status, qos_delivered
+            return slack.value[0], routing_vars, socp.status
 
-        return None, None, socp.status, None
+        return None, None, socp.status
 
     def cone_constraints(self, flows, x, id_to_idx):
         """
