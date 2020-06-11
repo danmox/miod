@@ -1,9 +1,9 @@
 import copy
 import sys
 import numpy as np
-import channel_model
-import rr_socp
-import rr_socp_server
+from . import channel_model
+from . import rr_socp
+from . import rr_socp_server
 import time
 from socp.srv import RobustRoutingSOCPRequest
 from socp.msg import Flow

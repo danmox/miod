@@ -1,8 +1,8 @@
 import numpy as np
 import time as systime
 from functools import partial
-from connectivity_optimization import ConnectivityOpt
-from socp.rr_socp import ChannelModel
+from .connectivity_optimization import ConnectivityOpt
+from socp.channel_model import ChannelModel
 
 import rospy
 import actionlib
@@ -314,14 +314,3 @@ class NetworkPlanner:
         else:
             np_error('unknown planner type: {}'.format(self.params['planner_type']))
             return
-
-
-if __name__ == '__main__':
-    try:
-        rospy.init_node('connectivity_network_planner')
-
-        network_planner = NetworkPlanner()
-        network_planner.run()
-
-    except rospy.ROSInterruptException:
-        pass
