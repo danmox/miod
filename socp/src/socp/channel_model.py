@@ -135,6 +135,6 @@ class PiecewiseChannel(ChannelModel):
         if dist > self.cutoff_dist:
             return np.zeros((2,1))
         elif dist > self.transition_dist:
-            return self.m * dist * diff
+            return self.m / dist * diff
         else:
             return ChannelModel.derivative(self, xi, xj)
