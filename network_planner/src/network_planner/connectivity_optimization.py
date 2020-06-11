@@ -4,7 +4,7 @@ import random
 import cvxpy as cp
 import matplotlib.pyplot as plt
 from scipy.linalg import null_space
-from socp.rr_socp import ChannelModel
+from socp.channel_model import ChannelModel
 from socp.rr_socp_tests import plot_config
 
 
@@ -53,14 +53,14 @@ class ConnectivityOpt:
                 if i in self.comm_idcs and j in self.comm_idcs:
                     xi_var = x[self.comm_idcs.index(i),:]
                     xj_var = x[self.comm_idcs.index(j),:]
-                    constraints += [Aij[i,j] == Rxixj + dRdxi.T * (xi_var - xi).T \
-                                                      + dRdxj.T * (xj_var - xj).T]
+                    constraints += [Aij[i,j] == Rxixj + dRdxi.T @ (xi_var - xi).T \
+                                                      + dRdxj.T @ (xj_var - xj).T]
                 elif i in self.comm_idcs:
                     xi_var = x[self.comm_idcs.index(i),:]
-                    constraints += [Aij[i,j] == Rxixj + dRdxi.T * (xi_var - xi).T]
+                    constraints += [Aij[i,j] == Rxixj + dRdxi.T @ (xi_var - xi).T]
                 elif j in self.comm_idcs:
                     xj_var = x[self.comm_idcs.index(j),:]
-                    constraints += [Aij[i,j] == Rxixj + dRdxj.T * (xj_var - xj).T]
+                    constraints += [Aij[i,j] == Rxixj + dRdxj.T @ (xj_var - xj).T]
                 else:
                     constraints += [Aij[i,j] == Rxixj]
 
@@ -71,7 +71,7 @@ class ConnectivityOpt:
         # 2nd smallest eigen value
 
         P = null_space(np.ones((1, self.agent_count)))
-        constraints += [P.T * Lij * P >> gamma*np.eye(self.agent_count-1)]
+        constraints += [P.T @ Lij @ P >> gamma*np.eye(self.agent_count-1)]
 
         #
         # solve problem
