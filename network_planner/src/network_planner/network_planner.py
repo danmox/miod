@@ -268,19 +268,20 @@ class NetworkPlanner:
             self.routing_vars = []
             return False
 
-        self.slack = res.slack
+        self.slack = res.obj_fcn
         self.routing_vars = np.reshape(np.asarray(res.routes),
                                        (self.agent_count, self.agent_count, len(self.comm_reqs)), 'F')
-        qos_msg = Float64MultiArray()
-        qos_msg.data = res.qos
-        self.qos_pub.publish(qos_msg)
+        # TODO compute delivered rate
+        # qos_msg = Float64MultiArray()
+        # qos_msg.data = res.qos
+        # self.qos_pub.publish(qos_msg)
 
         # pack and publish routing update message
 
         network_update = NetworkUpdate()
         for k in range(len(self.comm_reqs)):
             src_ip = self.id_to_ip[self.comm_reqs[k].src]
-            dest_ips = [self.id_to_ip[id] for id in self.comm_reqs[k].dest]
+            dest_ip = self.id_to_ip[self.comm_reqs[k].dest]
             for i in range(self.agent_count):
 
                 # TODO normalize routes to sum to 1 (but doing so causes the
@@ -296,7 +297,7 @@ class NetworkPlanner:
                 valid_ips = [self.id_to_ip[id] for id, val in zip(self.agent_ids, valid) if val]
                 prob_gws = [ProbGateway(ip, p) for ip, p in zip(valid_ips, routes[valid])]
                 node_ip = self.idx_to_ip[i]
-                network_update.routes += [PRTableEntry(node_ip, src_ip, ip, prob_gws) for ip in dest_ips]
+                network_update.routes.append(PRTableEntry(node_ip, src_ip, dest_ip, prob_gws))
 
         self.net_pub.publish(network_update)
 

@@ -3,7 +3,7 @@
 
 import rospy
 from network_planner.network_planner import NetworkPlanner
-from socp.msg import QoS
+from socp.msg import Flow
 
 
 if __name__ == '__main__':
@@ -12,16 +12,18 @@ if __name__ == '__main__':
         rospy.init_node(node_name)
 
         run_planner = True
-        if not rospy.has_param('/qos'):
+        if not rospy.has_param('/comm_reqs'):
             run_planner = False
-            rospy.logfatal('[{}] failed to fetch ROS param \'qos\''.format(node_name))
+            rospy.logfatal('[{}] failed to fetch ROS param \'comm_reqs\''.format(node_name))
         else:
-            qos_param = rospy.get_param('/qos')
+            comm_reqs_param = rospy.get_param('/comm_reqs')
 
+        method = Flow.CONFIDENCE
         if run_planner is True:
-            qos = [QoS(q['margin'], q['confidence'], q['src'], q['dest']) for q in qos_param]
+            # constructor is: Flow(rate, src, dest, method, qos)
+            comm_reqs = [Flow(f['rate'], f['src'], f['dest'], method, f['qos']) for f in comm_reqs_param]
 
-            network_planner = NetworkPlanner(qos)
+            network_planner = NetworkPlanner(comm_reqs)
             network_planner.run()
 
     except rospy.ROSInterruptException:

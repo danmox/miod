@@ -16,6 +16,7 @@
   <arg name="patrol_radius"          default="20.0"/> <!-- m -->
   <arg name="planner_type"           default="moving"/> <!-- fixed, moving -->
   <arg name="print_routes"           default="false"/>
+  <arg name="step_size"              default="0.5"/>
 
   <!-- quadrotor args -->
   <arg name="robot_description" default="$(find arl_unity_ros_abstract)/config/quadrotor.yaml"/>
@@ -54,6 +55,7 @@
     <param name="world_frame"         value="world"/>
     <param name="planner_type"        value="$(arg planner_type)"/>
     <param name="print_routes"        value="$(arg print_routes)"/>
+    <param name="step_size"           value="$(arg step_size)"/>
   </node>
 
   <!-- task (patrol) agents -->
