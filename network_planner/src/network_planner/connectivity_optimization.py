@@ -26,6 +26,9 @@ class ConnectivityOpt:
         v, _ = np.linalg.eigh(lap)
         return v[1]
 
+    def get_comm_config(self):
+        return self.config[self.comm_idcs]
+
     def update_network_config(self, step_size):
 
         gamma = cp.Variable((1))
