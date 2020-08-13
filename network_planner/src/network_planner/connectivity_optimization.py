@@ -102,12 +102,12 @@ class ConnectivityOpt:
         update = 1.0
         lambda2_prev = 0.0
         it = 0
-        while update > tol and it < 1000:
+        while update > tol and it < max_its:
             lambda2 = self.update_network_config(step_size)
             if viz:
                 l2_hist = np.append(l2_hist, [lambda2])
                 plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
-                            task_ids=task_ids, title="it: {:3d}, l2 = {:.3f}".format(it, lambda2))
+                            task_ids=task_ids, title="it: {:3d}, l2 = {:.3f}".format(it+1, lambda2))
                 axes[1].cla()
                 axes[1].plot(range(0,it+2), l2_hist, 'r', linewidth=2)
                 axes[1].set_title("update = {:.4e}".format(lambda2-lambda2_prev))

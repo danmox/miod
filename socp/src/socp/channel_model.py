@@ -89,7 +89,7 @@ class ChannelModel:
 
 class PiecewiseChannel(ChannelModel):
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0,
-                 transition_dist=15.0):
+                 transition_dist=16.4):
         ChannelModel.__init__(self, print_values, n0, n, l0, a, b)
         self.transition_dist = transition_dist
 
