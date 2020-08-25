@@ -98,9 +98,13 @@ class ConnectivityOpt:
         # function should be notified that the optimization failed
 
         conn_prev = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+
+        if prob.status != 'optimal':
+            return conn_prev, False
+
         conn_new  = ConnectivityOpt.connectivity(self.cm, self.x_task, x.value)
 
-        if prob.status != 'optimal' or conn_new < conn_prev:
+        if conn_new < conn_prev:
             return conn_prev, False
 
         self.x_comm = x.value
