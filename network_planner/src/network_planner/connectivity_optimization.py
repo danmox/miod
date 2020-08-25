@@ -1,11 +1,18 @@
 import numpy as np
-from math import pi
+from math import pi, floor, log10
 import random
 import cvxpy as cp
 import matplotlib.pyplot as plt
 from scipy.linalg import null_space
 from socp.channel_model import ChannelModel
 from socp.rr_socp_tests import plot_config
+
+
+def round_sf(x, significant_figures):
+    if x != 0.0:
+        return round(x, -int(floor(log10(abs(x))))+significant_figures-1)
+    else:
+        return 0.0
 
 
 class ConnectivityOpt:
@@ -83,47 +90,61 @@ class ConnectivityOpt:
         prob = cp.Problem(cp.Maximize(gamma), constraints)
         prob.solve()
 
-        if prob.status != 'optimal':
-            print(prob.status)
+        # only update the configuration if a new optimum was found
+        #
+        # NOTE with agressive step sizes the result of the optimization may be
+        # a configuration that has a worse value for connectivity; in this case
+        # the network team configuration should not be updated at the calling
+        # function should be notified that the optimization failed
+
+        conn_prev = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+        conn_new  = ConnectivityOpt.connectivity(self.cm, self.x_task, x.value)
+
+        if prob.status != 'optimal' or conn_new < conn_prev:
+            return conn_prev, False
 
         self.x_comm = x.value
         self.config[self.comm_idcs] = self.x_comm
-        return ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+        return conn_new, True
+
 
     # for use on a static task team only
-    def maximize_connectivity(self, step_size=0.2, tol=1e-10, max_its=1000, viz=False):
+    def maximize_connectivity(self, step_size=2.0, tol=1e-6, max_its=1000, viz=False):
 
         if viz:
             fig, axes = plt.subplots(1,2)
-            l2_hist = np.zeros((1,))
-            l2_hist[0] = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
             task_ids = set(range(self.agent_count)) - set(self.comm_idcs)
 
-        update = 1.0
-        lambda2_prev = 0.0
-        it = 0
-        while update > tol and it < max_its:
-            lambda2 = self.update_network_config(step_size)
+        # track lambda 2 over time for stopping crit and visualization
+        l2_hist = np.zeros((1,))
+        l2_hist[0] = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
+
+        for it in range(max_its):
+            lambda2, success = self.update_network_config(step_size)
+
+            # the optimization failed, most likely due to an agressive step size
+            if not success:
+                step_size *= 0.5
+                continue
+
+            # check if change in lambda 2 has "flatlined"
+            l2_hist = np.append(l2_hist, [lambda2])
+            m = np.polyfit(range(l2_hist[-10::].shape[0]), l2_hist[-10::], 1)[0]
+
             if viz:
-                l2_hist = np.append(l2_hist, [lambda2])
                 plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
-                            task_ids=task_ids, title="it: {:3d}, l2 = {:.3f}".format(it+1, lambda2))
+                            task_ids=task_ids,
+                            title=f'ss = {round_sf(step_size,2)}, m = {round_sf(m,2)}')
                 axes[1].cla()
-                axes[1].plot(range(0,it+2), l2_hist, 'r', linewidth=2)
-                axes[1].set_title("update = {:.4e}".format(lambda2-lambda2_prev))
+                axes[1].plot(l2_hist, 'r', linewidth=2)
+                axes[1].set_title(f'it = {it}, update = {round_sf(np.diff(l2_hist[-2::])[0],2)}')
                 plt.tight_layout()
                 plt.pause(0.01)
-            update = lambda2 - lambda2_prev
-            lambda2_prev = lambda2
-            it += 1
 
-        if viz:
-            plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
-                        task_ids=task_ids, title="total its: {:3d}".format(it-1))
-            axes[1].cla()
-            axes[1].plot(range(0,it+1), l2_hist, 'r', linewidth=2)
-            axes[1].set_title("l2 = {:.3f}".format(lambda2))
-            plt.tight_layout()
-            plt.show()
+            # stopping criterion
+            if abs(m) < tol:
+                break
+
+        plt.show()
 
         return lambda2
