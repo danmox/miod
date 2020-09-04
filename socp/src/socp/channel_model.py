@@ -138,3 +138,68 @@ class PiecewiseChannel(ChannelModel):
             return self.m / dist * diff
         else:
             return ChannelModel.derivative(self, xi, xj)
+
+
+class LinearChannel:
+    def __init__(self, print_values=False, max_range=30.0):
+        self.max_range = max_range
+        if print_values is True:
+            print('max_range = %.3f' % self.max_range)
+
+    def predict(self, x):
+        """
+        compute the expected channel rates and variances for each link in the
+        network with node positions given by x
+
+        Inputs:
+          x: a Nx2 list of node positions [x y]
+
+        Outputs:
+          rate: matrix of expected channel rates between each pair of agents
+          var: matrix of channel rate variances between each pair of agents
+        """
+
+        dist = spatial.distance_matrix(x, x)
+        rate = np.maximum(-1.0/self.max_range * dist + 1.0, 0.0)
+        rate[np.eye(dist.shape[0], dtype=bool)] = 0.0
+        var = np.zeros(dist.shape)
+        return rate, var
+
+    def predict_link(self, xi, xj):
+        """
+        compute the expected channel rate and variance of a single link
+
+        Inputs:
+          xi: 1x2 node position
+          xj: 1x2 node position
+
+        Outputs:
+          rate: expected channel rate between xi, xj
+          var: variance ("confidence") in expected channel rate between xi, xj
+        """
+
+        rate = max(-1.0/self.max_range * np.linalg.norm(xi - xj) + 1.0, 0.0)
+        var = 0.0
+        return rate, var
+
+    def derivative(self, xi, xj):
+        """
+        compute the derivative of channel rate function with respect to xi (note:
+        the derivative with respect to xj can be found by swapping the inputs)
+
+        Inputs:
+          xi: [x y] node position
+          xj: [x y] node position
+
+        Outputs:
+          der: 2x1 derivative of Rij w.r.t xi
+        """
+
+        xi = np.reshape(xi, (2,1))
+        xj = np.reshape(xj, (2,1))
+
+        diff = xi - xj
+        dist = np.linalg.norm(xi - xj)
+        if dist > self.max_range:
+            return np.zeros((2,1))
+        return -1.0 / self.max_range * diff / dist
