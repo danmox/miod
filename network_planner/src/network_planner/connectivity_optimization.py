@@ -149,6 +149,7 @@ class ConnectivityOpt:
             if abs(m) < tol:
                 break
 
-        plt.show()
+        if viz:
+            plt.show()
 
         return lambda2
