@@ -144,6 +144,8 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
 
             ax.plot(line[:,0], line[:,1], lw=2, c=cmap.to_rgba(rates[i,j]))
 
+        plt.colorbar(cmap, ax=ax)
+
     # plot agent positions as circles
 
     if len(x) != len(id_mask):
