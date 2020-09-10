@@ -27,21 +27,22 @@ def numpy_to_ros(np_config, z=0.):
     return ros_config
 
 def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
-                title=None, ids=None, task_ids=None, routes=None):
+                title=None, ids=None, task_ids=None, routes=None, rates=None):
     """
     plot the 2D spatial configuration of the network
 
     Input:
       config - a list of geometry_msgs.Point msgs
       Optional Args:
-        ax - axes to plot on
-        pause - avoids blocking by continuing after a short pause
+        ax         - axes to plot on
+        pause      - avoids blocking by continuing after a short pause
         clear_axes - clear ax before plotting
-        show - call plt.show()
-        title - string of text to set as title of figure
-        ids - as list of ids to use for agent labels
-        task_ids - ids of task agents
-        routes - draw lines denoting route usage between nodes
+        show       - call plt.show()
+        title      - string of text to set as title of figure
+        ids        - as list of ids to use for agent labels
+        task_ids   - ids of task agents
+        routes     - draw lines denoting route usage between nodes
+        rates      - draw lines denoting rates between agents
     """
     if type(config) is list:
         x = np.asarray([pt.x for pt in config])
@@ -122,6 +123,26 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
         for d in lines:
             ax.plot(d['line_x'], d['line_y'], lw=lw, c=cmap.to_rgba(d['rate']))
             ax.plot(d['arrow_x'], d['arrow_y'], lw=lw, c=cmap.to_rgba(d['rate']))
+
+    if routes is None and rates is not None:
+        cmap = cm.ScalarMappable(norm=Normalize(vmin=0.0, vmax=1.0, clip=True), cmap='cool')
+        for i, j in [(i,j) for i in range(len(x)) for j in range(i+1,len(x))]:
+            if rates[i,j] == 0.0:
+                continue
+
+            Pi = np.asarray([x[i], y[i]])
+            Pj = np.asarray([x[j], y[j]])
+
+            a1 = np.arctan2(Pj[1]-Pi[1], Pj[0]-Pi[0])
+            a2 = np.arctan2(Pi[1]-Pj[1], Pi[0]-Pj[0])
+
+            # line segment endpoints
+            scale = 0.04 * window_scale
+            line = np.zeros((2,2))
+            line[0,:] = Pi + scale*np.asarray([np.cos(a1), np.sin(a1)])
+            line[1,:] = Pj + scale*np.asarray([np.cos(a2), np.sin(a2)])
+
+            ax.plot(line[:,0], line[:,1], lw=2, c=cmap.to_rgba(rates[i,j]))
 
     # plot agent positions as circles
 
