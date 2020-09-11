@@ -104,16 +104,18 @@ class ConnectivityOpt:
 
         conn_new  = ConnectivityOpt.connectivity(self.cm, self.x_task, x.value)
 
+        success = True
         if conn_new < conn_prev:
-            return conn_prev, False
+            success = False
 
         self.x_comm = x.value
         self.config[self.comm_idcs] = self.x_comm
-        return conn_new, True
+        return conn_new, success
 
 
     # for use on a static task team only
-    def maximize_connectivity(self, step_size=2.0, tol=1e-6, max_its=1000, viz=False):
+    def maximize_connectivity(self, step_size=2.0, min_step=0.1, tol=1e-6,
+                              hist=10, max_its=100, viz=False):
 
         if viz:
             fig, axes = plt.subplots(1,2)
@@ -123,30 +125,34 @@ class ConnectivityOpt:
         l2_hist = np.zeros((1,))
         l2_hist[0] = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
 
+        best_lambda2 = 0.0
         for it in range(max_its):
             lambda2, success = self.update_network_config(step_size)
 
             # the optimization failed, most likely due to an agressive step size
             if not success:
-                step_size *= 0.5
+                step_size = max(min_step, 0.75*step_size)
                 continue
 
             # check if change in lambda 2 has "flatlined"
             l2_hist = np.append(l2_hist, [lambda2])
-            m = np.polyfit(range(l2_hist[-10::].shape[0]), l2_hist[-10::], 1)[0]
+            l2_line = np.polyfit(range(min(l2_hist.shape[0],hist)), l2_hist[-hist:], 1)
+            hist_diff = np.max(np.abs(np.diff(l2_hist[-hist:])))
 
             if viz:
                 plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
                             task_ids=task_ids,
-                            title=f'ss = {round_sf(step_size,2)}, m = {round_sf(m,2)}')
+                            title=f'it = {it}, ss = {round_sf(step_size,2)}')
                 axes[1].cla()
-                axes[1].plot(l2_hist, 'r', linewidth=2)
-                axes[1].set_title(f'it = {it}, update = {round_sf(np.diff(l2_hist[-2::])[0],2)}')
+                axes[1].plot(np.maximum(np.asarray([-hist, 0]) + l2_hist.shape[0] - 1, 0),
+                             l2_line @ np.asarray([[0,min(l2_hist.shape[0],hist)-1],[1,1]]), 'k', lw=2)
+                axes[1].plot(l2_hist, 'r', lw=2)
+                axes[1].set_title(f'm = {round_sf(abs(l2_line[0]),2)}, diff = {round_sf(hist_diff,2)}')
                 plt.tight_layout()
                 plt.pause(0.01)
 
-            # stopping criterion
-            if abs(m) < tol:
+            # stopping criterion: the change in the value of lambda2 has stagnated
+            if abs(l2_line[0]) < tol and hist_diff < 1e-5:
                 break
 
         if viz:
