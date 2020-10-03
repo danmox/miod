@@ -17,19 +17,15 @@ from matplotlib.colors import Normalize
 # helps the figures to be readable on hidpi screens
 mpl.rcParams['figure.dpi'] = 200
 
-def numpy_to_ros(np_config, z=0.):
-    """
-    convert a Nx2 numpy array of 2D node positions to a list of
-    geometry_msgs.Points
 
-    """
-    ros_config = [Point(np_config[i,0], np_config[i,1], z) for i in range(np_config.shape[0])]
-    return ros_config
+def numpy_to_ros(np_config, z=0.):
+    """Convert numpy position arrays to a list of geometry_msgs.Points"""
+    return [Point(np_config[i,0], np_config[i,1], z) for i in range(np_config.shape[0])]
+
 
 def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
                 title=None, ids=None, task_ids=None, routes=None, rates=None):
-    """
-    plot the 2D spatial configuration of the network
+    """Plot the 2D spatial configuration of the network
 
     Input:
       config - a list of geometry_msgs.Point msgs
@@ -43,7 +39,9 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
         task_ids   - ids of task agents
         routes     - draw lines denoting route usage between nodes
         rates      - draw lines denoting rates between agents
+
     """
+
     if type(config) is list:
         x = np.asarray([pt.x for pt in config])
         y = np.asarray([pt.y for pt in config])
@@ -174,8 +172,7 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
 
 
 def socp_info(routes, flow, config=None, solver=None, ids=None):
-    """
-    print information about the robust routing solution
+    """Print information about the robust routing solution
 
     Input:
       routes: an NxNxK array of routing variables
@@ -185,6 +182,7 @@ def socp_info(routes, flow, config=None, solver=None, ids=None):
       ids: (optional) node ids to use instead of 1,...,n
 
     """
+
     assert len(flow) == routes.shape[2]
     n = routes.shape[0]
     if ids is not None:
@@ -250,7 +248,7 @@ def speed_test():
 
     # solve SOCP
 
-    cm = channel_model.ChannelModel(print_values=True)
+    cm = channel_model.PathLossModel(print_values=True)
     rrsolver = rr_socp.RobustRoutingSolver(cm)
     for i in range(10):
         start = time.time()
