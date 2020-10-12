@@ -4,7 +4,6 @@ import random
 import cvxpy as cp
 import matplotlib.pyplot as plt
 from scipy.linalg import null_space
-from socp.channel_model import ChannelModel
 from socp.rr_socp_tests import plot_config
 
 
