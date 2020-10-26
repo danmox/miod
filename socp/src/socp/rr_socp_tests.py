@@ -24,7 +24,8 @@ def numpy_to_ros(np_config, z=0.):
 
 
 def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
-                title=None, ids=None, task_ids=None, routes=None, rates=None):
+                title=None, ids=None, task_ids=None, routes=None, rates=None,
+                bbx=None):
     """Plot the 2D spatial configuration of the network
 
     Input:
@@ -39,6 +40,7 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
         task_ids   - ids of task agents
         routes     - draw lines denoting route usage between nodes
         rates      - draw lines denoting rates between agents
+        bbx        - bounding box to use for figure area
 
     """
 
@@ -68,9 +70,13 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
     # draw routes between each agent
 
     ax.axis('scaled')
-    bbx = np.asarray([min(x), max(x), min(y), max(y)])
-    window_scale = np.max(bbx[1::2] - bbx[0::2])
-    ax.axis(bbx + np.asarray([-1, 1, -1, 1])*0.1*window_scale)
+    if bbx is None:
+        bbx = np.asarray([min(x), max(x), min(y), max(y)])
+        window_scale = np.max(bbx[1::2] - bbx[0::2])
+        ax.axis(bbx + np.asarray([-1, 1, -1, 1])*0.1*window_scale)
+    else:
+        window_scale = np.max(bbx[1::2] - bbx[0::2])
+        ax.axis(bbx)
 
     if routes is not None:
 
