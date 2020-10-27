@@ -150,9 +150,10 @@ class ConnectivityOpt:
             hist_diff = np.max(np.abs(np.diff(l2_hist[-hist:])))
 
             if viz:
+                rates, _ = self.cm.predict(self.config)
+                title = f'it = {it}, ss = {round_sf(step_size,2)}'
                 plot_config(self.config, ax=axes[0], clear_axes=True, show=False,
-                            task_ids=task_ids,
-                            title=f'it = {it}, ss = {round_sf(step_size,2)}')
+                            task_ids=task_ids, rates=rates, title=title)
                 axes[1].cla()
                 axes[1].plot(np.maximum(np.asarray([-hist, 0]) + l2_hist.shape[0] - 1, 0),
                              l2_line @ np.asarray([[0,min(l2_hist.shape[0],hist)-1],[1,1]]), 'k', lw=2)
@@ -167,6 +168,8 @@ class ConnectivityOpt:
                 break
 
         if viz:
+            axes[0].set_title(f'total its = {it}, ss = {round_sf(step_size,2)}')
+            plt.draw()
             plt.show()
 
         return lambda2
