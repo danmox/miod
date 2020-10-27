@@ -17,8 +17,8 @@ def round_sf(x, significant_figures):
 class ConnectivityOpt:
     def __init__(self, channel_model, x_task, x_comm):
         self.cm = channel_model
-        self.x_task = x_task
-        self.x_comm = x_comm
+        self.x_task = x_task.astype(np.double)
+        self.x_comm = x_comm.astype(np.double)
         self.config = np.vstack((self.x_task, self.x_comm))
         self.comm_count = self.x_comm.shape[0]
         self.agent_count = self.config.shape[0]
