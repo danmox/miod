@@ -35,7 +35,7 @@ class ConnectivityOpt:
     def get_comm_config(self):
         return self.config[self.comm_idcs]
 
-    def update_network_config(self, step_size):
+    def update_network_config(self, step_size, verbose=False):
 
         gamma = cp.Variable((1))
         x = cp.Variable((self.comm_count, 2))
@@ -89,24 +89,34 @@ class ConnectivityOpt:
         prob = cp.Problem(cp.Maximize(gamma), constraints)
         prob.solve()
 
-        # only update the configuration if a new optimum was found
-        #
-        # NOTE with agressive step sizes the result of the optimization may be
-        # a configuration that has a worse value for connectivity; in this case
-        # the network team configuration should not be updated at the calling
-        # function should be notified that the optimization failed
-
         conn_prev = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
 
         if prob.status != 'optimal':
+            if verbose: print(f'optimization failed with status {prob.status}')
             return conn_prev, False
+
+        # only update the configuration if a new optimum was found
+        #
+        # NOTE with agressive step sizes the result of the optimization may be
+        # a configuration that has a worse value for connectivity; in most
+        # cases the optimization can recover from this but the calling thread
+        # should be notified in order to reduce its step size
 
         conn_new  = ConnectivityOpt.connectivity(self.cm, self.x_task, x.value)
 
-        success = True
-        if conn_new < conn_prev:
-            success = False
+        # NOTE the one case that the optimization cannot recover from is
+        # accidentally driving the problem infeasible due to the linearized
+        # channel model operating at or near it's cutoff distance; in this
+        # case, the configuration should not be updated
+        if conn_new < 1e-5:
+            if verbose: print(f'optimization close to infeasibility ({conn_new}), updating nothing')
+            return conn_prev, False
 
+        success = True if conn_new > conn_prev else False
+
+        # NOTE if the connectivity gets worse but is not zero we still update
+        # the configuration to help with fast convergence
+        if verbose: print(f'updating comm agent configuration with status {success}')
         self.x_comm = x.value
         self.config[self.comm_idcs] = self.x_comm
         return conn_new, success
@@ -114,7 +124,7 @@ class ConnectivityOpt:
 
     # for use on a static task team only
     def maximize_connectivity(self, step_size=2.0, min_step=0.1, tol=1e-6,
-                              hist=10, max_its=100, viz=False):
+                              hist=10, max_its=100, viz=False, verbose=False):
 
         if viz:
             fig, axes = plt.subplots(1,2)
@@ -126,12 +136,13 @@ class ConnectivityOpt:
 
         best_lambda2 = 0.0
         for it in range(max_its):
-            lambda2, success = self.update_network_config(step_size)
+            if verbose: print(f'iteration {it+1}')
+            lambda2, success = self.update_network_config(step_size, verbose)
 
             # the optimization failed, most likely due to an agressive step size
             if not success:
                 step_size = max(min_step, 0.75*step_size)
-                continue
+                if verbose: print(f'reduced step size to {step_size}')
 
             # check if change in lambda 2 has "flatlined"
             l2_hist = np.append(l2_hist, [lambda2])
@@ -152,6 +163,7 @@ class ConnectivityOpt:
 
             # stopping criterion: the change in the value of lambda2 has stagnated
             if abs(l2_line[0]) < tol and hist_diff < 1e-5:
+                if verbose: print(f'stopping criterion reached')
                 break
 
         if viz:
