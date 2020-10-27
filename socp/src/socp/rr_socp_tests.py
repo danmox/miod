@@ -129,7 +129,7 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
             ax.plot(d['arrow_x'], d['arrow_y'], lw=lw, c=cmap.to_rgba(d['rate']))
 
     if routes is None and rates is not None:
-        cmap = cm.ScalarMappable(norm=Normalize(vmin=0.0, vmax=1.0, clip=True), cmap='cool')
+        cmap = cm.ScalarMappable(norm=Normalize(vmin=0.0, vmax=1.0, clip=True), cmap='plasma')
         for i, j in [(i,j) for i in range(len(x)) for j in range(i+1,len(x))]:
             if rates[i,j] == 0.0:
                 continue
@@ -148,7 +148,7 @@ def plot_config(config, ax=None, pause=None, clear_axes=False, show=True,
 
             ax.plot(line[:,0], line[:,1], lw=2, c=cmap.to_rgba(rates[i,j]))
 
-        plt.colorbar(cmap, ax=ax)
+        # plt.colorbar(cmap, ax=ax)
 
     # plot agent positions as circles
 
