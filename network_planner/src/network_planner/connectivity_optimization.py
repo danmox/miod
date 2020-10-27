@@ -123,8 +123,9 @@ class ConnectivityOpt:
 
 
     # for use on a static task team only
-    def maximize_connectivity(self, step_size=2.0, min_step=0.1, tol=1e-6,
-                              hist=10, max_its=100, viz=False, verbose=False):
+    def maximize_connectivity(self, init_step_size=0.5, min_step_size=0.01,
+                              m_tol=1e-6, h_tol=1e-5, hist=10, max_its=100,
+                              viz=False, verbose=False):
 
         if viz:
             fig, axes = plt.subplots(1,2)
@@ -135,13 +136,14 @@ class ConnectivityOpt:
         l2_hist[0] = ConnectivityOpt.connectivity(self.cm, self.x_task, self.x_comm)
 
         best_lambda2 = 0.0
+        step_size = init_step_size
         for it in range(max_its):
             if verbose: print(f'iteration {it+1}')
             lambda2, success = self.update_network_config(step_size, verbose)
 
             # the optimization failed, most likely due to an agressive step size
             if not success:
-                step_size = max(min_step, 0.75*step_size)
+                step_size = max(min_step_size, 0.75*step_size)
                 if verbose: print(f'reduced step size to {step_size}')
 
             # check if change in lambda 2 has "flatlined"
@@ -163,7 +165,7 @@ class ConnectivityOpt:
                 plt.pause(0.01)
 
             # stopping criterion: the change in the value of lambda2 has stagnated
-            if abs(l2_line[0]) < tol and hist_diff < 1e-5:
+            if abs(l2_line[0]) < m_tol and hist_diff < h_tol:
                 if verbose: print(f'stopping criterion reached')
                 break
 
