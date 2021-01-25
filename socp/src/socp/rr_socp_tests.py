@@ -237,7 +237,7 @@ def speed_test():
     task_count = 3
     comm_count = 6
 
-    rate = 0.10
+    rate = 0.05
     conf = 0.70
     ids = [0, 1, 2]
     flows = [Flow(rate, s, d, Flow.CONFIDENCE, conf) for s in ids for d in ids if d != s]
@@ -259,7 +259,7 @@ def speed_test():
     for i in range(10):
         start = time.time()
         slack, routes, status = rrsolver.solve_socp(flows, x)
-        print('found solution in {:.4f} second'.format(time.time() - start))
+        print('found {} solution in {:.4f} second'.format(status,time.time() - start))
 
 
 def simple_routing_test(rate=0.1, conf=0.7):
