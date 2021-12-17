@@ -4,10 +4,12 @@ from . import rr_socp
 import numpy as np
 from socp.srv import RobustRoutingSOCP, RobustRoutingSOCPResponse
 import rospy
-from .channel_model import ChannelModel
+from .channel_model import PathLossModel as ChannelModel
 
 
 class RRSOCPServer:
+    """A ROS wrapper for the RobustRouting class"""
+
     def __init__(self, fetch_params=True, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         if fetch_params:
             n0 = rospy.get_param("/N0")

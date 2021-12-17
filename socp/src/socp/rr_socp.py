@@ -1,105 +1,19 @@
 import numpy as np
 from scipy import special, spatial, stats
 import cvxpy as cp
-from .channel_model import ChannelModel
+from .channel_model import PathLossModel as ChannelModel
+from .channel_model import dbm2mw
 
 #
 # Robust Routing SOCP functions
 #
-
-def dbm2mw(dbm):
-    return 10.0 ** (np.asarray(dbm) / 10.0)
-
-
-class ChannelModel:
-    def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
-        self.L0 = l0                # transmit power (dBm)
-        self.n = n                  # decay rate
-        self.N0 = n0                # noise at receiver (dBm)
-        self.a = a                  # sigmoid parameter 1
-        self.b = b                  # sigmoid parameter 2
-        self.PL0 = dbm2mw(self.L0)  # transmit power (mW)
-        self.PN0 = dbm2mw(self.N0)  # noise at receiver (mW)
-        if print_values is True:
-            print('L0 = %.3f' % self.L0)
-            print('n  = %.3f' % self.n)
-            print('N0 = %.3f' % self.N0)
-            print('a  = %.3f' % self.a)
-            print('b  = %.3f' % self.b)
-
-    def predict(self, x):
-        """
-        compute the expected channel rates and variances for each link in the
-        network with node positions given by x
-
-        Inputs:
-          x: a Nx2 list of node positions [x y]
-
-        Outputs:
-          rate: matrix of expected channel rates between each pair of agents
-          var: matrix of channel rate variances between each pair of agents
-        """
-
-        d = spatial.distance_matrix(x, x)
-        dist_mask = ~np.eye(d.shape[0], dtype=bool)
-        power = np.zeros(d.shape)
-        power[dist_mask] = dbm2mw(self.L0 - 10 * self.n * np.log10(d[dist_mask]))
-        rate = special.erf(np.sqrt(power / self.PN0))
-        var = (self.a * d / (self.b + d)) ** 2
-        return rate, var
-
-    def predict_link(self, xi, xj):
-        """
-        compute the expected channel rate and variance of a single link
-
-        Inputs:
-          xi: 1x2 node position
-          xj: 1x2 node position
-
-        Outputs:
-          rate: expected channel rate between xi, xj
-          var: variance ("confidence") in expected channel rate between xi, xj
-        """
-
-        d = np.linalg.norm(xi - xj)
-        power = dbm2mw(self.L0 - 10 * self.n * np.log10(d))
-        rate = special.erf(np.sqrt(power / self.PN0))
-        var = (self.a * d / (self.b + d)) ** 2
-        return rate, var
-
-    def derivative(self, xi, xj):
-        """
-        compute the derivative of channel rate function with respect to xi (note:
-        the derivative with respect to xj can be found by swapping the inputs)
-
-        Inputs:
-          xi: [x y] node position
-          xj: [x y] node position
-
-        Outputs:
-          der: 2x1 derivative of Rij w.r.t xi
-        """
-
-        xi = np.reshape(xi, (2,1))
-        xj = np.reshape(xj, (2,1))
-
-        dist = np.linalg.norm(xi - xj)
-        if dist < 1e-6:
-            return np.zeros((2,1))
-        der = - 10.0**(self.L0/20) * self.n * np.sqrt(dist ** (-self.n) / self.PN0) \
-            * np.exp(-10.0**(self.L0 / 10.0) * dist**(-self.n) / self.PN0) \
-            / (np.sqrt(np.pi) * dist) * (xi - xj) / dist
-        return der
-
 
 class RobustRoutingSolver:
     def __init__(self, channel_model):
         self.cm = channel_model
 
     def solve_socp(self, flows, x, idx_to_id=None, reshape_routes=False):
-        """
-        solve the robust routing problem for the given network requirements and
-        configuration
+        """Solve the robust routing problem for the given config. / reqs.
 
         Inputs:
           flows: a list of socp.Flow messages
@@ -110,6 +24,7 @@ class RobustRoutingSolver:
           slack: slack of the associated robust routing solution
           routes: optimal routing variables
           status: 'optimal' if a soln was found
+
         """
 
         N = x.shape[0]
@@ -161,9 +76,7 @@ class RobustRoutingSolver:
         return None, None, socp.status
 
     def cone_constraints(self, flows, x, id_to_idx):
-        """
-        compute the coefficient matrices and vectors of the 2nd order
-        constraints of the robust routing problem.
+        """Compute constraint coefficient matrices for the robust rouing prob.
 
         2nd order cone constraints of the form:
         ||A*y + b|| <= c^T*y + d
@@ -183,6 +96,7 @@ class RobustRoutingSolver:
           zero_vars: which optimization variables can safely be set to zero
           conf: the probabilistic confidence of each constraint
           m_ik: the required rate margin of each constraint
+
         """
 
         assert x.shape[1] == 2

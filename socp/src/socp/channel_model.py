@@ -3,10 +3,22 @@ from scipy import special, spatial, stats
 
 
 def dbm2mw(dbm):
+    """Convert between decible-milliwatts (dBm) and milliwatts"""
     return 10.0 ** (np.asarray(dbm) / 10.0)
 
 
-class ChannelModel:
+class PathLossModel:
+    """A distance dependent channel model with log normal fading.
+
+    This class implements the distance dependent path loss with log-normal
+    fading channel model from [1]. See section 4.1 and M1 in section 4.3 for
+    details.
+
+    [1] Fink, Jonathan. "Communication for teams of networked robots." PhD
+    Thesis (2011).
+
+    """
+
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         self.L0 = l0                # transmit power (dBm)
         self.n = n                  # decay rate
@@ -23,9 +35,7 @@ class ChannelModel:
             print('b  = %.3f' % self.b)
 
     def predict(self, x):
-        """
-        compute the expected channel rates and variances for each link in the
-        network with node positions given by x
+        """Compute the expected channel rate and variance for a team of agents
 
         Inputs:
           x: a Nx2 list of node positions [x y]
@@ -33,6 +43,7 @@ class ChannelModel:
         Outputs:
           rate: matrix of expected channel rates between each pair of agents
           var: matrix of channel rate variances between each pair of agents
+
         """
 
         d = spatial.distance_matrix(x, x)
@@ -44,8 +55,7 @@ class ChannelModel:
         return rate, var
 
     def predict_link(self, xi, xj):
-        """
-        compute the expected channel rate and variance of a single link
+        """Compute the expected channel rate and variance of a single link
 
         Inputs:
           xi: 1x2 node position
@@ -54,6 +64,7 @@ class ChannelModel:
         Outputs:
           rate: expected channel rate between xi, xj
           var: variance ("confidence") in expected channel rate between xi, xj
+
         """
 
         d = np.linalg.norm(xi - xj)
@@ -63,16 +74,18 @@ class ChannelModel:
         return rate, var
 
     def derivative(self, xi, xj):
-        """
-        compute the derivative of channel rate function with respect to xi (note:
-        the derivative with respect to xj can be found by swapping the inputs)
+        """Compute the derivative of the channel rate function w.r.t xi
+
+        Note: the derivative of the channel with respect to xj can be found by
+        swapping the inputs (i.e.: derivative(xj, xi))
 
         Inputs:
-          xi: [x y] node position
-          xj: [x y] node position
+          xi: [x, y] node position
+          xj: [x, y] node position
 
         Outputs:
           der: 2x1 derivative of Rij w.r.t xi
+
         """
 
         xi = np.reshape(xi, (2,1))
@@ -87,25 +100,51 @@ class ChannelModel:
         return der
 
 
-class PiecewiseChannel(ChannelModel):
+class PiecewisePathLossModel(PathLossModel):
+    """A piecewise distance dependent channel model with log normal fading.
+
+    This class combines the distance dependent path loss with log-normal fading
+    channel model from [1] (see section 4.1 and M1 in section 4.3 for details)
+    with a linear model at long distances that ensures the predicted rate goes
+    to zero as the distance gets large. Note that M1 by itself never quite goes
+    to zero even as the distance grows well beyond the distance two agents can
+    communicate; hence the need for a linear section at long distances that
+    ensures this desired behavior.
+
+    [1] Fink, Jonathan. "Communication for teams of networked robots." PhD
+    Thesis (2011).
+
+    """
+
     def __init__(self, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0,
                  transition_dist=16.4):
-        ChannelModel.__init__(self, print_values, n0, n, l0, a, b)
+        PathLossModel.__init__(self, print_values, n0, n, l0, a, b)
         self.transition_dist = transition_dist
 
         # find the slope of R(xi, xj) at the cuttoff distance; this will serve
         # as the slope of the linear section that decays to zero
-        dRdd = ChannelModel.derivative(self, np.asarray([transition_dist, 0.0]), np.zeros((2,)))
+        dRdd = PathLossModel.derivative(self, np.asarray([transition_dist, 0.0]), np.zeros((2,)))
         self.m = dRdd[0].item() # by construction dR/dy = 0; dR/dx = slope (change in distance)
 
         # find the y-intercept of the linear portion
-        trans_rate, _ = ChannelModel.predict_link(self, np.asarray([transition_dist, 0.0]), np.zeros((2,)))
+        trans_rate, _ = PathLossModel.predict_link(self, np.asarray([transition_dist, 0.0]), np.zeros((2,)))
         self.b = trans_rate - self.m * transition_dist
 
         self.cutoff_dist = - self.b / self.m # when the rate drops to zero
 
     def predict(self, x):
-        rate, var = ChannelModel.predict(self, x)
+        """Compute the expected channel rate and variance for a team of agents
+
+        Inputs:
+          x: a Nx2 list of node positions [x y]
+
+        Outputs:
+          rate: matrix of expected channel rates between each pair of agents
+          var: matrix of channel rate variances between each pair of agents
+
+        """
+
+        rate, var = PathLossModel.predict(self, x)
 
         edm = spatial.distance_matrix(x, x)
         dist_mask =  edm > self.transition_dist
@@ -116,7 +155,19 @@ class PiecewiseChannel(ChannelModel):
         return rate, var
 
     def predict_link(self, xi, xj):
-        rate, var = ChannelModel.predict_link(self, xi, xj)
+        """Compute the expected channel rate and variance of a single link
+
+        Inputs:
+          xi: 1x2 node position
+          xj: 1x2 node position
+
+        Outputs:
+          rate: expected channel rate between xi, xj
+          var: variance ("confidence") in expected channel rate between xi, xj
+
+        """
+
+        rate, var = PathLossModel.predict_link(self, xi, xj)
 
         dist = np.linalg.norm(xi - xj)
         if dist > self.transition_dist:
@@ -129,6 +180,20 @@ class PiecewiseChannel(ChannelModel):
         return rate, var
 
     def derivative(self, xi, xj):
+        """Compute the derivative of the channel rate function w.r.t xi
+
+        Note: the derivative of the channel with respect to xj can be found by
+        swapping the inputs (i.e.: derivative(xj, xi))
+
+        Inputs:
+          xi: [x, y] node position
+          xj: [x, y] node position
+
+        Outputs:
+          der: 2x1 derivative of Rij w.r.t xi
+
+        """
+
         diff = xi - xj
         dist = np.linalg.norm(diff)
 
@@ -137,10 +202,12 @@ class PiecewiseChannel(ChannelModel):
         elif dist > self.transition_dist:
             return self.m / dist * diff
         else:
-            return ChannelModel.derivative(self, xi, xj)
+            return PathLossModel.derivative(self, xi, xj)
 
 
-class LinearChannel:
+class LinearModel:
+    """A channel mode that decays linearly with distance"""
+
     def __init__(self, print_values=False, max_range=30.0):
         self.max_range = max_range
         if print_values is True:
@@ -157,6 +224,7 @@ class LinearChannel:
         Outputs:
           rate: matrix of expected channel rates between each pair of agents
           var: matrix of channel rate variances between each pair of agents
+
         """
 
         dist = spatial.distance_matrix(x, x)
@@ -176,6 +244,7 @@ class LinearChannel:
         Outputs:
           rate: expected channel rate between xi, xj
           var: variance ("confidence") in expected channel rate between xi, xj
+
         """
 
         rate = max(-1.0/self.max_range * np.linalg.norm(xi - xj) + 1.0, 0.0)
@@ -193,6 +262,7 @@ class LinearChannel:
 
         Outputs:
           der: 2x1 derivative of Rij w.r.t xi
+
         """
 
         xi = np.reshape(xi, (2,1))
