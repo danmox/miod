@@ -53,7 +53,7 @@ def rsync(server, path, password, local_results_folder, timeout=30):
     return stdout
 
 
-def moving_average_inf(a, x_values, n=20, period=1) :
+def moving_average_inf(a, x_values, n=20, period=5) :
     mv_average_filter = np.zeros(n)
     j=0
     ret = np.zeros(len(a))
@@ -65,7 +65,6 @@ def moving_average_inf(a, x_values, n=20, period=1) :
             prev_val = x_values[i]
         mv_average_filter[j] = a[i]
         if cur_per>period:
-            print(cur_per)
             mv_average_filter[j] = period*1000
         j += 1
         j = j % n
@@ -91,12 +90,12 @@ def moving_average(a, n=20) :
     return ret
 
 
-save_archive = True
-load_from_archive=False
+save_archive = False
+load_from_archive=True
 load_local = False
-archive_name = 'results/RRarchive2019-11-14 16:21.npz'
+archive_name = 'results/RRarchive2020-03-05 15:45.npz'
 home = expanduser("~")
-local_results_folder = home+"/workspace_aero/src/intel_aero/routing_protocol/src/results/"
+local_results_folder = home+"/workspace_aero/src/infrastructure-on-demand/routing_protocol/src/results/"
 
 data = {}
 
@@ -110,14 +109,14 @@ else:
     file_name = 'results/RR'
     local = None#'10.42.0.13'
 
-    hosts = ['10.42.0.1']#, '10.42.0.2', '10.42.0.10']
+    hosts = ['10.42.0.4', '10.42.0.6', '10.42.0.7']#, '10.42.0.2', '10.42.0.10']
     passwd = ('1234567890\n').encode()
     files = {}
     for i in hosts:
         files[i] = file_name+"_"+str(i)+".npz"
         aero_id = i.split(".")[-1]
         server = "aero{}@{}".format(aero_id,i)
-        path = "~/ws_intel/src/intel_aero/routing_protocol/src/{}".format(files[i])
+        path = "~/ws_intel/src/infrastructure-on-demand/routing_protocol/src/{}".format(files[i])
         if load_from_archive is not True:
             rsync(server,path,passwd,local_results_folder)
 
@@ -135,13 +134,13 @@ else:
 
 print("Loading files complete, parsing...")
 fig, tp_plot = plt.subplots()
-fig2, tr_plot = plt.subplots()
+fig2, delay_plot = plt.subplots()
 fig3 = plt.figure()
 fig3_prj = fig3.gca(projection='3d')
 rt_plot = Axes3D(fig3)
 
-fig4, tp_plot_ani = plt.subplots()
-fig5, tr_plot_ani = plt.subplots()
+#fig4, tp_plot_ani = plt.subplots()
+#fig5, tr_plot_ani = plt.subplots()
 
 
 colors = ['b', 'g', 'r', 'c', 'y']
@@ -153,9 +152,9 @@ tp_total = {}
 tp_total_ma = {}
 tp_total_time = {}
 
-tr_total = {}
-tr_total_ma = {}
-tr_total_time = {}
+delay_total = {}
+delay_total_ma = {}
+delay_total_time = {}
 
 rt_total = {}
 rt_path_total = {}
@@ -171,25 +170,32 @@ max_pos_z = [None, None]
 for i in data:
     dat = data[i]
     #print(dat.item())
-    print(dat.item()["ws"])
     start_time = dat.item()["start_time"]
     m_av_len = 20
     tr = dat.item()["tr"]
-    if len(tr)>0:
+    ws = dat.item()["ws"]
+    delay = dat.item()["delay"]
+    #print(delay)
+    if len(delay)>0:
         tp_ip = dat.item()['tp_ip']
-        tr = np.transpose(tr)
+        delay = np.transpose(np.array(delay, dtype=object))
+        y_ax = delay[1]
+        delay_plot_ma = moving_average_inf(y_ax, delay[0] - start_time, n=m_av_len, period=10)
+        delay_plot.plot(delay[0] - start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
+                        label=('TX - {}, RX - {}'.format(i, tp_ip)))
+        delay_plot.plot(delay[0] - start_time, delay_plot_ma, color=colors[j % len(colors)],
+                        label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
+        delay_total[i] = y_ax
+        delay_total_ma[i] = delay_plot_ma
+        delay_total_time[i] = delay[0] - start_time
+
+    #print(tr)
+    tr = np.transpose(np.array(tr, dtype=object))
+    print(tr)
+
+    if len(tr) > 0:
         rt_path_total[i] = tr[1]
-        print(tr)
         rt_path_time[i] = tr[0]-start_time
-        y_ax = [sum(k) for k in tr[2]]
-        tr_plot_ma = moving_average_inf(y_ax, tr[0]-start_time, n=m_av_len, period=1)
-        tr_plot.plot(tr[0]-start_time, y_ax, color=colors[j % len(colors)], marker='.', linewidth=0, markersize=1,
-                 label=('TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_plot.plot(tr[0]-start_time, tr_plot_ma, color=colors[j % len(colors)],
-             label=('Mov. av., TX - {}, RX - {}'.format(i, tp_ip)))
-        tr_total[i] = y_ax
-        tr_total_ma[i] = tr_plot_ma
-        tr_total_time[i] = tr[0]-start_time
 
 
     tp = dat.item()["tp"]
@@ -211,13 +217,13 @@ for i in data:
 
     rt = dat.item()["rt"]
     pos = dat.item()["pos"]
+    #print(rt)
     if len(rt)>0:
         time_rt = np.array(rt).transpose()[0,:]
         rt_time_total[i] = np.array(time_rt,dtype=float) - start_time
         max_time_rt = max(max_time_rt, max(rt_time_total[i]))
         rt_total[i] = np.array(rt)[:,1:]
-        print(i)
-        print(rt_total[i])
+        #print(rt_total[i])
     if len(pos)>0:
         time_pos = np.array(pos).transpose()[0,:]
         pos_time_total[i] = np.array(time_pos,dtype=float) - start_time
@@ -259,10 +265,10 @@ if max_pos_z[0]!=None:
 
 
 
-tr_plot.title.set_text('Delay')
-tr_plot.set_xlabel("time, s")
-tr_plot.set_ylabel("Delay, ms")
-tr_plot.legend()
+delay_plot.title.set_text('Delay')
+delay_plot.set_xlabel("time, s")
+delay_plot.set_ylabel("Delay, ms")
+delay_plot.legend()
 fig2.savefig('./results/delay.png')
 
 
@@ -320,9 +326,9 @@ def update_stats_tr(i):
     textstr = "Time: {}".format(str(i))
     plt.gcf().text(0.02, 0.02, textstr, fontsize=14)
 
-    for j in tr_total:
+    for j in delay_total:
         tp_ip = data[j].item()['tp_ip']
-        cur_time_tp = tr_total_time[j]
+        cur_time_tp = delay_total_time[j]
         cur_idx_tp = np.where(cur_time_tp < i)[0]
 
         if len(cur_idx_tp) > 0:
@@ -331,13 +337,11 @@ def update_stats_tr(i):
             tr_plot_ani.set_xlabel("time, s")
             tr_plot_ani.set_ylabel("Delay")
             cur_idx = cur_idx_tp[-1]
-            tr_plot_ani.plot(tr_total_time[j][:cur_idx], tr_total[j][:cur_idx], color="r", marker='.', linewidth=0, markersize=1,
-                         label=('TX - {}, RX - {}'.format(j, tp_ip)))
-            tr_plot_ani.plot(tr_total_time[j][:cur_idx], tr_total_ma[j][:cur_idx], color="r",
-                         label=('Mov. av., TX - {}, RX - {}'.format(j, tp_ip)))
+            tr_plot_ani.plot(delay_total_time[j][:cur_idx], delay_total[j][:cur_idx], color="r", marker='.', linewidth=0, markersize=1,
+                             label=('TX - {}, RX - {}'.format(j, tp_ip)))
+            tr_plot_ani.plot(delay_total_time[j][:cur_idx], delay_total_ma[j][:cur_idx], color="r",
+                             label=('Mov. av., TX - {}, RX - {}'.format(j, tp_ip)))
             tr_plot_ani.legend()
-
-
 
 
 
@@ -421,7 +425,7 @@ def update_graph(i):
 
 
 
-#ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=1000)
+ani = FuncAnimation(fig3, update_graph, frames=range(0,ceil(max_time_rt)), interval=100)
 
 #ani1 = FuncAnimation(fig4, update_stats_tp, frames=range(0,ceil(max_time_rt)), interval=1000)
 

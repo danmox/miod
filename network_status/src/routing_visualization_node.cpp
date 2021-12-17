@@ -31,13 +31,6 @@ void poseCB(const geometry_msgs::PoseStamped::ConstPtr& msg, int id)
 
 
 template<typename T>
-bool all(const T& cont, bool val)
-{
-  return std::find(cont.begin(), cont.end(), !val) == cont.end();
-}
-
-
-template<typename T>
 void getParamStrict(const ros::NodeHandle& nh, std::string param_name, T& param)
 {
   if (!nh.getParam(param_name, param)) {
@@ -56,12 +49,11 @@ int main(int argc, char** argv)
   ros::Subscriber net_sub = nh.subscribe("network_update", 2, networkUpdateCB);
 
   XmlRpc::XmlRpcValue task_agent_ids, comm_agent_ids;
-  std::string world_frame, pose_topic_prefix, pose_topic_suffix;
+  std::string world_frame, pose_topic;
   getParamStrict(nh, "/comm_agent_ids", task_agent_ids);
   getParamStrict(nh, "/task_agent_ids", comm_agent_ids);
   getParamStrict(pnh, "world_frame", world_frame);
-  getParamStrict(pnh, "pose_topic_prefix", pose_topic_prefix);
-  getParamStrict(pnh, "pose_topic_suffix", pose_topic_suffix);
+  getParamStrict(pnh, "pose_topic", pose_topic);
   int total_agents = task_agent_ids.size() + comm_agent_ids.size();
 
   // extract agent ids
@@ -80,7 +72,11 @@ int main(int argc, char** argv)
     agent_ids.push_back(static_cast<int>(comm_agent_ids[i]));
   }
 
+  for (int id : agent_ids)
+    received_pose.emplace(id, false);
+
   // agent IP -> agent ID map
+  // NOTE here we assume IP's are of the form XXX.XXX.XXX.ID
 
   std::map<std::string, int> ip_to_id;
   for (int i = 0; i < total_agents; ++i) {
@@ -93,21 +89,22 @@ int main(int argc, char** argv)
   namespace stdph = std::placeholders;
   std::vector<ros::Subscriber> pose_subs;
   for (int i = 0; i < total_agents; ++i) {
-    std::stringstream ss;
-    ss << pose_topic_prefix << "aero" << agent_ids[i] << pose_topic_suffix;
+    std::string topic = pose_topic;
+    topic.replace(topic.find("#"), 1, std::to_string(agent_ids[i]));
     auto fcn = std::bind(&poseCB, stdph::_1, agent_ids[i]);
-    pose_subs.push_back(nh.subscribe<geometry_msgs::PoseStamped>(ss.str(), 10, fcn));
+    pose_subs.push_back(nh.subscribe<geometry_msgs::PoseStamped>(topic, 10, fcn));
   }
 
   // main loop
 
   ros::Rate rate(10);
-  ROS_INFO("[routing_visualization_node] starting loop");
+  ROS_DEBUG("[routing_visualization_node] starting loop");
   while (ros::ok()) {
 
     rate.sleep();
     ros::spinOnce();
 
+    // wait for pose information for all agents
     bool received_all_poses = true;
     for (auto& val : received_pose)
       if (!val.second)
@@ -125,6 +122,7 @@ int main(int argc, char** argv)
       marker.action = visualization_msgs::Marker::ADD;
       marker.scale.x = 0.5;
       marker.pose.orientation.w = 1.0;
+
       for (const auto& prt_entry : net_cmd->routes) {
         for (int j = 0; j < prt_entry.gateways.size(); ++j) {
 
@@ -149,7 +147,7 @@ int main(int argc, char** argv)
       viz_pub.publish(marker);
 
     } else {
-      ROS_DEBUG("[routing_visualization_node] no network update or missing node poses; skipping this iteration");
+      ROS_DEBUG("[routing_visualization_node] missing network update or node poses");
     }
 
   }

@@ -5,7 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 763
+    Tree Height: 716
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -14,7 +14,7 @@ Panels:
       - /2D Nav Goal1
       - /Publish Point1
     Name: Tool Properties
-    Splitter Ratio: 0.588679016
+    Splitter Ratio: 0.5886790156364441
   - Class: rviz/Views
     Expanded:
       - /Current View1
@@ -25,16 +25,20 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: ""
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.200000003
+    - Alpha: 0.20000000298023224
       Cell Size: 1
       Class: rviz/Grid
       Color: 158; 158; 161
       Enabled: true
       Line Style:
-        Line Width: 0.0299999993
+        Line Width: 0.029999999329447746
         Value: Lines
       Name: Grid
       Normal Cell Count: 0
@@ -46,7 +50,7 @@ Visualization Manager:
       Plane Cell Count: 120
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.699999988
+    - Alpha: 0.699999988079071
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
@@ -57,19 +61,228 @@ Visualization Manager:
       Use Timestamp: false
       Value: false
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
-      Marker Scale: 1
+        All Enabled: false
+        aero1/base_link:
+          Value: true
+        aero1/base_link_inertia:
+          Value: false
+        aero1/rotor_0:
+          Value: false
+        aero1/rotor_1:
+          Value: false
+        aero1/rotor_2:
+          Value: false
+        aero1/rotor_3:
+          Value: false
+        aero2/base_link:
+          Value: true
+        aero2/base_link_inertia:
+          Value: false
+        aero2/rotor_0:
+          Value: false
+        aero2/rotor_1:
+          Value: false
+        aero2/rotor_2:
+          Value: false
+        aero2/rotor_3:
+          Value: false
+        aero3/base_link:
+          Value: true
+        aero3/base_link_inertia:
+          Value: false
+        aero3/rotor_0:
+          Value: false
+        aero3/rotor_1:
+          Value: false
+        aero3/rotor_2:
+          Value: false
+        aero3/rotor_3:
+          Value: false
+        aero4/base_link:
+          Value: true
+        aero4/base_link_inertia:
+          Value: false
+        aero4/rotor_0:
+          Value: false
+        aero4/rotor_1:
+          Value: false
+        aero4/rotor_2:
+          Value: false
+        aero4/rotor_3:
+          Value: false
+        aero5/base_link:
+          Value: true
+        aero5/base_link_inertia:
+          Value: false
+        aero5/rotor_0:
+          Value: false
+        aero5/rotor_1:
+          Value: false
+        aero5/rotor_2:
+          Value: false
+        aero5/rotor_3:
+          Value: false
+        aero6/base_link:
+          Value: true
+        aero6/base_link_inertia:
+          Value: false
+        aero6/rotor_0:
+          Value: false
+        aero6/rotor_1:
+          Value: false
+        aero6/rotor_2:
+          Value: false
+        aero6/rotor_3:
+          Value: false
+        aero7/base_link:
+          Value: true
+        aero7/base_link_inertia:
+          Value: true
+        aero7/rotor_0:
+          Value: false
+        aero7/rotor_1:
+          Value: false
+        aero7/rotor_2:
+          Value: false
+        aero7/rotor_3:
+          Value: false
+        aero8/base_link:
+          Value: true
+        aero8/base_link_inertia:
+          Value: true
+        aero8/rotor_0:
+          Value: false
+        aero8/rotor_1:
+          Value: false
+        aero8/rotor_2:
+          Value: false
+        aero8/rotor_3:
+          Value: true
+        aero9/base_link:
+          Value: true
+        aero9/base_link_inertia:
+          Value: true
+        aero9/rotor_0:
+          Value: false
+        aero9/rotor_1:
+          Value: false
+        aero9/rotor_2:
+          Value: false
+        aero9/rotor_3:
+          Value: false
+        world:
+          Value: false
+      Marker Scale: 10
       Name: TF
-      Show Arrows: true
+      Show Arrows: false
       Show Axes: true
-      Show Names: true
+      Show Names: false
       Tree:
-        {}
+        world:
+          aero1/base_link:
+            aero1/base_link_inertia:
+              {}
+            aero1/rotor_0:
+              {}
+            aero1/rotor_1:
+              {}
+            aero1/rotor_2:
+              {}
+            aero1/rotor_3:
+              {}
+          aero2/base_link:
+            aero2/base_link_inertia:
+              {}
+            aero2/rotor_0:
+              {}
+            aero2/rotor_1:
+              {}
+            aero2/rotor_2:
+              {}
+            aero2/rotor_3:
+              {}
+          aero3/base_link:
+            aero3/base_link_inertia:
+              {}
+            aero3/rotor_0:
+              {}
+            aero3/rotor_1:
+              {}
+            aero3/rotor_2:
+              {}
+            aero3/rotor_3:
+              {}
+          aero4/base_link:
+            aero4/base_link_inertia:
+              {}
+            aero4/rotor_0:
+              {}
+            aero4/rotor_1:
+              {}
+            aero4/rotor_2:
+              {}
+            aero4/rotor_3:
+              {}
+          aero5/base_link:
+            aero5/base_link_inertia:
+              {}
+            aero5/rotor_0:
+              {}
+            aero5/rotor_1:
+              {}
+            aero5/rotor_2:
+              {}
+            aero5/rotor_3:
+              {}
+          aero6/base_link:
+            aero6/base_link_inertia:
+              {}
+            aero6/rotor_0:
+              {}
+            aero6/rotor_1:
+              {}
+            aero6/rotor_2:
+              {}
+            aero6/rotor_3:
+              {}
+          aero7/base_link:
+            aero7/base_link_inertia:
+              {}
+            aero7/rotor_0:
+              {}
+            aero7/rotor_1:
+              {}
+            aero7/rotor_2:
+              {}
+            aero7/rotor_3:
+              {}
+          aero8/base_link:
+            aero8/base_link_inertia:
+              {}
+            aero8/rotor_0:
+              {}
+            aero8/rotor_1:
+              {}
+            aero8/rotor_2:
+              {}
+            aero8/rotor_3:
+              {}
+          aero9/base_link:
+            aero9/base_link_inertia:
+              {}
+            aero9/rotor_0:
+              {}
+            aero9/rotor_1:
+              {}
+            aero9/rotor_2:
+              {}
+            aero9/rotor_3:
+              {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /occupied_cells_vis_array
@@ -81,8 +294,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 44.0999985
-        Min Value: 0.300000012
+        Max Value: 44.099998474121094
+        Min Value: 0.30000001192092896
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -101,7 +314,7 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.200000003
+      Size (m): 0.20000000298023224
       Style: Points
       Topic: /octomap_point_cloud_centers
       Unreliable: false
@@ -166,11 +379,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero1 path
       Offset:
         X: 0
@@ -178,9 +391,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero1/path
       Unreliable: false
       Value: true
@@ -234,11 +447,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero2 path
       Offset:
         X: 0
@@ -246,9 +459,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero2/path
       Unreliable: false
       Value: true
@@ -302,11 +515,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero3 path
       Offset:
         X: 0
@@ -314,9 +527,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero3/path
       Unreliable: false
       Value: true
@@ -370,11 +583,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero4 path
       Offset:
         X: 0
@@ -382,9 +595,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero4/path
       Unreliable: false
       Value: true
@@ -438,11 +651,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero5 path
       Offset:
         X: 0
@@ -450,9 +663,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero5/path
       Unreliable: false
       Value: true
@@ -506,11 +719,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero6 path
       Offset:
         X: 0
@@ -518,9 +731,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero6/path
       Unreliable: false
       Value: true
@@ -574,11 +787,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero7 path
       Offset:
         X: 0
@@ -586,9 +799,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero7/path
       Unreliable: false
       Value: true
@@ -642,11 +855,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero8 path
       Offset:
         X: 0
@@ -654,9 +867,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero8/path
       Unreliable: false
       Value: true
@@ -710,11 +923,11 @@ Visualization Manager:
       Class: rviz/Path
       Color: 0; 0; 255
       Enabled: true
-      Head Diameter: 0.300000012
-      Head Length: 0.200000003
-      Length: 0.300000012
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.0299999993
+      Line Width: 0.029999999329447746
       Name: aero9 path
       Offset:
         X: 0
@@ -722,9 +935,9 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Radius: 0.0299999993
-      Shaft Diameter: 0.100000001
-      Shaft Length: 0.100000001
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /aero9/path
       Unreliable: false
       Value: true
@@ -751,7 +964,10 @@ Visualization Manager:
     - Class: rviz/FocusCamera
     - Class: rviz/Measure
     - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
       Topic: /initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5
     - Class: rviz/SetGoal
       Topic: /move_base_simple/goal
     - Class: rviz/PublishPoint
@@ -761,33 +977,33 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 126.758865
+      Distance: 45.528564453125
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.0599999987
+        Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.71884942
-        Y: -6.95219278
-        Z: -3.55563736
+        X: -0.7698735594749451
+        Y: -0.5620755553245544
+        Z: -5.525696754455566
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.0500000007
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.00999999978
-      Pitch: 0.904797077
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.7197972536087036
       Target Frame: world
       Value: Orbit (rviz)
-      Yaw: 0.676655293
+      Yaw: 0.6566553115844727
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1056
+  Height: 1025
   Hide Left Dock: false
   Hide Right Dock: true
-  QMainWindow State: 000000ff00000000fd0000000400000000000001ad0000038afc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006100fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c00610079007301000000280000038a000000d700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c000002610000000100000216000004d8fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000031000004d8000000ad00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073f0000004afc0100000002fb0000000800540069006d006501000000000000073f0000030000fffffffb0000000800540069006d006501000000000000045000000000000000000000058c0000038a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001ad00000357fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000357000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c000002610000000100000216000004d8fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730000000031000004d8000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000004afc0100000002fb0000000800540069006d0065010000000000000780000002eb00fffffffb0000000800540069006d00650100000000000004500000000000000000000005cd0000035700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -796,6 +1012,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: true
-  Width: 1855
-  X: 65
-  Y: 24
+  Width: 1920
+  X: 0
+  Y: 27

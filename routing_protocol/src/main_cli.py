@@ -52,7 +52,7 @@ class Params:
     rt_tables_ids = []
 
     TP_IP = None
-    tp_update_period = 1  # throughput query interval
+    tp_update_period = 1.  # throughput query interval
     tp_stats = []
     traceroute_stats = []
 
@@ -60,6 +60,7 @@ class Params:
     results_folder = home+'/ws_intel/src/intel_aero/routing_protocol/src/results/'
     final_stats = {}
     final_stats["start_time"] = time()
+    final_stats["delay"] = []
     final_stats["ws"] = []
     final_stats["tp"] = []
     final_stats["tr"] = []
@@ -129,9 +130,31 @@ def measurement_thread_throughput_srv():
         sleep(0.1)
     cur_wireless.terminate()
 
+def measurement_thread_delay():
+    if Params.TP_IP!=None:
+        while Params.sim_run is True:
+            cmdline = ["fping", Params.TP_IP, "-c1", "-t", str(Params.tp_update_period * 1000)]
+            while Params.sim_run is True:
+                try:
+                    subprocess.check_output(cmdline)
+                    break
+                except subprocess.CalledProcessError:
+                    print("retrying fping")
+                    sleep(1)
+            cur_wireless = subprocess.run(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+            cur_wireless_update = cur_wireless.stdout.decode()
+            delays = re.search(r"bytes,\s(.*?)\sms", cur_wireless_update)
+            if delays is not None:
+                delays = float(delays.group(1))
+                print(delays)
+                if Params.statistics_collection:
+                    Params.final_stats["delay"].append([time(), delays])
+            sleep(Params.tp_update_period)
+
+
 def measurement_thread_traceroute():
     if Params.TP_IP!=None:
-        cmdline = ["sudo", "traceroute", "-T", Params.TP_IP]
+        cmdline = ["sudo", "traceroute", Params.TP_IP]
         while Params.sim_run is True:
             try:
                 subprocess.check_output(cmdline)
@@ -142,21 +165,19 @@ def measurement_thread_traceroute():
         print("traceroute to {} succesfull".format(str(Params.TP_IP)))
         start_time = Params.final_stats["start_time"]
         while Params.sim_run is True:
-            cmdline = ["sudo", "traceroute", "-T", Params.TP_IP, "-w", str(Params.tp_update_period)]
+            cmdline = ["sudo", "traceroute", Params.TP_IP, "-w", str(Params.tp_update_period)]
             cur_wireless = subprocess.run(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
             cur_wireless_update = cur_wireless.stdout.decode()
             print(cur_wireless_update)
             ips = np.array(re.findall(r"((?<=\d\s\s)([\d]{1,3}\.){3}[\d]{1,3})", cur_wireless_update))
-            delays = np.array(re.findall(r"((?<=\)\s\s)[\d]{1,4}\.[\d]{1,3})", cur_wireless_update))
             if len(ips)>0:
                 ips2 = ips.transpose()[0]
                 if len(ips2)>0:
                     ips2 = list(ips2)
                     ips2.insert(0,Params.HOST)
-                    delays = list(np.around(delays.astype(float),1))
-                    Params.traceroute_stats.append([time()-start_time,ips2,delays])
+                    Params.traceroute_stats.append([time()-start_time,ips2])
                     if Params.statistics_collection:
-                        Params.final_stats["tr"].append([time(),ips2,delays])
+                        Params.final_stats["tr"].append([time(),ips2])
             sleep(Params.tp_update_period)
 
 
@@ -244,37 +265,39 @@ def rt_update_thread():
     while Params.sim_run is True:
         new_rt = Params.routing_table
         for src in new_rt.keys():
-            if not src in Params.rt_tables_ids:
-                Params.rt_tables_ids.append(src)
-                #print(str(Params.rt_tables_ids.index(src)))
-                subprocess.run(
-                    ["sudo", "ip", "rule", "add", "from", str(src), "table", str(Params.rt_tables_ids.index(src) + 1),
-                     "prio", "2"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
             dest = new_rt[src][0][0]
-            subprocess.run(["sudo", "ip", "route", "del", dest, "table", str(Params.rt_tables_ids.index(src) + 1)],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if len(new_rt[src][0]) > 2:
-                cur_prob = 0
-                coin = random.uniform(0, sum(new_rt[src][1]))
-                for i in range(0, len(new_rt[src][1])):
-                    cur_prob += new_rt[src][1][i]
-                    if coin <= cur_prob:
-                        if Params.statistics_collection:
-                            Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][i + 1]])
-                        subprocess.run(
-                            ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i + 1], "dev", Params.WIFI_IF,
-                             "table", str(Params.rt_tables_ids.index(src) + 1)],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                        print(
-                            "changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][i + 1]))
-            elif len(new_rt[src][0])==2:
-                if Params.statistics_collection:
-                    Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][1]])
-                subprocess.run(
-                    ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table",
-                     str(Params.rt_tables_ids.index(src) + 1)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][1]))
+            if dest != Params.HOST:
+                if not src in Params.rt_tables_ids:
+                    Params.rt_tables_ids.append(src)
+                    #print(str(Params.rt_tables_ids.index(src)))
+                    subprocess.run(
+                        ["sudo", "ip", "rule", "add", "from", str(src), "table", str(Params.rt_tables_ids.index(src) + 1),
+                         "prio", "2"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+                subprocess.run(["sudo", "ip", "route", "del", dest, "table", str(Params.rt_tables_ids.index(src) + 1)],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                if len(new_rt[src][0]) > 2:
+                    cur_prob = 0
+                    coin = random.uniform(0, sum(new_rt[src][1]))
+                    for i in range(0, len(new_rt[src][1])):
+                        cur_prob += new_rt[src][1][i]
+                        if coin <= cur_prob:
+                            if Params.statistics_collection:
+                                Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][i + 1]])
+                            subprocess.run(
+                                ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][i + 1], "dev", Params.WIFI_IF,
+                                 "table", str(Params.rt_tables_ids.index(src) + 1)],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            print(
+                                "changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][i + 1]))
+                elif len(new_rt[src][0])==2:
+                    if Params.statistics_collection:
+                        Params.final_stats["rt"].append([time(), src, dest, new_rt[src][0][1]])
+                    subprocess.run(
+                        ["sudo", "ip", "route", "add", dest, "via", new_rt[src][0][1], "dev", Params.WIFI_IF, "table",
+                         str(Params.rt_tables_ids.index(src) + 1)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print("changing route: from {} to {} is now via {}".format(str(src), dest, new_rt[src][0][1]))
 
         sleep(Params.rt_update_period)
 
@@ -370,8 +393,9 @@ def main():
 
     args, unknown = parser.parse_known_args()
 
-    Params.TP_IP=args.dest_ip
-    Params.final_stats["tp_ip"] = args.dest_ip
+    if args.dest_ip != "None":
+        Params.TP_IP = args.dest_ip
+        Params.final_stats["tp_ip"] = args.dest_ip
     if args.srv != None:
         Params.SERVER = args.srv
     if args.interface != None:
@@ -407,6 +431,8 @@ def main():
         threads.append(threading.Thread(target=send_ping_thread))
         threads.append(threading.Thread(target=receive_ping_thread))
         threads.append(threading.Thread(target=pos_update_thread))
+        threads.append(threading.Thread(target=measurement_thread_delay))
+
     try:
         for t in threads:
             t.start()

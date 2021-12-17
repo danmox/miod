@@ -34,9 +34,3 @@ target_link_libraries(outdoor_test ${catkin_LIBRARIES})
 
 add_executable(outdoor_action_test src/outdoor_action_test.cpp)
 target_link_libraries(outdoor_action_test ${catkin_LIBRARIES})
-
-add_executable(task_agents_net_patrol_node src/task_agents_net_patrol_node.cpp)
-target_link_libraries(task_agents_net_patrol_node ${catkin_LIBRARIES})
-
-add_executable(network_planner_net_patrol_node src/network_planner_net_patrol_node.cpp)
-target_link_libraries(network_planner_net_patrol_node ${catkin_LIBRARIES})

@@ -1,12 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import rr_socp
+from . import rr_socp
 import numpy as np
 from socp.srv import RobustRoutingSOCP, RobustRoutingSOCPResponse
 import rospy
+from .channel_model import PathLossModel as ChannelModel
 
 
 class RRSOCPServer:
+    """A ROS wrapper for the RobustRouting class"""
+
     def __init__(self, fetch_params=True, print_values=True, n0=-70.0, n=2.52, l0=-53.0, a=0.2, b=6.0):
         if fetch_params:
             n0 = rospy.get_param("/N0")
@@ -14,15 +17,17 @@ class RRSOCPServer:
             l0 = rospy.get_param("/L0")
             a = rospy.get_param("/a")
             b = rospy.get_param("/b")
-            self.solver = rr_socp.RobustRoutingSolver(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+            channel_model = ChannelModel(print_values, n0, n, l0, a, b)
+            self.solver = rr_socp.RobustRoutingSolver(channel_model)
         else:
-            self.solver = rr_socp.RobustRoutingSolver(print_values=print_values, n0=n0, n=n, l0=l0, a=a, b=b)
+            channel_model = ChannelModel(print_values, n0, n, l0, a, b)
+            self.solver = rr_socp.RobustRoutingSolver(channel_model)
 
     def solve_socp(self, req):
         res = RobustRoutingSOCPResponse()
 
         # check for valid request
-        if len(req.config) == 0 or len(req.qos) == 0:
+        if len(req.config) == 0 or len(req.flows) == 0:
             rospy.logwarn('[robust_routing_socp_server] invalid reqeust')
             return res
 
@@ -31,9 +36,9 @@ class RRSOCPServer:
             x[i, 0] = req.config[i].x
             x[i, 1] = req.config[i].y
 
-        slack, routes, status = self.solver.solve_socp(req.qos, x)
+        slack, routes, status = self.solver.solve_socp(req.flows, x, req.idx_to_id)
         if status == 'optimal':
-            res.slack = slack
+            res.obj_fcn = slack
             res.routes = routes
 
         res.status = status

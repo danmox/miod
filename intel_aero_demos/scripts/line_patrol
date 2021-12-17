@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+
+import actionlib
+from std_msgs.msg import Header
+from geometry_msgs.msg import Pose, Point, Quaternion
+from intel_aero_navigation.msg import WaypointNavigationAction, WaypointNavigationGoal
+import rospy
+
+
+if __name__ == '__main__':
+
+    try:
+        node_name = 'line_patrol_node'
+        rospy.init_node(node_name)
+
+        required_params = ['/desired_altitude', '/start_pos', '/end_pos', '/moving_agent']
+        params = {}
+        run_patrol = True
+        for param in required_params:
+            if rospy.has_param(param):
+                params[param[1:]] = rospy.get_param(param)
+            else:
+                rospy.fatal('[{}] failed to fetch ROS param \'{}\''.format(node_name, param))
+                run_patrol = False
+
+        if run_patrol:
+
+            action_name = '/aero{}/gazebo_vel_nav_nodelet'.format(params['moving_agent'])
+            client = actionlib.SimpleActionClient(action_name, WaypointNavigationAction)
+            rospy.loginfo('[{}] waiting for {} to start'.format(node_name, action_name))
+            client.wait_for_server()
+
+            start_pos = Point()
+
+            goal = WaypointNavigationGoal()
+            goal.header = Header(frame_id='world', stamp=rospy.get_rostime())
+            goal.waypoints += [Pose(Point(params['start_pos'][0], params['start_pos'][1], params['desired_altitude']), Quaternion(w=1.))]
+            goal.waypoints += [Pose(Point(params['end_pos'][0], params['end_pos'][1], params['desired_altitude']), Quaternion(w=1.))]
+            goal.waypoints += [Pose(Point(params['start_pos'][0], params['start_pos'][1], params['desired_altitude']), Quaternion(w=1.))]
+            goal.end_action = WaypointNavigationGoal.LAND
+
+            client.send_goal(goal)
+            rospy.loginfo('[{}] waiting for aero{} to finish'.format(node_name, params['moving_agent']))
+            client.wait_for_result()
+
+    except rospy.ROSInterruptException:
+        pass
